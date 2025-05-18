@@ -1,0 +1,29 @@
+ [tool.poetry]
+ name = "web-agent"
+ version = "0.1.0"
+ description = "A smooth & efficient web-automation agent using LangChain and Playwright."
+ authors = ["jonahkesoyan <jonahkesoyan@example.com>"]
+ license = "MIT"
+
+ [tool.poetry.dependencies]
+ python = "^3.11"
+ langchain = "*"
+ langchain-openai = "*"
+ playwright = "*"
+ python-dotenv = "*"
+ tenacity = "*"
+ structlog = "*"
+ typer = "*"
+ langchain-community = "*"
+ ollama = "*"
+
+ [tool.poetry.dev-dependencies]
+ black = "*"
+ ruff = "*"
+ pytest = "*"
+ pytest-playwright = "*"
+ mypy = "*"
+
+ [build-system]
+ requires = ["poetry-core>=1.0.0"]
+ build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,7 @@
+ .cursor
+Agent-S/
+ .env
+ __pycache__/
+ *.log
+ trace.zip
+ venv/
