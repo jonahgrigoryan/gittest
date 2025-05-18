@@ -1,7 +1,7 @@
 from langchain.tools import BaseTool
 from pydantic import BaseModel
 
-from playwright_helpers import get_sync_page
+from playwright_helpers import get_shared_page
 
 class NavigateURLInput(BaseModel):
     url: str
@@ -12,9 +12,9 @@ class NavigateURLTool(BaseTool):
     args_schema = NavigateURLInput
 
     def _run(self, url: str) -> str:
-        with get_sync_page() as page:
-            page.goto(url, wait_until="domcontentloaded")
-            return page.title()
+        page = get_shared_page()
+        page.goto(url, wait_until="domcontentloaded")
+        return page.title()
 
     async def _arun(self, url: str):
         raise NotImplementedError("Use the sync version for now")
@@ -28,9 +28,9 @@ class ClickElementTool(BaseTool):
     args_schema = ClickElementInput
 
     def _run(self, selector: str) -> str:
-        with get_sync_page() as page:
-            page.click(selector)
-            return f"Clicked element with selector: {selector}"
+        page = get_shared_page()
+        page.click(selector)
+        return f"Clicked element with selector: {selector}"
 
     async def _arun(self, selector: str):
         raise NotImplementedError("Use the sync version for now")
@@ -45,9 +45,9 @@ class TypeTextTool(BaseTool):
     args_schema = TypeTextInput
 
     def _run(self, selector: str, text: str) -> str:
-        with get_sync_page() as page:
-            page.fill(selector, text)
-            return f"Typed text into element with selector: {selector}"
+        page = get_shared_page()
+        page.fill(selector, text)
+        return f"Typed text into element with selector: {selector}"
 
     async def _arun(self, selector: str, text: str):
         raise NotImplementedError("Use the sync version for now")
@@ -61,8 +61,8 @@ class GetTextContentTool(BaseTool):
     args_schema = GetTextContentInput
 
     def _run(self, selector: str) -> str:
-        with get_sync_page() as page:
-            return page.inner_text(selector)
+        page = get_shared_page()
+        return page.inner_text(selector)
 
     async def _arun(self, selector: str):
         raise NotImplementedError("Use the sync version for now")
@@ -76,8 +76,8 @@ class GetSimplifiedHTMLTool(BaseTool):
     args_schema = GetSimplifiedHTMLInput
 
     def _run(self, selector: str) -> str:
-        with get_sync_page() as page:
-            return page.inner_html(selector).strip()
+        page = get_shared_page()
+        return page.inner_html(selector).strip()
 
     async def _arun(self, selector: str):
         raise NotImplementedError("Use the sync version for now")

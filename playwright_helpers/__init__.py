@@ -29,3 +29,17 @@ async def get_async_page() -> AsyncIterator:
             yield page
         finally:
             await browser.close()
+    
+# Persistent shared browser session for multi-step flows
+_pw_context = sync_playwright()
+_pw = _pw_context.__enter__()
+_browser = _pw.chromium.launch(
+    headless=True,
+    args=["--disable-blink-features=AutomationControlled"],
+)
+_context = _browser.new_context()
+_shared_page = _context.new_page()
+
+def get_shared_page():
+    """Return a persistent Playwright page across multiple tool calls."""
+    return _shared_page
