@@ -1,3 +1,4 @@
+import logger  # configure structlog
 import json
 import typer
 

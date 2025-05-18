@@ -1,3 +1,4 @@
+import logger  # configure structlog
 from langchain.agents import create_react_agent
 from langchain_openai import ChatOpenAI
 from tools.web_tools import (
