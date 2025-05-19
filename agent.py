@@ -15,12 +15,22 @@ TOOLS = [
     TypeTextTool(),
 ]
 
-AGENT = create_react_agent(
-    llm=llm,
-    tools=TOOLS,
-    prompt="""You are a web-automation assistant. Plan what to do, then act.
+from langchain.prompts import PromptTemplate
+
+_REACT_TEMPLATE = PromptTemplate(
+    input_variables=["input", "agent_scratchpad"],
+    template="""You are a web-automation assistant. Plan what to do, then act.
 Steps:
 1. Think step-by-step.
 2. Use the tools to interact with the browser.
-3. Conclude with a short answer.""",
+3. Conclude with a short answer.
+
+{input}
+{agent_scratchpad}""",
+)
+
+AGENT = create_react_agent(
+    llm=llm,
+    tools=TOOLS,
+    prompt=_REACT_TEMPLATE,
 )
