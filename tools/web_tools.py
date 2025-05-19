@@ -1,5 +1,6 @@
 from langchain.tools import BaseTool
 from pydantic import BaseModel
+from typing import Type
 
 from playwright_helpers import get_shared_page
 
@@ -7,9 +8,9 @@ class NavigateURLInput(BaseModel):
     url: str
 
 class NavigateURLTool(BaseTool):
-    name = "navigate_url"
-    description = "Open the given URL in the active browser tab."
-    args_schema = NavigateURLInput
+    name: str = "navigate_url"
+    description: str = "Open the given URL in the active browser tab."
+    args_schema: Type[BaseModel] = NavigateURLInput
 
     def _run(self, url: str) -> str:
         page = get_shared_page()
@@ -23,9 +24,9 @@ class ClickElementInput(BaseModel):
     selector: str
 
 class ClickElementTool(BaseTool):
-    name = "click_element"
-    description = "Click the element specified by selector."
-    args_schema = ClickElementInput
+    name: str = "click_element"
+    description: str = "Click the element specified by selector."
+    args_schema: Type[BaseModel] = ClickElementInput
 
     def _run(self, selector: str) -> str:
         page = get_shared_page()
@@ -40,9 +41,9 @@ class TypeTextInput(BaseModel):
     text: str
 
 class TypeTextTool(BaseTool):
-    name = "type_text"
-    description = "Type text into the element specified by selector."
-    args_schema = TypeTextInput
+    name: str = "type_text"
+    description: str = "Type text into the element specified by selector."
+    args_schema: Type[BaseModel] = TypeTextInput
 
     def _run(self, selector: str, text: str) -> str:
         page = get_shared_page()
@@ -56,9 +57,9 @@ class GetTextContentInput(BaseModel):
     selector: str
 
 class GetTextContentTool(BaseTool):
-    name = "get_text_content"
-    description = "Get text content of the element specified by selector."
-    args_schema = GetTextContentInput
+    name: str = "get_text_content"
+    description: str = "Get text content of the element specified by selector."
+    args_schema: Type[BaseModel] = GetTextContentInput
 
     def _run(self, selector: str) -> str:
         page = get_shared_page()
@@ -71,9 +72,9 @@ class GetSimplifiedHTMLInput(BaseModel):
     selector: str
 
 class GetSimplifiedHTMLTool(BaseTool):
-    name = "get_simplified_html"
-    description = "Get inner HTML of the element specified by selector."
-    args_schema = GetSimplifiedHTMLInput
+    name: str = "get_simplified_html"
+    description: str = "Get inner HTML of the element specified by selector."
+    args_schema: Type[BaseModel] = GetSimplifiedHTMLInput
 
     def _run(self, selector: str) -> str:
         page = get_shared_page()
