@@ -18,8 +18,13 @@ TOOLS = [
 from langchain.prompts import PromptTemplate
 
 _REACT_TEMPLATE = PromptTemplate(
-    input_variables=["input", "agent_scratchpad"],
+    input_variables=["input", "agent_scratchpad", "tool_names", "tools"],
     template="""You are a web-automation assistant. Plan what to do, then act.
+You have access to the following tools:
+{tools}
+
+Available tool names: {tool_names}
+
 Steps:
 1. Think step-by-step.
 2. Use the tools to interact with the browser.
