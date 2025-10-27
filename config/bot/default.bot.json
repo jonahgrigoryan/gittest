@@ -1,0 +1,10 @@
+{
+  "compliance": { "gameType": "NLHE_6max", "allowedEnvironments": ["simulator"], "siteAllowlist": [] },
+  "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.995, "occlusionThreshold": 0.05 },
+  "gto": { "cachePath": "cache/preflop", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
+  "agents": { "models": [], "timeoutMs": 3000, "outputSchema": {} },
+  "strategy": { "alphaGTO": 0.7, "betSizingSets": { "preflop": [], "flop": [], "turn": [], "river": [] }, "divergenceThresholdPP": 30 },
+  "execution": { "mode": "simulator" },
+  "safety": { "bankrollLimit": 0, "sessionLimit": 0, "panicStopConfidenceThreshold": 0.99, "panicStopConsecutiveFrames": 3 },
+  "logging": { "retentionDays": 14, "exportFormats": ["json"] }
+}

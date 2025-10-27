@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BotConfig",
+  "type": "object",
+  "required": ["compliance","vision","gto","agents","strategy","execution","safety","logging"],
+  "properties": {
+    "compliance": { "type": "object" },
+    "vision": { "type": "object" },
+    "gto": { "type": "object" },
+    "agents": { "type": "object" },
+    "strategy": { "type": "object" },
+    "execution": { "type": "object" },
+    "safety": { "type": "object" },
+    "logging": { "type": "object" }
+  }
+}

@@ -1,0 +1,13 @@
+version: "3.9"
+services:
+  orchestrator:
+    build: ../../packages/orchestrator
+    volumes:
+      - ../../:/workspace
+      - ../../config:/config:ro
+      - ../../results:/results
+      - ../../logs:/logs
+      - ../../coverage:/coverage
+    working_dir: /workspace/packages/orchestrator
+    command: ["pnpm","test"]
+volumes: {}
