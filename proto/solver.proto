@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package solver;
+
+service Solver {
+  rpc Solve (SubgameRequest) returns (SubgameResponse);
+}
+
+message SubgameRequest {
+  string state_fingerprint = 1;
+}
+
+message SubgameResponse {
+  repeated string actions = 1;
+  repeated double probabilities = 2;
+}

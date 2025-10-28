@@ -1,0 +1,6 @@
+dist/
+coverage/
+results/
+logs/
+packages/**/dist/
+packages/shared/src/gen/

@@ -1,0 +1,17 @@
+{
+  "name": "@poker-bot/agents",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@poker-bot/shared": "workspace:*"
+  }
+}
