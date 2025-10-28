@@ -83,6 +83,9 @@ importers:
       ajv:
         specifier: 8.17.1
         version: 8.17.1
+      protobufjs:
+        specifier: 7.5.4
+        version: 7.5.4
 
 packages:
 

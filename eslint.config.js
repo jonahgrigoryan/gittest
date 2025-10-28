@@ -16,6 +16,7 @@ export default [
       "logs/**",
       "packages/**/dist/**",
       "packages/shared/src/gen/**",
+      "**/*.d.ts",
     ],
   },
   {
