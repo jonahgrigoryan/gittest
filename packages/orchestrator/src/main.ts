@@ -7,7 +7,9 @@ export async function run() {
 
   if (process.env.ORCH_PING_SOLVER === "1") {
     // Compile-time link check to shared generated stubs
-    const { makeRequest, parseResponse } = await import("./solver_client/client");
+    const { createSolverClient, makeRequest, parseResponse } = await import("./solver_client/client");
+    const client = createSolverClient();
+    client.close();
     // issue a dummy request for compile-only check
     void makeRequest("ping");
     // fake response parse to exercise types without runtime imports

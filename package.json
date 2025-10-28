@@ -10,7 +10,7 @@
     "check:protoc": "protoc --version || echo 'protoc not installed'",
     "check:buf": "buf --version || echo 'buf not installed'",
     "verify:env": "pnpm run check:node && pnpm run check:pnpm && pnpm run check:python && pnpm run check:protoc && pnpm run check:buf",
-    "proto:gen": "buf generate proto || echo \"buf not installed, skipping codegen\"",
+    "proto:gen": "buf generate --template proto/buf.gen.yaml proto || echo \"buf not installed, skipping codegen\"",
     "prebuild": "pnpm run proto:gen || echo \"codegen skipped\"",
     "build": "pnpm -r --filter ./packages/** run build",
     "lint": "pnpm -r --filter ./packages/** run lint",

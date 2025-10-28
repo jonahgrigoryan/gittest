@@ -1,9 +1,14 @@
-export enum Suit { C = "C", D = "D", H = "H", S = "S" }
-export enum Rank { Two="2", Three="3", Four="4", Five="5", Six="6", Seven="7", Eight="8", Nine="9", Ten="T", Jack="J", Queen="Q", King="K", Ace="A" }
-export enum Position { BTN="BTN", SB="SB", BB="BB", UTG="UTG", MP="MP", CO="CO" }
-export enum Street { Preflop="PREFLOP", Flop="FLOP", Turn="TURN", River="RIVER" }
+export type Suit = "h" | "d" | "c" | "s";
+export type Rank = "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "T" | "J" | "Q" | "K" | "A";
+export type Position = "BTN" | "SB" | "BB" | "UTG" | "MP" | "CO";
+export type Street = "preflop" | "flop" | "turn" | "river";
+export type GameType = "HU_NLHE" | "NLHE_6max";
 
-export interface Card { rank: Rank; suit: Suit; }
+export interface Card {
+  rank: Rank;
+  suit: Suit;
+}
+
 export type ActionType = "fold" | "check" | "call" | "raise";
 
 export interface Action {
@@ -14,16 +19,29 @@ export interface Action {
 }
 
 export interface RNG {
-  seed: string;
+  seed: number;
   next(): number;
 }
 
 export interface GameState {
-  street: Street;
-  heroPosition: Position;
-  board?: Card[];
+  handId: string;
+  gameType: GameType;
+  blinds: { small: number; big: number; ante?: number };
+  positions: {
+    hero: Position;
+    button: Position;
+    smallBlind: Position;
+    bigBlind: Position;
+  };
+  players: Map<Position, { stack: number; holeCards?: Card[] }>;
+  communityCards: Card[];
   pot: number;
-  stacks: Record<string, number>;
-  confidence?: Record<string, number>;
-  latencyMs?: Record<string, number>;
+  street: Street;
+  actionHistory: Action[];
+  legalActions: Action[];
+  confidence: {
+    overall: number;
+    perElement: Map<string, number>;
+  };
+  latency: number;
 }
