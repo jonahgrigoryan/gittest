@@ -1,9 +1,15 @@
 export async function run() {
   // Load config; default to repo config if BOT_CONFIG not provided
   const path = await import("path");
-  const { config } = await import("@poker-bot/shared");
+  const shared = await import("@poker-bot/shared");
+  const { createConfigManager } = shared;
   const cfgPath = process.env.BOT_CONFIG || path.resolve(process.cwd(), "../../config/bot/default.bot.json");
-  const cfg = config.loadConfig(cfgPath);
+  const configManager = await createConfigManager(cfgPath);
+  
+  // Optionally start watching for config changes if CONFIG_WATCH is set
+  if (process.env.CONFIG_WATCH === "1") {
+    await configManager.startWatching();
+  }
 
   if (process.env.ORCH_PING_SOLVER === "1") {
     // Compile-time link check to shared generated stubs
@@ -18,5 +24,5 @@ export async function run() {
     parseResponse(fake);
   }
 
-  return { ok: true, configLoaded: !!cfg };
+  return { ok: true, configLoaded: !!configManager };
 }
