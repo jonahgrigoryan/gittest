@@ -1,5 +1,10 @@
 import type { JSONSchemaType } from "ajv";
 
+export interface ValidationResult {
+  valid: boolean;
+  errors?: string[];
+}
+
 export type GameType = "HU_NLHE" | "NLHE_6max";
 export type AgentProvider = "openai" | "anthropic" | "local";
 export type ExecutionMode = "simulator" | "api" | "research_ui";
