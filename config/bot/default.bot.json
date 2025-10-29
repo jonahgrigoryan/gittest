@@ -1,8 +1,29 @@
 {
-  "compliance": { "gameType": "NLHE_6max", "allowedEnvironments": ["simulator"], "siteAllowlist": [] },
+  "compliance": {
+    "gameType": "NLHE_6max",
+    "blinds": { "small": 1, "big": 2 },
+    "allowedEnvironments": ["private_sim"],
+    "siteAllowlist": []
+  },
   "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.995, "occlusionThreshold": 0.05 },
   "gto": { "cachePath": "cache/preflop", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
-  "agents": { "models": [], "timeoutMs": 3000, "outputSchema": {} },
+  "agents": {
+    "models": [],
+    "timeoutMs": 3000,
+    "outputSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "rationale": { "type": "string" }
+      },
+      "required": ["actions"],
+      "additionalProperties": true
+    }
+  },
   "strategy": { "alphaGTO": 0.7, "betSizingSets": { "preflop": [], "flop": [], "turn": [], "river": [] }, "divergenceThresholdPP": 30 },
   "execution": { "mode": "simulator" },
   "safety": { "bankrollLimit": 0, "sessionLimit": 0, "panicStopConfidenceThreshold": 0.99, "panicStopConsecutiveFrames": 3 },

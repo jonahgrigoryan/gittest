@@ -6,3 +6,7 @@ dist/
 coverage/
 logs/
 results/
+# Rust build outputs
+services/**/target/
+# TS incremental build info
+packages/**/tsconfig.tsbuildinfo

@@ -1,0 +1,19 @@
+{
+  "name": "@poker-bot/shared",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "ajv": "8.17.1",
+    "protobufjs": "7.5.4",
+    "@grpc/grpc-js": "1.11.1"
+  }
+}
