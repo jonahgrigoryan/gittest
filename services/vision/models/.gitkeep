@@ -1,0 +1,5 @@
+# Placeholder for ONNX model files
+# Add your trained models here:
+# - card_rank.onnx
+# - card_suit.onnx
+# - digit.onnx

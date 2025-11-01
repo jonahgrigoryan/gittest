@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Layout Pack Schema",
+  "description": "Schema for poker platform layout configuration with ROI definitions",
+  "type": "object",
+  "required": [
+    "version",
+    "platform",
+    "theme",
+    "resolution",
+    "dpiCalibration",
+    "cardROIs",
+    "stackROIs",
+    "potROI",
+    "buttonROI",
+    "actionButtonROIs",
+    "turnIndicatorROI",
+    "windowPatterns"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version for cache invalidation",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "platform": {
+      "type": "string",
+      "description": "Platform identifier",
+      "examples": ["pokerstars", "ggpoker", "simulator"]
+    },
+    "theme": {
+      "type": "string",
+      "description": "Theme variant",
+      "examples": ["default", "dark", "classic"]
+    },
+    "resolution": {
+      "type": "object",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 640
+        },
+        "height": {
+          "type": "number",
+          "minimum": 480
+        }
+      }
+    },
+    "dpiCalibration": {
+      "type": "number",
+      "description": "Base DPI multiplier",
+      "minimum": 0.5,
+      "maximum": 4.0,
+      "examples": [1.0, 1.5, 2.0]
+    },
+    "cardROIs": {
+      "type": "array",
+      "description": "ROI definitions for hero and community cards",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/roi"
+      }
+    },
+    "stackROIs": {
+      "type": "object",
+      "description": "Mapping of Position to ROI for each player stack",
+      "additionalProperties": {
+        "$ref": "#/definitions/roi"
+      }
+    },
+    "potROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for pot amount"
+    },
+    "buttonROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for dealer button"
+    },
+    "actionButtonROIs": {
+      "type": "object",
+      "required": ["fold", "check", "call", "raise", "bet", "allIn"],
+      "properties": {
+        "fold": {
+          "$ref": "#/definitions/roi"
+        },
+        "check": {
+          "$ref": "#/definitions/roi"
+        },
+        "call": {
+          "$ref": "#/definitions/roi"
+        },
+        "raise": {
+          "$ref": "#/definitions/roi"
+        },
+        "bet": {
+          "$ref": "#/definitions/roi"
+        },
+        "allIn": {
+          "$ref": "#/definitions/roi"
+        }
+      }
+    },
+    "turnIndicatorROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for detecting hero's turn"
+    },
+    "windowPatterns": {
+      "type": "object",
+      "required": ["titleRegex", "processName"],
+      "properties": {
+        "titleRegex": {
+          "type": "string",
+          "description": "Regex to match window title"
+        },
+        "processName": {
+          "type": "string",
+          "description": "Process name to validate"
+        },
+        "className": {
+          "type": "string",
+          "description": "Window class name (platform-specific)"
+        }
+      }
+    },
+    "buttonTemplates": {
+      "type": "object",
+      "description": "Paths to template images for button detection",
+      "properties": {
+        "fold": {
+          "type": "string"
+        },
+        "check": {
+          "type": "string"
+        },
+        "call": {
+          "type": "string"
+        },
+        "raise": {
+          "type": "string"
+        },
+        "allIn": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "roi": {
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X coordinate (pixels or relative 0-1)",
+          "minimum": 0
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate (pixels or relative 0-1)",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "description": "Width in pixels or relative 0-1",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in pixels or relative 0-1",
+          "exclusiveMinimum": 0
+        },
+        "relative": {
+          "type": "boolean",
+          "description": "If true, coordinates are relative to window bounds (0-1 range)",
+          "default": false
+        }
+      }
+    }
+  }
+}

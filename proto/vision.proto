@@ -2,6 +2,95 @@ syntax = "proto3";
 
 package vision;
 
-service VisionService {}
+service VisionService {
+  rpc CaptureFrame(CaptureRequest) returns (VisionOutput);
+  rpc HealthCheck(Empty) returns (HealthStatus);
+}
 
-message Placeholder {}
+message CaptureRequest {
+  string layout_json = 1;
+}
+
+message VisionOutput {
+  int64 timestamp = 1;
+  CardData cards = 2;
+  map<string, StackData> stacks = 3;
+  AmountData pot = 4;
+  ButtonData buttons = 5;
+  PositionData positions = 6;
+  map<string, double> occlusion = 7;
+  ActionButtons action_buttons = 8;
+  TurnState turn_state = 9;
+  LatencyData latency = 10;
+}
+
+message CardData {
+  repeated Card hole_cards = 1;
+  repeated Card community_cards = 2;
+  double confidence = 3;
+}
+
+message Card {
+  string rank = 1;
+  string suit = 2;
+}
+
+message StackData {
+  double amount = 1;
+  double confidence = 2;
+}
+
+message AmountData {
+  double amount = 1;
+  double confidence = 2;
+}
+
+message ButtonData {
+  string dealer = 1;
+  double confidence = 2;
+}
+
+message PositionData {
+  double confidence = 1;
+}
+
+message ActionButtons {
+  ButtonInfo fold = 1;
+  ButtonInfo check = 2;
+  ButtonInfo call = 3;
+  ButtonInfo raise = 4;
+  ButtonInfo bet = 5;
+  ButtonInfo all_in = 6;
+}
+
+message ButtonInfo {
+  ScreenCoords screen_coords = 1;
+  bool is_enabled = 2;
+  bool is_visible = 3;
+  double confidence = 4;
+  string text = 5;
+}
+
+message ScreenCoords {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message TurnState {
+  bool is_hero_turn = 1;
+  int32 action_timer = 2;
+  double confidence = 3;
+}
+
+message LatencyData {
+  double capture = 1;
+  double extraction = 2;
+  double total = 3;
+}
+
+message Empty {}
+
+message HealthStatus {
+  bool healthy = 1;
+  string message = 2;
+}

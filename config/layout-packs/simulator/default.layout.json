@@ -1,0 +1,95 @@
+{
+  "version": "1.0.0",
+  "platform": "simulator",
+  "theme": "default",
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "dpiCalibration": 1.0,
+  "cardROIs": [
+    { "x": 860, "y": 850, "width": 80, "height": 110 },
+    { "x": 960, "y": 850, "width": 80, "height": 110 },
+    { "x": 710, "y": 450, "width": 80, "height": 110 },
+    { "x": 810, "y": 450, "width": 80, "height": 110 },
+    { "x": 910, "y": 450, "width": 80, "height": 110 },
+    { "x": 1010, "y": 450, "width": 80, "height": 110 },
+    { "x": 1110, "y": 450, "width": 80, "height": 110 }
+  ],
+  "stackROIs": {
+    "BTN": { "x": 1400, "y": 650, "width": 120, "height": 30 },
+    "SB": { "x": 1200, "y": 400, "width": 120, "height": 30 },
+    "BB": { "x": 800, "y": 200, "width": 120, "height": 30 },
+    "UTG": { "x": 400, "y": 400, "width": 120, "height": 30 },
+    "MP": { "x": 300, "y": 650, "width": 120, "height": 30 },
+    "CO": { "x": 600, "y": 800, "width": 120, "height": 30 }
+  },
+  "potROI": {
+    "x": 860,
+    "y": 380,
+    "width": 200,
+    "height": 40
+  },
+  "buttonROI": {
+    "x": 1350,
+    "y": 600,
+    "width": 50,
+    "height": 50
+  },
+  "actionButtonROIs": {
+    "fold": {
+      "x": 600,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    },
+    "check": {
+      "x": 740,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    },
+    "call": {
+      "x": 880,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    },
+    "raise": {
+      "x": 1020,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    },
+    "bet": {
+      "x": 1020,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    },
+    "allIn": {
+      "x": 1160,
+      "y": 950,
+      "width": 120,
+      "height": 50
+    }
+  },
+  "turnIndicatorROI": {
+    "x": 800,
+    "y": 750,
+    "width": 320,
+    "height": 80
+  },
+  "windowPatterns": {
+    "titleRegex": "^Poker Simulator.*",
+    "processName": "poker-sim",
+    "className": "SimulatorWindow"
+  },
+  "buttonTemplates": {
+    "fold": "templates/fold_button.png",
+    "check": "templates/check_button.png",
+    "call": "templates/call_button.png",
+    "raise": "templates/raise_button.png",
+    "allIn": "templates/allin_button.png"
+  }
+}
