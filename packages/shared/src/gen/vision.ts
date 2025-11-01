@@ -6,35 +6,146 @@
 
 /* eslint-disable */
 import {
+  type CallOptions,
   ChannelCredentials,
   Client,
   type ClientOptions,
+  type ClientUnaryCall,
+  type handleUnaryCall,
   makeGenericClientConstructor,
+  Metadata,
+  type ServiceError,
   type UntypedServiceImplementation,
 } from "@grpc/grpc-js";
+import Long from "long";
 import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "vision";
 
-export interface Placeholder {
+export interface CaptureRequest {
+  layoutJson: string;
 }
 
-function createBasePlaceholder(): Placeholder {
-  return {};
+export interface Card {
+  rank: string;
+  suit: string;
 }
 
-export const Placeholder = {
-  encode(_: Placeholder, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export interface CardData {
+  holeCards: Card[];
+  communityCards: Card[];
+  confidence: number;
+}
+
+export interface StackData {
+  amount: number;
+  confidence: number;
+}
+
+export interface AmountData {
+  amount: number;
+  confidence: number;
+}
+
+export interface ButtonData {
+  dealer: string;
+  confidence: number;
+}
+
+export interface PositionData {
+  confidence: number;
+}
+
+export interface ScreenCoords {
+  x: number;
+  y: number;
+}
+
+export interface ButtonInfo {
+  screenCoords?: ScreenCoords;
+  isEnabled: boolean;
+  isVisible: boolean;
+  confidence: number;
+  text: string;
+}
+
+export interface ActionButtons {
+  fold?: ButtonInfo;
+  check?: ButtonInfo;
+  call?: ButtonInfo;
+  raise?: ButtonInfo;
+  bet?: ButtonInfo;
+  allIn?: ButtonInfo;
+}
+
+export interface TurnState {
+  isHeroTurn: boolean;
+  actionTimer: number;
+  confidence: number;
+}
+
+export interface LatencyData {
+  capture: number;
+  extraction: number;
+  total: number;
+}
+
+export interface VisionOutput {
+  timestamp: number;
+  cards?: CardData;
+  stacks: { [key: string]: StackData };
+  pot?: AmountData;
+  buttons?: ButtonData;
+  positions?: PositionData;
+  occlusion: { [key: string]: number };
+  actionButtons?: ActionButtons;
+  turnState?: TurnState;
+  latency?: LatencyData;
+}
+
+export interface VisionOutput_StacksEntry {
+  key: string;
+  value?: StackData;
+}
+
+export interface VisionOutput_OcclusionEntry {
+  key: string;
+  value: number;
+}
+
+export interface Empty {}
+
+export interface HealthStatus {
+  healthy: boolean;
+  message: string;
+}
+
+function createBaseCaptureRequest(): CaptureRequest {
+  return { layoutJson: "" };
+}
+
+export const CaptureRequest = {
+  encode(message: CaptureRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.layoutJson !== "") {
+      writer.uint32(10).string(message.layoutJson);
+    }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): Placeholder {
+  decode(input: _m0.Reader | Uint8Array, length?: number): CaptureRequest {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBasePlaceholder();
+    const message = createBaseCaptureRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.layoutJson = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -44,31 +155,1552 @@ export const Placeholder = {
     return message;
   },
 
-  fromJSON(_: any): Placeholder {
+  fromJSON(object: any): CaptureRequest {
+    return { layoutJson: isSet(object.layoutJson) ? globalThis.String(object.layoutJson) : "" };
+  },
+
+  toJSON(message: CaptureRequest): unknown {
+    const obj: any = {};
+    if (message.layoutJson !== "") {
+      obj.layoutJson = message.layoutJson;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CaptureRequest>): CaptureRequest {
+    return CaptureRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CaptureRequest>): CaptureRequest {
+    const message = createBaseCaptureRequest();
+    message.layoutJson = object.layoutJson ?? "";
+    return message;
+  },
+};
+
+function createBaseCard(): Card {
+  return { rank: "", suit: "" };
+}
+
+export const Card = {
+  encode(message: Card, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.rank !== "") {
+      writer.uint32(10).string(message.rank);
+    }
+    if (message.suit !== "") {
+      writer.uint32(18).string(message.suit);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Card {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCard();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.rank = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.suit = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): Card {
+    return {
+      rank: isSet(object.rank) ? globalThis.String(object.rank) : "",
+      suit: isSet(object.suit) ? globalThis.String(object.suit) : "",
+    };
+  },
+
+  toJSON(message: Card): unknown {
+    const obj: any = {};
+    if (message.rank !== "") {
+      obj.rank = message.rank;
+    }
+    if (message.suit !== "") {
+      obj.suit = message.suit;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<Card>): Card {
+    return Card.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<Card>): Card {
+    const message = createBaseCard();
+    message.rank = object.rank ?? "";
+    message.suit = object.suit ?? "";
+    return message;
+  },
+};
+
+function createBaseCardData(): CardData {
+  return { holeCards: [], communityCards: [], confidence: 0 };
+}
+
+export const CardData = {
+  encode(message: CardData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    for (const v of message.holeCards) {
+      Card.encode(v!, writer.uint32(10).fork()).ldelim();
+    }
+    for (const v of message.communityCards) {
+      Card.encode(v!, writer.uint32(18).fork()).ldelim();
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(25).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): CardData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCardData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.holeCards.push(Card.decode(reader, reader.uint32()));
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.communityCards.push(Card.decode(reader, reader.uint32()));
+          continue;
+        case 3:
+          if (tag !== 25) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CardData {
+    return {
+      holeCards: globalThis.Array.isArray(object?.holeCards) ? object.holeCards.map((e: any) => Card.fromJSON(e)) : [],
+      communityCards: globalThis.Array.isArray(object?.communityCards)
+        ? object.communityCards.map((e: any) => Card.fromJSON(e))
+        : [],
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+    };
+  },
+
+  toJSON(message: CardData): unknown {
+    const obj: any = {};
+    if (message.holeCards?.length) {
+      obj.holeCards = message.holeCards.map((e) => Card.toJSON(e));
+    }
+    if (message.communityCards?.length) {
+      obj.communityCards = message.communityCards.map((e) => Card.toJSON(e));
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CardData>): CardData {
+    return CardData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CardData>): CardData {
+    const message = createBaseCardData();
+    message.holeCards = object.holeCards?.map((e) => Card.fromPartial(e)) || [];
+    message.communityCards = object.communityCards?.map((e) => Card.fromPartial(e)) || [];
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBaseStackData(): StackData {
+  return { amount: 0, confidence: 0 };
+}
+
+export const StackData = {
+  encode(message: StackData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.amount !== 0) {
+      writer.uint32(9).double(message.amount);
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(17).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): StackData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseStackData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 9) {
+            break;
+          }
+
+          message.amount = reader.double();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): StackData {
+    return {
+      amount: isSet(object.amount) ? globalThis.Number(object.amount) : 0,
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+    };
+  },
+
+  toJSON(message: StackData): unknown {
+    const obj: any = {};
+    if (message.amount !== 0) {
+      obj.amount = message.amount;
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<StackData>): StackData {
+    return StackData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<StackData>): StackData {
+    const message = createBaseStackData();
+    message.amount = object.amount ?? 0;
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBaseAmountData(): AmountData {
+  return { amount: 0, confidence: 0 };
+}
+
+export const AmountData = {
+  encode(message: AmountData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.amount !== 0) {
+      writer.uint32(9).double(message.amount);
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(17).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): AmountData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAmountData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 9) {
+            break;
+          }
+
+          message.amount = reader.double();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): AmountData {
+    return {
+      amount: isSet(object.amount) ? globalThis.Number(object.amount) : 0,
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+    };
+  },
+
+  toJSON(message: AmountData): unknown {
+    const obj: any = {};
+    if (message.amount !== 0) {
+      obj.amount = message.amount;
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AmountData>): AmountData {
+    return AmountData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AmountData>): AmountData {
+    const message = createBaseAmountData();
+    message.amount = object.amount ?? 0;
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBaseButtonData(): ButtonData {
+  return { dealer: "", confidence: 0 };
+}
+
+export const ButtonData = {
+  encode(message: ButtonData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.dealer !== "") {
+      writer.uint32(10).string(message.dealer);
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(17).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ButtonData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseButtonData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.dealer = reader.string();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ButtonData {
+    return {
+      dealer: isSet(object.dealer) ? globalThis.String(object.dealer) : "",
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+    };
+  },
+
+  toJSON(message: ButtonData): unknown {
+    const obj: any = {};
+    if (message.dealer !== "") {
+      obj.dealer = message.dealer;
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ButtonData>): ButtonData {
+    return ButtonData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ButtonData>): ButtonData {
+    const message = createBaseButtonData();
+    message.dealer = object.dealer ?? "";
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBasePositionData(): PositionData {
+  return { confidence: 0 };
+}
+
+export const PositionData = {
+  encode(message: PositionData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.confidence !== 0) {
+      writer.uint32(9).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): PositionData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBasePositionData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 9) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): PositionData {
+    return { confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0 };
+  },
+
+  toJSON(message: PositionData): unknown {
+    const obj: any = {};
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<PositionData>): PositionData {
+    return PositionData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<PositionData>): PositionData {
+    const message = createBasePositionData();
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBaseScreenCoords(): ScreenCoords {
+  return { x: 0, y: 0 };
+}
+
+export const ScreenCoords = {
+  encode(message: ScreenCoords, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.x !== 0) {
+      writer.uint32(8).int32(message.x);
+    }
+    if (message.y !== 0) {
+      writer.uint32(16).int32(message.y);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ScreenCoords {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseScreenCoords();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.x = reader.int32();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.y = reader.int32();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ScreenCoords {
+    return {
+      x: isSet(object.x) ? globalThis.Number(object.x) : 0,
+      y: isSet(object.y) ? globalThis.Number(object.y) : 0,
+    };
+  },
+
+  toJSON(message: ScreenCoords): unknown {
+    const obj: any = {};
+    if (message.x !== 0) {
+      obj.x = Math.round(message.x);
+    }
+    if (message.y !== 0) {
+      obj.y = Math.round(message.y);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ScreenCoords>): ScreenCoords {
+    return ScreenCoords.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ScreenCoords>): ScreenCoords {
+    const message = createBaseScreenCoords();
+    message.x = object.x ?? 0;
+    message.y = object.y ?? 0;
+    return message;
+  },
+};
+
+function createBaseButtonInfo(): ButtonInfo {
+  return { screenCoords: undefined, isEnabled: false, isVisible: false, confidence: 0, text: "" };
+}
+
+export const ButtonInfo = {
+  encode(message: ButtonInfo, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.screenCoords !== undefined) {
+      ScreenCoords.encode(message.screenCoords, writer.uint32(10).fork()).ldelim();
+    }
+    if (message.isEnabled === true) {
+      writer.uint32(16).bool(message.isEnabled);
+    }
+    if (message.isVisible === true) {
+      writer.uint32(24).bool(message.isVisible);
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(33).double(message.confidence);
+    }
+    if (message.text !== "") {
+      writer.uint32(42).string(message.text);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ButtonInfo {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseButtonInfo();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.screenCoords = ScreenCoords.decode(reader, reader.uint32());
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.isEnabled = reader.bool();
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.isVisible = reader.bool();
+          continue;
+        case 4:
+          if (tag !== 33) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.text = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ButtonInfo {
+    return {
+      screenCoords: isSet(object.screenCoords) ? ScreenCoords.fromJSON(object.screenCoords) : undefined,
+      isEnabled: isSet(object.isEnabled) ? globalThis.Boolean(object.isEnabled) : false,
+      isVisible: isSet(object.isVisible) ? globalThis.Boolean(object.isVisible) : false,
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+      text: isSet(object.text) ? globalThis.String(object.text) : "",
+    };
+  },
+
+  toJSON(message: ButtonInfo): unknown {
+    const obj: any = {};
+    if (message.screenCoords !== undefined) {
+      obj.screenCoords = ScreenCoords.toJSON(message.screenCoords);
+    }
+    if (message.isEnabled === true) {
+      obj.isEnabled = message.isEnabled;
+    }
+    if (message.isVisible === true) {
+      obj.isVisible = message.isVisible;
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    if (message.text !== "") {
+      obj.text = message.text;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ButtonInfo>): ButtonInfo {
+    return ButtonInfo.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ButtonInfo>): ButtonInfo {
+    const message = createBaseButtonInfo();
+    message.screenCoords = (object.screenCoords !== undefined && object.screenCoords !== null)
+      ? ScreenCoords.fromPartial(object.screenCoords)
+      : undefined;
+    message.isEnabled = object.isEnabled ?? false;
+    message.isVisible = object.isVisible ?? false;
+    message.confidence = object.confidence ?? 0;
+    message.text = object.text ?? "";
+    return message;
+  },
+};
+
+function createBaseActionButtons(): ActionButtons {
+  return { fold: undefined, check: undefined, call: undefined, raise: undefined, bet: undefined, allIn: undefined };
+}
+
+export const ActionButtons = {
+  encode(message: ActionButtons, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.fold !== undefined) {
+      ButtonInfo.encode(message.fold, writer.uint32(10).fork()).ldelim();
+    }
+    if (message.check !== undefined) {
+      ButtonInfo.encode(message.check, writer.uint32(18).fork()).ldelim();
+    }
+    if (message.call !== undefined) {
+      ButtonInfo.encode(message.call, writer.uint32(26).fork()).ldelim();
+    }
+    if (message.raise !== undefined) {
+      ButtonInfo.encode(message.raise, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.bet !== undefined) {
+      ButtonInfo.encode(message.bet, writer.uint32(42).fork()).ldelim();
+    }
+    if (message.allIn !== undefined) {
+      ButtonInfo.encode(message.allIn, writer.uint32(50).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ActionButtons {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActionButtons();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.fold = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.check = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.call = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.raise = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.bet = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.allIn = ButtonInfo.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ActionButtons {
+    return {
+      fold: isSet(object.fold) ? ButtonInfo.fromJSON(object.fold) : undefined,
+      check: isSet(object.check) ? ButtonInfo.fromJSON(object.check) : undefined,
+      call: isSet(object.call) ? ButtonInfo.fromJSON(object.call) : undefined,
+      raise: isSet(object.raise) ? ButtonInfo.fromJSON(object.raise) : undefined,
+      bet: isSet(object.bet) ? ButtonInfo.fromJSON(object.bet) : undefined,
+      allIn: isSet(object.allIn) ? ButtonInfo.fromJSON(object.allIn) : undefined,
+    };
+  },
+
+  toJSON(message: ActionButtons): unknown {
+    const obj: any = {};
+    if (message.fold !== undefined) {
+      obj.fold = ButtonInfo.toJSON(message.fold);
+    }
+    if (message.check !== undefined) {
+      obj.check = ButtonInfo.toJSON(message.check);
+    }
+    if (message.call !== undefined) {
+      obj.call = ButtonInfo.toJSON(message.call);
+    }
+    if (message.raise !== undefined) {
+      obj.raise = ButtonInfo.toJSON(message.raise);
+    }
+    if (message.bet !== undefined) {
+      obj.bet = ButtonInfo.toJSON(message.bet);
+    }
+    if (message.allIn !== undefined) {
+      obj.allIn = ButtonInfo.toJSON(message.allIn);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ActionButtons>): ActionButtons {
+    return ActionButtons.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ActionButtons>): ActionButtons {
+    const message = createBaseActionButtons();
+    message.fold = (object.fold !== undefined && object.fold !== null) ? ButtonInfo.fromPartial(object.fold) : undefined;
+    message.check = (object.check !== undefined && object.check !== null) ? ButtonInfo.fromPartial(object.check) : undefined;
+    message.call = (object.call !== undefined && object.call !== null) ? ButtonInfo.fromPartial(object.call) : undefined;
+    message.raise = (object.raise !== undefined && object.raise !== null) ? ButtonInfo.fromPartial(object.raise) : undefined;
+    message.bet = (object.bet !== undefined && object.bet !== null) ? ButtonInfo.fromPartial(object.bet) : undefined;
+    message.allIn = (object.allIn !== undefined && object.allIn !== null) ? ButtonInfo.fromPartial(object.allIn) : undefined;
+    return message;
+  },
+};
+
+function createBaseTurnState(): TurnState {
+  return { isHeroTurn: false, actionTimer: 0, confidence: 0 };
+}
+
+export const TurnState = {
+  encode(message: TurnState, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.isHeroTurn === true) {
+      writer.uint32(8).bool(message.isHeroTurn);
+    }
+    if (message.actionTimer !== 0) {
+      writer.uint32(16).int32(message.actionTimer);
+    }
+    if (message.confidence !== 0) {
+      writer.uint32(25).double(message.confidence);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): TurnState {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTurnState();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.isHeroTurn = reader.bool();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.actionTimer = reader.int32();
+          continue;
+        case 3:
+          if (tag !== 25) {
+            break;
+          }
+
+          message.confidence = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TurnState {
+    return {
+      isHeroTurn: isSet(object.isHeroTurn) ? globalThis.Boolean(object.isHeroTurn) : false,
+      actionTimer: isSet(object.actionTimer) ? globalThis.Number(object.actionTimer) : 0,
+      confidence: isSet(object.confidence) ? globalThis.Number(object.confidence) : 0,
+    };
+  },
+
+  toJSON(message: TurnState): unknown {
+    const obj: any = {};
+    if (message.isHeroTurn === true) {
+      obj.isHeroTurn = message.isHeroTurn;
+    }
+    if (message.actionTimer !== 0) {
+      obj.actionTimer = Math.round(message.actionTimer);
+    }
+    if (message.confidence !== 0) {
+      obj.confidence = message.confidence;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TurnState>): TurnState {
+    return TurnState.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TurnState>): TurnState {
+    const message = createBaseTurnState();
+    message.isHeroTurn = object.isHeroTurn ?? false;
+    message.actionTimer = object.actionTimer ?? 0;
+    message.confidence = object.confidence ?? 0;
+    return message;
+  },
+};
+
+function createBaseLatencyData(): LatencyData {
+  return { capture: 0, extraction: 0, total: 0 };
+}
+
+export const LatencyData = {
+  encode(message: LatencyData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.capture !== 0) {
+      writer.uint32(9).double(message.capture);
+    }
+    if (message.extraction !== 0) {
+      writer.uint32(17).double(message.extraction);
+    }
+    if (message.total !== 0) {
+      writer.uint32(25).double(message.total);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): LatencyData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseLatencyData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 9) {
+            break;
+          }
+
+          message.capture = reader.double();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.extraction = reader.double();
+          continue;
+        case 3:
+          if (tag !== 25) {
+            break;
+          }
+
+          message.total = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): LatencyData {
+    return {
+      capture: isSet(object.capture) ? globalThis.Number(object.capture) : 0,
+      extraction: isSet(object.extraction) ? globalThis.Number(object.extraction) : 0,
+      total: isSet(object.total) ? globalThis.Number(object.total) : 0,
+    };
+  },
+
+  toJSON(message: LatencyData): unknown {
+    const obj: any = {};
+    if (message.capture !== 0) {
+      obj.capture = message.capture;
+    }
+    if (message.extraction !== 0) {
+      obj.extraction = message.extraction;
+    }
+    if (message.total !== 0) {
+      obj.total = message.total;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<LatencyData>): LatencyData {
+    return LatencyData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<LatencyData>): LatencyData {
+    const message = createBaseLatencyData();
+    message.capture = object.capture ?? 0;
+    message.extraction = object.extraction ?? 0;
+    message.total = object.total ?? 0;
+    return message;
+  },
+};
+
+function createBaseVisionOutput(): VisionOutput {
+  return {
+    timestamp: 0,
+    cards: undefined,
+    stacks: {},
+    pot: undefined,
+    buttons: undefined,
+    positions: undefined,
+    occlusion: {},
+    actionButtons: undefined,
+    turnState: undefined,
+    latency: undefined,
+  };
+}
+
+export const VisionOutput = {
+  encode(message: VisionOutput, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.timestamp !== 0) {
+      writer.uint32(8).int64(message.timestamp);
+    }
+    if (message.cards !== undefined) {
+      CardData.encode(message.cards, writer.uint32(18).fork()).ldelim();
+    }
+    Object.entries(message.stacks).forEach(([key, value]) => {
+      VisionOutput_StacksEntry.encode({ key, value }, writer.uint32(26).fork()).ldelim();
+    });
+    if (message.pot !== undefined) {
+      AmountData.encode(message.pot, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.buttons !== undefined) {
+      ButtonData.encode(message.buttons, writer.uint32(42).fork()).ldelim();
+    }
+    if (message.positions !== undefined) {
+      PositionData.encode(message.positions, writer.uint32(50).fork()).ldelim();
+    }
+    Object.entries(message.occlusion).forEach(([key, value]) => {
+      VisionOutput_OcclusionEntry.encode({ key, value }, writer.uint32(58).fork()).ldelim();
+    });
+    if (message.actionButtons !== undefined) {
+      ActionButtons.encode(message.actionButtons, writer.uint32(66).fork()).ldelim();
+    }
+    if (message.turnState !== undefined) {
+      TurnState.encode(message.turnState, writer.uint32(74).fork()).ldelim();
+    }
+    if (message.latency !== undefined) {
+      LatencyData.encode(message.latency, writer.uint32(82).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): VisionOutput {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseVisionOutput();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.timestamp = longToNumber(reader.int64() as Long);
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.cards = CardData.decode(reader, reader.uint32());
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          const entry3 = VisionOutput_StacksEntry.decode(reader, reader.uint32());
+          if (entry3.value !== undefined) {
+            message.stacks[entry3.key] = entry3.value;
+          }
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.pot = AmountData.decode(reader, reader.uint32());
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.buttons = ButtonData.decode(reader, reader.uint32());
+          continue;
+        case 6:
+          if (tag !== 50) {
+            break;
+          }
+
+          message.positions = PositionData.decode(reader, reader.uint32());
+          continue;
+        case 7:
+          if (tag !== 58) {
+            break;
+          }
+
+          const entry7 = VisionOutput_OcclusionEntry.decode(reader, reader.uint32());
+          if (entry7.value !== undefined) {
+            message.occlusion[entry7.key] = entry7.value;
+          }
+          continue;
+        case 8:
+          if (tag !== 66) {
+            break;
+          }
+
+          message.actionButtons = ActionButtons.decode(reader, reader.uint32());
+          continue;
+        case 9:
+          if (tag !== 74) {
+            break;
+          }
+
+          message.turnState = TurnState.decode(reader, reader.uint32());
+          continue;
+        case 10:
+          if (tag !== 82) {
+            break;
+          }
+
+          message.latency = LatencyData.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): VisionOutput {
+    return {
+      timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0,
+      cards: isSet(object.cards) ? CardData.fromJSON(object.cards) : undefined,
+      stacks: isObject(object.stacks)
+        ? Object.entries(object.stacks).reduce<Record<string, StackData>>((acc, [key, value]) => {
+          acc[key] = StackData.fromJSON(value);
+          return acc;
+        }, {})
+        : {},
+      pot: isSet(object.pot) ? AmountData.fromJSON(object.pot) : undefined,
+      buttons: isSet(object.buttons) ? ButtonData.fromJSON(object.buttons) : undefined,
+      positions: isSet(object.positions) ? PositionData.fromJSON(object.positions) : undefined,
+      occlusion: isObject(object.occlusion)
+        ? Object.entries(object.occlusion).reduce<Record<string, number>>((acc, [key, value]) => {
+          acc[key] = Number(value);
+          return acc;
+        }, {})
+        : {},
+      actionButtons: isSet(object.actionButtons) ? ActionButtons.fromJSON(object.actionButtons) : undefined,
+      turnState: isSet(object.turnState) ? TurnState.fromJSON(object.turnState) : undefined,
+      latency: isSet(object.latency) ? LatencyData.fromJSON(object.latency) : undefined,
+    };
+  },
+
+  toJSON(message: VisionOutput): unknown {
+    const obj: any = {};
+    if (message.timestamp !== 0) {
+      obj.timestamp = Math.round(message.timestamp);
+    }
+    if (message.cards !== undefined) {
+      obj.cards = CardData.toJSON(message.cards);
+    }
+    if (message.stacks) {
+      const entries = Object.entries(message.stacks);
+      if (entries.length > 0) {
+        obj.stacks = {};
+        entries.forEach(([k, v]) => {
+          obj.stacks[k] = StackData.toJSON(v);
+        });
+      }
+    }
+    if (message.pot !== undefined) {
+      obj.pot = AmountData.toJSON(message.pot);
+    }
+    if (message.buttons !== undefined) {
+      obj.buttons = ButtonData.toJSON(message.buttons);
+    }
+    if (message.positions !== undefined) {
+      obj.positions = PositionData.toJSON(message.positions);
+    }
+    if (message.occlusion) {
+      const entries = Object.entries(message.occlusion);
+      if (entries.length > 0) {
+        obj.occlusion = {};
+        entries.forEach(([k, v]) => {
+          obj.occlusion[k] = v;
+        });
+      }
+    }
+    if (message.actionButtons !== undefined) {
+      obj.actionButtons = ActionButtons.toJSON(message.actionButtons);
+    }
+    if (message.turnState !== undefined) {
+      obj.turnState = TurnState.toJSON(message.turnState);
+    }
+    if (message.latency !== undefined) {
+      obj.latency = LatencyData.toJSON(message.latency);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<VisionOutput>): VisionOutput {
+    return VisionOutput.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<VisionOutput>): VisionOutput {
+    const message = createBaseVisionOutput();
+    message.timestamp = object.timestamp ?? 0;
+    message.cards = (object.cards !== undefined && object.cards !== null) ? CardData.fromPartial(object.cards) : undefined;
+    message.stacks = Object.entries(object.stacks ?? {}).reduce<Record<string, StackData>>((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = StackData.fromPartial(value);
+      }
+      return acc;
+    }, {});
+    message.pot = (object.pot !== undefined && object.pot !== null) ? AmountData.fromPartial(object.pot) : undefined;
+    message.buttons = (object.buttons !== undefined && object.buttons !== null)
+      ? ButtonData.fromPartial(object.buttons)
+      : undefined;
+    message.positions = (object.positions !== undefined && object.positions !== null)
+      ? PositionData.fromPartial(object.positions)
+      : undefined;
+    message.occlusion = Object.entries(object.occlusion ?? {}).reduce<Record<string, number>>((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = Number(value);
+      }
+      return acc;
+    }, {});
+    message.actionButtons = (object.actionButtons !== undefined && object.actionButtons !== null)
+      ? ActionButtons.fromPartial(object.actionButtons)
+      : undefined;
+    message.turnState = (object.turnState !== undefined && object.turnState !== null)
+      ? TurnState.fromPartial(object.turnState)
+      : undefined;
+    message.latency = (object.latency !== undefined && object.latency !== null)
+      ? LatencyData.fromPartial(object.latency)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseVisionOutput_StacksEntry(): VisionOutput_StacksEntry {
+  return { key: "", value: undefined };
+}
+
+export const VisionOutput_StacksEntry = {
+  encode(message: VisionOutput_StacksEntry, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== undefined) {
+      StackData.encode(message.value, writer.uint32(18).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): VisionOutput_StacksEntry {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseVisionOutput_StacksEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = StackData.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): VisionOutput_StacksEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? StackData.fromJSON(object.value) : undefined,
+    };
+  },
+
+  toJSON(message: VisionOutput_StacksEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== undefined) {
+      obj.value = StackData.toJSON(message.value);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<VisionOutput_StacksEntry>): VisionOutput_StacksEntry {
+    return VisionOutput_StacksEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<VisionOutput_StacksEntry>): VisionOutput_StacksEntry {
+    const message = createBaseVisionOutput_StacksEntry();
+    message.key = object.key ?? "";
+    message.value = (object.value !== undefined && object.value !== null) ? StackData.fromPartial(object.value) : undefined;
+    return message;
+  },
+};
+
+function createBaseVisionOutput_OcclusionEntry(): VisionOutput_OcclusionEntry {
+  return { key: "", value: 0 };
+}
+
+export const VisionOutput_OcclusionEntry = {
+  encode(message: VisionOutput_OcclusionEntry, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== 0) {
+      writer.uint32(17).double(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): VisionOutput_OcclusionEntry {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseVisionOutput_OcclusionEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.value = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): VisionOutput_OcclusionEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.Number(object.value) : 0,
+    };
+  },
+
+  toJSON(message: VisionOutput_OcclusionEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== 0) {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<VisionOutput_OcclusionEntry>): VisionOutput_OcclusionEntry {
+    return VisionOutput_OcclusionEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<VisionOutput_OcclusionEntry>): VisionOutput_OcclusionEntry {
+    const message = createBaseVisionOutput_OcclusionEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? 0;
+    return message;
+  },
+};
+
+function createBaseEmpty(): Empty {
+  return {};
+}
+
+export const Empty = {
+  encode(_: Empty, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): Empty {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEmpty();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): Empty {
     return {};
   },
 
-  toJSON(_: Placeholder): unknown {
+  toJSON(_: Empty): unknown {
     const obj: any = {};
     return obj;
   },
 
-  create(base?: DeepPartial<Placeholder>): Placeholder {
-    return Placeholder.fromPartial(base ?? {});
+  create(base?: DeepPartial<Empty>): Empty {
+    return Empty.fromPartial(base ?? {});
   },
-  fromPartial(_: DeepPartial<Placeholder>): Placeholder {
-    const message = createBasePlaceholder();
+  fromPartial(_: DeepPartial<Empty>): Empty {
+    return createBaseEmpty();
+  },
+};
+
+function createBaseHealthStatus(): HealthStatus {
+  return { healthy: false, message: "" };
+}
+
+export const HealthStatus = {
+  encode(message: HealthStatus, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.healthy === true) {
+      writer.uint32(8).bool(message.healthy);
+    }
+    if (message.message !== "") {
+      writer.uint32(18).string(message.message);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): HealthStatus {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseHealthStatus();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.healthy = reader.bool();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.message = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): HealthStatus {
+    return {
+      healthy: isSet(object.healthy) ? globalThis.Boolean(object.healthy) : false,
+      message: isSet(object.message) ? globalThis.String(object.message) : "",
+    };
+  },
+
+  toJSON(message: HealthStatus): unknown {
+    const obj: any = {};
+    if (message.healthy === true) {
+      obj.healthy = message.healthy;
+    }
+    if (message.message !== "") {
+      obj.message = message.message;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<HealthStatus>): HealthStatus {
+    return HealthStatus.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<HealthStatus>): HealthStatus {
+    const message = createBaseHealthStatus();
+    message.healthy = object.healthy ?? false;
+    message.message = object.message ?? "";
     return message;
   },
 };
 
 export type VisionServiceService = typeof VisionServiceService;
-export const VisionServiceService = {} as const;
+export const VisionServiceService = {
+  captureFrame: {
+    path: "/vision.VisionService/CaptureFrame",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: CaptureRequest) => Buffer.from(CaptureRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer) => CaptureRequest.decode(value),
+    responseSerialize: (value: VisionOutput) => Buffer.from(VisionOutput.encode(value).finish()),
+    responseDeserialize: (value: Buffer) => VisionOutput.decode(value),
+  },
+  healthCheck: {
+    path: "/vision.VisionService/HealthCheck",
+    requestStream: false,
+    responseStream: false,
+    requestSerialize: (value: Empty) => Buffer.from(Empty.encode(value).finish()),
+    requestDeserialize: (value: Buffer) => Empty.decode(value),
+    responseSerialize: (value: HealthStatus) => Buffer.from(HealthStatus.encode(value).finish()),
+    responseDeserialize: (value: Buffer) => HealthStatus.decode(value),
+  },
+} as const;
 
 export interface VisionServiceServer extends UntypedServiceImplementation {
+  captureFrame: handleUnaryCall<CaptureRequest, VisionOutput>;
+  healthCheck: handleUnaryCall<Empty, HealthStatus>;
 }
 
 export interface VisionServiceClient extends Client {
+  captureFrame(
+    request: CaptureRequest,
+    callback: (error: ServiceError | null, response: VisionOutput) => void,
+  ): ClientUnaryCall;
+  captureFrame(
+    request: CaptureRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: VisionOutput) => void,
+  ): ClientUnaryCall;
+  captureFrame(
+    request: CaptureRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: VisionOutput) => void,
+  ): ClientUnaryCall;
+  healthCheck(
+    request: Empty,
+    callback: (error: ServiceError | null, response: HealthStatus) => void,
+  ): ClientUnaryCall;
+  healthCheck(
+    request: Empty,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: HealthStatus) => void,
+  ): ClientUnaryCall;
+  healthCheck(
+    request: Empty,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: HealthStatus) => void,
+  ): ClientUnaryCall;
 }
 
 export const VisionServiceClient = makeGenericClientConstructor(
@@ -87,3 +1719,23 @@ export type DeepPartial<T> = T extends Builtin ? T
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
+
+function isObject(value: any): value is Record<string, any> {
+  return typeof value === "object" && value !== null;
+}
+
+function isSet(value: any): boolean {
+  return value !== null && value !== undefined;
+}
+
+function longToNumber(long: Long): number {
+  if (long.gt(globalThis.Number.MAX_SAFE_INTEGER)) {
+    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
+  }
+  return long.toNumber();
+}
+
+if (_m0.util.Long !== Long) {
+  _m0.util.Long = Long;
+  _m0.configure();
+}

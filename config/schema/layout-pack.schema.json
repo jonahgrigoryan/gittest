@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LayoutPack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "platform",
+    "theme",
+    "resolution",
+    "dpiCalibration",
+    "cardROIs",
+    "stackROIs",
+    "potROI",
+    "buttonROI",
+    "actionButtonROIs",
+    "turnIndicatorROI",
+    "windowPatterns"
+  ],
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "platform": { "type": "string", "minLength": 1 },
+    "theme": { "type": "string", "minLength": 1 },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "dpiCalibration": { "type": "number", "exclusiveMinimum": 0 },
+    "cardROIs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/roi" }
+    },
+    "stackROIs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["BTN", "SB", "BB", "UTG", "MP", "CO"],
+      "properties": {
+        "BTN": { "$ref": "#/$defs/roi" },
+        "SB": { "$ref": "#/$defs/roi" },
+        "BB": { "$ref": "#/$defs/roi" },
+        "UTG": { "$ref": "#/$defs/roi" },
+        "MP": { "$ref": "#/$defs/roi" },
+        "CO": { "$ref": "#/$defs/roi" }
+      }
+    },
+    "potROI": { "$ref": "#/$defs/roi" },
+    "buttonROI": { "$ref": "#/$defs/roi" },
+    "actionButtonROIs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fold", "check", "call", "raise", "bet", "allIn"],
+      "properties": {
+        "fold": { "$ref": "#/$defs/roi" },
+        "check": { "$ref": "#/$defs/roi" },
+        "call": { "$ref": "#/$defs/roi" },
+        "raise": { "$ref": "#/$defs/roi" },
+        "bet": { "$ref": "#/$defs/roi" },
+        "allIn": { "$ref": "#/$defs/roi" }
+      }
+    },
+    "turnIndicatorROI": { "$ref": "#/$defs/roi" },
+    "windowPatterns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["titleRegex", "processName"],
+      "properties": {
+        "titleRegex": { "type": "string", "minLength": 1 },
+        "processName": { "type": "string", "minLength": 1 },
+        "className": { "type": "string", "minLength": 1 }
+      }
+    },
+    "buttonTemplates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fold": { "type": "string", "minLength": 1 },
+        "check": { "type": "string", "minLength": 1 },
+        "call": { "type": "string", "minLength": 1 },
+        "raise": { "type": "string", "minLength": 1 },
+        "allIn": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "roi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "relative": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "relative": { "const": true } },
+            "required": ["relative"]
+          },
+          "then": {
+            "properties": {
+              "x": { "minimum": 0, "maximum": 1 },
+              "y": { "minimum": 0, "maximum": 1 },
+              "width": { "exclusiveMinimum": 0, "maximum": 1 },
+              "height": { "exclusiveMinimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

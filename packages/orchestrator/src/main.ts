@@ -1,28 +1,63 @@
+import { GameStateParser } from "./vision/parser";
+import { VisionClient } from "./vision/client";
+
 export async function run() {
-  // Load config; default to repo config if BOT_CONFIG not provided
   const path = await import("path");
   const shared = await import("@poker-bot/shared");
-  const { createConfigManager } = shared;
+  const { createConfigManager, vision } = shared;
+
   const cfgPath = process.env.BOT_CONFIG || path.resolve(process.cwd(), "../../config/bot/default.bot.json");
   const configManager = await createConfigManager(cfgPath);
-  
-  // Optionally start watching for config changes if CONFIG_WATCH is set
+
   if (process.env.CONFIG_WATCH === "1") {
     await configManager.startWatching();
   }
 
   if (process.env.ORCH_PING_SOLVER === "1") {
-    // Compile-time link check to shared generated stubs
     const { createSolverClient, makeRequest, parseResponse } = await import("./solver_client/client");
     const client = createSolverClient();
     client.close();
-    // issue a dummy request for compile-only check
     void makeRequest("ping");
-    // fake response parse to exercise types without runtime imports
     type SubgameResponse = import("@poker-bot/shared/src/gen/solver").SubgameResponse;
     const fake: SubgameResponse = { actions: ["fold"], probabilities: [1] };
     parseResponse(fake);
   }
 
-  return { ok: true, configLoaded: !!configManager };
+  const layoutPackPath = configManager.get<string>("vision.layoutPack");
+  const resolvedLayoutPath = path.resolve(process.cwd(), "../../", layoutPackPath);
+  const layoutPack = vision.loadLayoutPack(resolvedLayoutPath);
+
+  const parserConfig: vision.ParserConfig = {
+    confidenceThreshold: configManager.get<number>("vision.confidenceThreshold"),
+    occlusionThreshold: configManager.get<number>("vision.occlusionThreshold"),
+    enableInference: true
+  };
+
+  const parser = new GameStateParser(parserConfig);
+  void parser;
+
+  const visionServiceUrl = process.env.VISION_SERVICE_URL ?? "0.0.0.0:50052";
+  const visionClient = new VisionClient(visionServiceUrl, layoutPack);
+
+  if (process.env.ORCH_PING_VISION === "1") {
+    try {
+      await visionClient.healthCheck();
+    } catch (error) {
+      console.warn("Vision service health check failed:", error);
+    } finally {
+      visionClient.close();
+    }
+  } else {
+    visionClient.close();
+  }
+
+  return {
+    ok: true,
+    configLoaded: !!configManager,
+    vision: {
+      serviceUrl: visionServiceUrl,
+      layoutPath: resolvedLayoutPath,
+      parserConfig
+    }
+  };
 }
