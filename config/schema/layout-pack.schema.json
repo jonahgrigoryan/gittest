@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LayoutPack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "platform",
+    "theme",
+    "resolution",
+    "dpiCalibration",
+    "cardROIs",
+    "stackROIs",
+    "potROI",
+    "buttonROI",
+    "actionButtonROIs",
+    "turnIndicatorROI",
+    "windowPatterns"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "platform": {
+      "type": "string",
+      "minLength": 1
+    },
+    "theme": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "number", "minimum": 1 },
+        "height": { "type": "number", "minimum": 1 }
+      }
+    },
+    "dpiCalibration": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 5.0
+    },
+    "cardROIs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ROI"
+      }
+    },
+    "stackROIs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/ROI"
+      },
+      "propertyNames": {
+        "enum": ["BTN", "SB", "BB", "UTG", "MP", "CO"]
+      }
+    },
+    "potROI": {
+      "$ref": "#/$defs/ROI"
+    },
+    "buttonROI": {
+      "$ref": "#/$defs/ROI"
+    },
+    "actionButtonROIs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fold", "check", "call", "raise", "bet", "allIn"],
+      "properties": {
+        "fold": { "$ref": "#/$defs/ROI" },
+        "check": { "$ref": "#/$defs/ROI" },
+        "call": { "$ref": "#/$defs/ROI" },
+        "raise": { "$ref": "#/$defs/ROI" },
+        "bet": { "$ref": "#/$defs/ROI" },
+        "allIn": { "$ref": "#/$defs/ROI" }
+      }
+    },
+    "turnIndicatorROI": {
+      "$ref": "#/$defs/ROI"
+    },
+    "windowPatterns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["titleRegex", "processName"],
+      "properties": {
+        "titleRegex": { "type": "string", "minLength": 1 },
+        "processName": { "type": "string", "minLength": 1 },
+        "className": { "type": "string" }
+      }
+    },
+    "buttonTemplates": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fold": { "type": "string" },
+        "check": { "type": "string" },
+        "call": { "type": "string" },
+        "raise": { "type": "string" },
+        "allIn": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "ROI": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "width": { "type": "number", "minimum": 1 },
+        "height": { "type": "number", "minimum": 1 },
+        "relative": { "type": "boolean" }
+      }
+    }
+  }
+}
