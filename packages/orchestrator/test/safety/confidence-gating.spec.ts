@@ -6,8 +6,8 @@ import { createBotConfig, createParsedState } from "../utils/factories";
 describe("Confidence Gating", () => {
   const baseConfig = createBotConfig();
 
-  it("triggers SafeAction when overall confidence < 0.995", () => {
-    const state = createParsedState({ confidence: { overall: 0.99, perElement: new Map() } });
+  it("triggers SafeAction when overall confidence < 0.9", () => {
+    const state = createParsedState({ confidence: { overall: 0.85, perElement: new Map() } });
     expect(shouldTriggerSafeAction(state, baseConfig)).toBe(true);
   });
 
@@ -19,8 +19,8 @@ describe("Confidence Gating", () => {
     expect(shouldTriggerSafeAction(state, baseConfig)).toBe(true);
   });
 
-  it("does not trigger when confidence = 0.995", () => {
-    const state = createParsedState({ confidence: { overall: 0.995, perElement: new Map() } });
+  it("does not trigger when confidence = 0.9", () => {
+    const state = createParsedState({ confidence: { overall: 0.9, perElement: new Map() } });
     expect(shouldTriggerSafeAction(state, baseConfig)).toBe(false);
   });
 

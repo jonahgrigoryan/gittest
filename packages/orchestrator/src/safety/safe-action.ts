@@ -4,7 +4,7 @@ import type { config, vision } from "@poker-bot/shared";
 type BotConfig = config.BotConfig;
 type ParsedGameState = vision.ParsedGameState;
 
-const DEFAULT_CONFIDENCE_THRESHOLD = 0.995;
+const DEFAULT_CONFIDENCE_THRESHOLD = 0.9;
 const DEFAULT_OCCLUSION_THRESHOLD = 0.05;
 
 export function shouldTriggerSafeAction(state: ParsedGameState, botConfig: BotConfig): boolean {

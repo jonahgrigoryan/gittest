@@ -5,6 +5,9 @@ import { getCallAmount } from "../vision/legal-actions";
 export function detectForcedAction(state: GameState, position: Position): Action | null {
   if (isForcedBlind(state, position)) {
     const amount = position === "SB" ? state.blinds.small : state.blinds.big;
+    if (!amount || amount <= 0) {
+      return null;
+    }
     return {
       type: "call",
       amount,
@@ -32,6 +35,11 @@ export function isForcedBlind(state: GameState, position: Position): boolean {
   }
 
   if (position !== "SB" && position !== "BB") {
+    return false;
+  }
+
+  const blindAmount = position === "SB" ? state.blinds.small : state.blinds.big;
+  if (!blindAmount || blindAmount <= 0) {
     return false;
   }
 

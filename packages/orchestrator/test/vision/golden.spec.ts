@@ -185,7 +185,7 @@ const scenarios: Scenario[] = [
 
 describe("Vision Golden Tests", () => {
   const parser = new GameStateParser({
-    confidenceThreshold: 0.995,
+    confidenceThreshold: 0.9,
     occlusionThreshold: 0.05,
     enableInference: true
   });

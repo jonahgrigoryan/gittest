@@ -20,6 +20,11 @@ export class StateSyncTracker {
       return errors;
     }
 
+    if (this.isNewHand(currentState, previous)) {
+      this.history = [];
+      return errors;
+    }
+
     if (currentState.pot < previous.pot - 1e-3) {
       errors.push("Pot decreased between consecutive frames");
     }
@@ -44,5 +49,24 @@ export class StateSyncTracker {
       count += 1;
     }
     return count;
+  }
+
+  private isNewHand(
+    current: vision.ParsedGameState,
+    previous: vision.ParsedGameState
+  ): boolean {
+    if (current.street === "preflop" && previous.street !== "preflop") {
+      return true;
+    }
+
+    if (current.communityCards.length < previous.communityCards.length) {
+      return true;
+    }
+
+    if (current.handId !== previous.handId) {
+      return true;
+    }
+
+    return false;
   }
 }

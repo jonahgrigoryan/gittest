@@ -24,9 +24,22 @@ export async function run() {
     parseResponse(fake);
   }
 
-  const layoutPackPath = configManager.get<string>("vision.layoutPack");
-  const resolvedLayoutPath = path.resolve(process.cwd(), "../../", layoutPackPath);
-  const layoutPack = vision.loadLayoutPack(resolvedLayoutPath);
+  const layoutPackConfigPath = configManager.get<string>("vision.layoutPack");
+  const baseLayoutDir = path.resolve(process.cwd(), "../../config/layout-packs");
+  const layoutFileName = layoutPackConfigPath.endsWith(".json")
+    ? layoutPackConfigPath
+    : `${layoutPackConfigPath}.layout.json`;
+  const resolvedLayoutPath = path.isAbsolute(layoutPackConfigPath)
+    ? layoutPackConfigPath
+    : path.resolve(baseLayoutDir, layoutFileName);
+
+  let layoutPack;
+  try {
+    layoutPack = vision.loadLayoutPack(resolvedLayoutPath);
+  } catch (error) {
+    console.warn(`Failed to load layout pack at ${resolvedLayoutPath}:`, error);
+    layoutPack = vision.loadLayoutPack(path.resolve(baseLayoutDir, "simulator/default.layout.json"));
+  }
 
   const parserConfig: ParserConfig = {
     confidenceThreshold: configManager.get<number>("vision.confidenceThreshold"),

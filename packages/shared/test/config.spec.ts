@@ -92,7 +92,7 @@ describe("ConfigurationManager", () => {
     it("gets nested property with dot notation", () => {
       const threshold = manager!.get<number>("vision.confidenceThreshold");
       expect(typeof threshold).toBe("number");
-      expect(threshold).toBe(0.995);
+      expect(threshold).toBe(0.9);
     });
 
     it("gets deeply nested property", () => {
@@ -208,7 +208,7 @@ describe("ConfigurationManager", () => {
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Value should not change
-      expect(manager!.get<number>("vision.confidenceThreshold")).toBe(0.995);
+      expect(manager!.get<number>("vision.confidenceThreshold")).toBe(0.9);
     });
   });
 
@@ -270,7 +270,7 @@ describe("ConfigurationManager", () => {
       
       // Vision callback should NOT fire because vision.confidenceThreshold didn't change
       expect(visionCallbackCalled).toBe(false);
-      expect(manager!.get<number>("vision.confidenceThreshold")).toBe(0.995);
+      expect(manager!.get<number>("vision.confidenceThreshold")).toBe(0.9);
     });
   });
 

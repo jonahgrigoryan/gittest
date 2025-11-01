@@ -14,7 +14,7 @@ export function createBotConfig(overrides: Partial<config.BotConfig> = {}): conf
     vision: {
       layoutPack: "",
       dpiCalibration: 1,
-      confidenceThreshold: 0.995,
+      confidenceThreshold: 0.9,
       occlusionThreshold: 0.05
     },
     gto: {

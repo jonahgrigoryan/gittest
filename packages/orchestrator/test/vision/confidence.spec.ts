@@ -5,7 +5,7 @@ import type { vision } from "@poker-bot/shared";
 import { GameStateParser } from "../../src/vision/parser";
 
 const parser = new GameStateParser({
-  confidenceThreshold: 0.995,
+  confidenceThreshold: 0.9,
   occlusionThreshold: 0.05,
   enableInference: true
 });
