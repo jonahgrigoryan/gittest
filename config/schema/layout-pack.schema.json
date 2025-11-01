@@ -1,0 +1,181 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version for cache invalidation"
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["pokerstars", "ggpoker", "simulator"],
+      "description": "Platform identifier"
+    },
+    "theme": {
+      "type": "string",
+      "description": "UI theme (default, dark, classic, etc.)"
+    },
+    "resolution": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 1
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1
+        }
+      },
+      "required": ["width", "height"],
+      "description": "Base resolution for layout coordinates"
+    },
+    "dpiCalibration": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 5.0,
+      "description": "Base DPI multiplier (1.0, 1.5, 2.0)"
+    },
+    "cardROIs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/roi"
+      },
+      "description": "ROI definitions for hero and community cards"
+    },
+    "stackROIs": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "$ref": "#/definitions/roi"
+        }
+      },
+      "description": "Mapping of Position to ROI for each player stack"
+    },
+    "potROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for pot amount"
+    },
+    "buttonROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for dealer button"
+    },
+    "actionButtonROIs": {
+      "type": "object",
+      "properties": {
+        "fold": {
+          "$ref": "#/definitions/roi"
+        },
+        "check": {
+          "$ref": "#/definitions/roi"
+        },
+        "call": {
+          "$ref": "#/definitions/roi"
+        },
+        "raise": {
+          "$ref": "#/definitions/roi"
+        },
+        "bet": {
+          "$ref": "#/definitions/roi"
+        },
+        "allIn": {
+          "$ref": "#/definitions/roi"
+        }
+      },
+      "required": ["fold", "check", "call", "raise", "bet", "allIn"],
+      "description": "ROIs for action buttons"
+    },
+    "turnIndicatorROI": {
+      "$ref": "#/definitions/roi",
+      "description": "ROI for detecting hero's turn"
+    },
+    "windowPatterns": {
+      "type": "object",
+      "properties": {
+        "titleRegex": {
+          "type": "string",
+          "description": "Regex to match window title"
+        },
+        "processName": {
+          "type": "string",
+          "description": "Process name to validate"
+        },
+        "className": {
+          "type": "string",
+          "description": "Window class name (platform-specific)"
+        }
+      },
+      "required": ["titleRegex", "processName"],
+      "description": "Window detection metadata"
+    },
+    "buttonTemplates": {
+      "type": "object",
+      "properties": {
+        "fold": {
+          "type": "string",
+          "description": "Path to fold button template"
+        },
+        "check": {
+          "type": "string",
+          "description": "Path to check button template"
+        },
+        "call": {
+          "type": "string",
+          "description": "Path to call button template"
+        },
+        "raise": {
+          "type": "string",
+          "description": "Path to raise button template"
+        },
+        "allIn": {
+          "type": "string",
+          "description": "Path to all-in button template"
+        }
+      },
+      "description": "Optional paths to template images for button detection"
+    }
+  },
+  "required": [
+    "version",
+    "platform",
+    "theme",
+    "resolution",
+    "dpiCalibration",
+    "cardROIs",
+    "stackROIs",
+    "potROI",
+    "buttonROI",
+    "actionButtonROIs",
+    "turnIndicatorROI",
+    "windowPatterns"
+  ],
+  "definitions": {
+    "roi": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": 0
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "minimum": 1
+        },
+        "height": {
+          "type": "number",
+          "minimum": 1
+        },
+        "relative": {
+          "type": "boolean",
+          "description": "If true, coordinates are relative to window bounds (0-1 range)"
+        }
+      },
+      "required": ["x", "y", "width", "height"],
+      "description": "Region of Interest definition"
+    }
+  }
+}

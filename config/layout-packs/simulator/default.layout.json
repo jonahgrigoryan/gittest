@@ -1,0 +1,158 @@
+{
+  "version": "1.0.0",
+  "platform": "simulator",
+  "theme": "default",
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "dpiCalibration": 1.0,
+  "cardROIs": [
+    {
+      "x": 850,
+      "y": 800,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 890,
+      "y": 800,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 960,
+      "y": 400,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 1000,
+      "y": 400,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 1040,
+      "y": 400,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 1080,
+      "y": 400,
+      "width": 30,
+      "height": 40
+    },
+    {
+      "x": 1120,
+      "y": 400,
+      "width": 30,
+      "height": 40
+    }
+  ],
+  "stackROIs": {
+    "UTG": {
+      "x": 400,
+      "y": 200,
+      "width": 80,
+      "height": 25
+    },
+    "MP": {
+      "x": 600,
+      "y": 250,
+      "width": 80,
+      "height": 25
+    },
+    "CO": {
+      "x": 1200,
+      "y": 250,
+      "width": 80,
+      "height": 25
+    },
+    "BTN": {
+      "x": 1400,
+      "y": 300,
+      "width": 80,
+      "height": 25
+    },
+    "SB": {
+      "x": 200,
+      "y": 600,
+      "width": 80,
+      "height": 25
+    },
+    "BB": {
+      "x": 1600,
+      "y": 600,
+      "width": 80,
+      "height": 25
+    },
+    "HERO": {
+      "x": 960,
+      "y": 900,
+      "width": 80,
+      "height": 25
+    }
+  },
+  "potROI": {
+    "x": 960,
+    "y": 350,
+    "width": 100,
+    "height": 30
+  },
+  "buttonROI": {
+    "x": 1400,
+    "y": 350,
+    "width": 40,
+    "height": 40
+  },
+  "actionButtonROIs": {
+    "fold": {
+      "x": 700,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    },
+    "check": {
+      "x": 800,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    },
+    "call": {
+      "x": 900,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    },
+    "raise": {
+      "x": 1000,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    },
+    "bet": {
+      "x": 1100,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    },
+    "allIn": {
+      "x": 1200,
+      "y": 850,
+      "width": 80,
+      "height": 40
+    }
+  },
+  "turnIndicatorROI": {
+    "x": 950,
+    "y": 950,
+    "width": 20,
+    "height": 20
+  },
+  "windowPatterns": {
+    "titleRegex": ".*Poker.*Simulator.*",
+    "processName": "poker-simulator"
+  }
+}

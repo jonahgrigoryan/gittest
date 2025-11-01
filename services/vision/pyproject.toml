@@ -6,9 +6,11 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "3.11.9"
 onnxruntime = "1.18.1"
+onnx = "^1.16.0"
 numpy = "^2.1.0"
 opencv-python-headless = "^4.10.0"
 pillow = "^10.4.0"
+pyscreenshot = "^3.1"
 grpcio = "^1.65.0"
 protobuf = "^5.27.0"
 

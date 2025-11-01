@@ -1,0 +1,36 @@
+{
+  "handId": "vision_test",
+  "gameType": "NLHE_6max",
+  "blinds": { "small": 5, "big": 10 },
+  "positions": {
+    "hero": "HERO",
+    "button": "BTN",
+    "smallBlind": "SB",
+    "bigBlind": "BB"
+  },
+  "players": {
+    "HERO": { "stack": 1000 },
+    "BTN": { "stack": 500 },
+    "SB": { "stack": 200 },
+    "BB": { "stack": 800 }
+  },
+  "communityCards": [],
+  "pot": 15,
+  "street": "preflop",
+  "actionHistory": [],
+  "legalActions": [
+    { "type": "fold", "position": "HERO", "street": "preflop" },
+    { "type": "call", "amount": 10, "position": "HERO", "street": "preflop" },
+    { "type": "raise", "amount": 25, "position": "HERO", "street": "preflop" }
+  ],
+  "confidence": {
+    "overall": 0.95,
+    "perElement": {
+      "cards": 0.9,
+      "stacks": 0.92,
+      "pot": 0.88,
+      "buttons": 0.95
+    }
+  },
+  "latency": 45
+}
