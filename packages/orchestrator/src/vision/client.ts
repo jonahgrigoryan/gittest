@@ -1,5 +1,5 @@
 import { credentials, Metadata } from "@grpc/grpc-js";
-import type { Position } from "@poker-bot/shared";
+import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import type { vision } from "@poker-bot/shared";
 
 import {
@@ -8,9 +8,12 @@ import {
   type HealthStatus,
   type VisionOutput as RpcVisionOutput,
   VisionServiceClient
-} from "@poker-bot/shared/src/gen/vision";
+} from "@poker-bot/shared/dist/gen/vision";
 
 const POSITION_VALUES: Position[] = ["BTN", "SB", "BB", "UTG", "MP", "CO"];
+const RANK_VALUES: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];
+const SUIT_VALUES: Suit[] = ["h", "d", "c", "s"];
+type RpcCardData = NonNullable<RpcVisionOutput["cards"]>;
 
 export class VisionClient {
   private readonly client: VisionServiceClient;
@@ -81,8 +84,8 @@ export class VisionClient {
     return {
       timestamp: output.timestamp ?? Date.now(),
       cards: {
-        holeCards: output.cards?.holeCards ?? [],
-        communityCards: output.cards?.communityCards ?? [],
+        holeCards: this.transformCards(output.cards?.holeCards),
+        communityCards: this.transformCards(output.cards?.communityCards),
         confidence: output.cards?.confidence ?? 0
       },
       stacks,
@@ -106,6 +109,22 @@ export class VisionClient {
         total: output.latency?.total ?? 0
       }
     };
+  }
+
+  private transformCards(cards?: RpcCardData["holeCards"]): Card[] {
+    if (!cards) {
+      return [];
+    }
+    return cards
+      .map(card => this.toDomainCard(card))
+      .filter((card): card is Card => card !== null);
+  }
+
+  private toDomainCard(card: RpcCardData["holeCards"][number]): Card | null {
+    if (!this.isRank(card.rank) || !this.isSuit(card.suit)) {
+      return null;
+    }
+    return { rank: card.rank, suit: card.suit };
   }
 
   private transformActionButtons(actionButtons?: RpcActionButtons): vision.VisionOutput["actionButtons"] {
@@ -143,5 +162,13 @@ export class VisionClient {
 
   private isPosition(value: string | undefined): value is Position {
     return value !== undefined && POSITION_VALUES.includes(value as Position);
+  }
+
+  private isRank(value: string | undefined): value is Rank {
+    return value !== undefined && RANK_VALUES.includes(value as Rank);
+  }
+
+  private isSuit(value: string | undefined): value is Suit {
+    return value !== undefined && SUIT_VALUES.includes(value as Suit);
   }
 }

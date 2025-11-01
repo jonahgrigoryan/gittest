@@ -1736,6 +1736,6 @@ function longToNumber(long: Long): number {
 }
 
 if (_m0.util.Long !== Long) {
-  _m0.util.Long = Long;
+  _m0.util.Long = Long as never;
   _m0.configure();
 }

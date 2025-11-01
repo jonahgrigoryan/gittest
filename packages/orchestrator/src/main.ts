@@ -1,5 +1,6 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
+import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
 
 export async function run() {
   const path = await import("path");
@@ -27,7 +28,7 @@ export async function run() {
   const resolvedLayoutPath = path.resolve(process.cwd(), "../../", layoutPackPath);
   const layoutPack = vision.loadLayoutPack(resolvedLayoutPath);
 
-  const parserConfig: vision.ParserConfig = {
+  const parserConfig: ParserConfig = {
     confidenceThreshold: configManager.get<number>("vision.confidenceThreshold"),
     occlusionThreshold: configManager.get<number>("vision.occlusionThreshold"),
     enableInference: true

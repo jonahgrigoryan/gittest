@@ -1,4 +1,4 @@
-import type { Position } from "@poker-bot/shared";
+import type { Position, Card } from "@poker-bot/shared";
 import type { vision } from "@poker-bot/shared";
 
 export type PositionMap = Map<number, Position>;
@@ -39,10 +39,10 @@ export function inferHeroPosition(layout: vision.LayoutPack): Position {
 }
 
 export function assignPositions(
-  stacks: Map<Position, { stack: number; holeCards?: vision.Card[] }>,
+  stacks: Map<Position, { stack: number; holeCards?: Card[] }>,
   dealerButton: Position
-): Map<Position, { stack: number; holeCards?: vision.Card[] }> {
-  const ordered: [Position, { stack: number; holeCards?: vision.Card[] }][] = [];
+): Map<Position, { stack: number; holeCards?: Card[] }> {
+  const ordered: [Position, { stack: number; holeCards?: Card[] }][] = [];
   for (const position of POSITION_ORDER) {
     const info = stacks.get(position);
     if (info) {
@@ -50,7 +50,7 @@ export function assignPositions(
     }
   }
 
-  const result = new Map<Position, { stack: number; holeCards?: vision.Card[] }>();
+  const result = new Map<Position, { stack: number; holeCards?: Card[] }>();
   const dealerIndex = POSITION_ORDER.indexOf(dealerButton);
   if (dealerIndex === -1) {
     return stacks;
