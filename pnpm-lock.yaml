@@ -89,6 +89,9 @@ importers:
       chokidar:
         specifier: ^4.0.3
         version: 4.0.3
+      long:
+        specifier: 5.2.0
+        version: 5.2.0
       protobufjs:
         specifier: 7.5.4
         version: 7.5.4
@@ -1134,6 +1137,9 @@ packages:
   lodash.sortby@4.7.0:
     resolution: {integrity: sha512-HDWXG8isMntAyRF5vZ7xKuEvOhT4AhlRt/3czTSjvGUxjYCBVRQY48ViDHyfYz9VIoBkW4TMGQNapx+l3RUwdA==}
 
+  long@5.2.0:
+    resolution: {integrity: sha512-9RTUNjK60eJbx3uz+TEGF7fUr29ZDxR5QzXcyDpeSfeH28S9ycINflOgOlppit5U+4kNTe83KQnMEerw7GmE8w==}
+
   long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
 
@@ -1813,7 +1819,7 @@ snapshots:
   '@grpc/proto-loader@0.7.15':
     dependencies:
       lodash.camelcase: 4.3.0
-      long: 5.3.2
+      long: 5.2.0
       protobufjs: 7.5.4
       yargs: 17.7.2
 
@@ -2543,6 +2549,8 @@ snapshots:
 
   lodash.sortby@4.7.0: {}
 
+  long@5.2.0: {}
+
   long@5.3.2: {}
 
   loupe@3.2.1: {}
@@ -2672,7 +2680,7 @@ snapshots:
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
       '@types/node': 20.14.11
-      long: 5.3.2
+      long: 5.2.0
 
   punycode@2.3.1: {}
 
