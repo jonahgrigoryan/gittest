@@ -5,7 +5,7 @@
     "allowedEnvironments": ["private_sim"],
     "siteAllowlist": []
   },
-  "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.995, "occlusionThreshold": 0.05 },
+  "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.9, "occlusionThreshold": 0.05 },
   "gto": { "cachePath": "cache/preflop", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
   "agents": {
     "models": [],

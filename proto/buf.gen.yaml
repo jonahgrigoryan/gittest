@@ -8,3 +8,4 @@ plugins:
       - env=node
       - stringEnums=true
       - useExactTypes=false
+      - forceLong=number

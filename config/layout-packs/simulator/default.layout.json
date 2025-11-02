@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "platform": "simulator",
+  "theme": "default",
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "dpiCalibration": 1.0,
+  "cardROIs": [
+    { "x": 860, "y": 820, "width": 80, "height": 118 },
+    { "x": 960, "y": 820, "width": 80, "height": 118 },
+    { "x": 740, "y": 430, "width": 70, "height": 105 },
+    { "x": 840, "y": 430, "width": 70, "height": 105 },
+    { "x": 940, "y": 430, "width": 70, "height": 105 },
+    { "x": 1040, "y": 430, "width": 70, "height": 105 },
+    { "x": 1140, "y": 430, "width": 70, "height": 105 }
+  ],
+  "stackROIs": {
+    "BTN": { "x": 1340, "y": 710, "width": 110, "height": 70 },
+    "SB": { "x": 820, "y": 940, "width": 110, "height": 70 },
+    "BB": { "x": 1080, "y": 960, "width": 110, "height": 70 },
+    "UTG": { "x": 340, "y": 610, "width": 110, "height": 70 },
+    "MP": { "x": 420, "y": 340, "width": 110, "height": 70 },
+    "CO": { "x": 1520, "y": 360, "width": 110, "height": 70 }
+  },
+  "potROI": { "x": 920, "y": 360, "width": 120, "height": 80 },
+  "buttonROI": { "x": 1360, "y": 660, "width": 60, "height": 60 },
+  "actionButtonROIs": {
+    "fold": { "x": 1480, "y": 880, "width": 180, "height": 90 },
+    "check": { "x": 1480, "y": 780, "width": 180, "height": 90 },
+    "call": { "x": 1680, "y": 780, "width": 180, "height": 90 },
+    "raise": { "x": 1680, "y": 880, "width": 180, "height": 90 },
+    "bet": { "x": 1680, "y": 980, "width": 180, "height": 90 },
+    "allIn": { "x": 1480, "y": 980, "width": 180, "height": 90 }
+  },
+  "turnIndicatorROI": { "x": 900, "y": 960, "width": 120, "height": 40 },
+  "windowPatterns": {
+    "titleRegex": "^Poker Simulator - Table",
+    "processName": "poker-sim",
+    "className": "SimulatorMainWindow"
+  },
+  "buttonTemplates": {
+    "fold": "assets/templates/simulator/fold.png",
+    "check": "assets/templates/simulator/check.png",
+    "call": "assets/templates/simulator/call.png",
+    "raise": "assets/templates/simulator/raise.png",
+    "allIn": "assets/templates/simulator/all-in.png"
+  }
+}
