@@ -13,8 +13,8 @@ class VisionOutputBuilder:
   def __init__(self) -> None:
     self._timestamp = int(time() * 1000)
     self._cards: Dict[str, object] = {
-      "holeCards": [],
-      "communityCards": [],
+      "hole_cards": [],
+      "community_cards": [],
       "confidence": 0.0
     }
     self._stacks: Dict[str, Dict[str, float]] = {}
@@ -42,8 +42,8 @@ class VisionOutputBuilder:
 
   def set_cards(self, hole_cards: List[Dict[str, str]], community_cards: List[Dict[str, str]], confidence: float) -> None:
     self._cards = {
-      "holeCards": hole_cards,
-      "communityCards": community_cards,
+      "hole_cards": hole_cards,
+      "community_cards": community_cards,
       "confidence": max(0.0, min(confidence, 1.0))
     }
 
@@ -70,8 +70,8 @@ class VisionOutputBuilder:
 
   def set_turn_state(self, is_hero_turn: bool, action_timer: Optional[int], confidence: float) -> None:
     self._turn_state = {
-      "isHeroTurn": is_hero_turn,
-      "actionTimer": action_timer if action_timer is not None else 0,
+      "is_hero_turn": is_hero_turn,
+      "action_timer": action_timer if action_timer is not None else 0,
       "confidence": max(0.0, min(confidence, 1.0))
     }
 
@@ -94,9 +94,9 @@ class VisionOutputBuilder:
     }
 
     if self._action_buttons:
-      output["actionButtons"] = self._action_buttons
+      output["action_buttons"] = self._action_buttons
 
     if self._turn_state is not None:
-      output["turnState"] = self._turn_state
+      output["turn_state"] = self._turn_state
 
     return output

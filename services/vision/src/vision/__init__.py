@@ -7,6 +7,7 @@ from .gating import compute_overall_confidence, should_gate_element
 from .models import ModelManager
 from .occlusion import analyze_roi_variance, detect_occlusion, detect_popup_overlay
 from .output import VisionOutputBuilder
+from .server import VisionServicer, serve
 
 __all__ = [
   "ScreenCapture",
@@ -22,5 +23,7 @@ __all__ = [
   "analyze_roi_variance",
   "VisionOutputBuilder",
   "should_gate_element",
-  "compute_overall_confidence"
+  "compute_overall_confidence",
+  "VisionServicer",
+  "serve"
 ]

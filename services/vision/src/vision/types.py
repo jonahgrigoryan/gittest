@@ -21,13 +21,17 @@ class Resolution(TypedDict):
   height: int
 
 
-class ActionButtonROIs(TypedDict):
-  fold: ROI
-  check: ROI
-  call: ROI
-  raise: ROI
-  bet: ROI
-  allIn: ROI
+ActionButtonROIs = TypedDict(
+  "ActionButtonROIs",
+  {
+    "fold": ROI,
+    "check": ROI,
+    "call": ROI,
+    "raise": ROI,
+    "bet": ROI,
+    "allIn": ROI
+  }
+)
 
 
 class WindowPatterns(TypedDict, total=False):
@@ -94,4 +98,3 @@ class ExtractedElements(TypedDict, total=False):
   button: ExtractedRegion
   actionButtons: Dict[str, ExtractedRegion]
   turnIndicator: ExtractedRegion
-
