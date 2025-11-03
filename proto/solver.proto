@@ -8,9 +8,23 @@ service Solver {
 
 message SubgameRequest {
   string state_fingerprint = 1;
+  string game_state_json = 2;
+  int32 budget_ms = 3;
+  int32 effective_stack_bb = 4;
+  repeated string action_set = 5;
+}
+
+message ActionProb {
+  string action_type = 1;
+  double amount = 2;
+  double frequency = 3;
+  double ev = 4;
+  double regret = 5;
 }
 
 message SubgameResponse {
-  repeated string actions = 1;
-  repeated double probabilities = 2;
+  repeated ActionProb actions = 1;
+  double exploitability = 2;
+  int32 compute_time_ms = 3;
+  string source = 4;
 }
