@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "fingerprint": "sample-flop-texture",
+  "exploitability": 0.05,
+  "computeTimeMs": 18,
+  "actions": [
+    {
+      "action": {
+        "type": "raise",
+        "amount": 7,
+        "position": "BTN",
+        "street": "flop"
+      },
+      "solution": {
+        "frequency": 0.7,
+        "ev": 0.3
+      }
+    },
+    {
+      "action": {
+        "type": "check",
+        "position": "BTN",
+        "street": "flop"
+      },
+      "solution": {
+        "frequency": 0.3,
+        "ev": 0.2
+      }
+    }
+  ]
+}

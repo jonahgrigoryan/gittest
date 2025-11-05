@@ -23,6 +23,33 @@ export interface RNG {
   next(): number;
 }
 
+export interface ActionSolution {
+  frequency: number;
+  ev: number;
+  regret?: number;
+}
+
+export type GTOSource = "cache" | "subgame";
+
+export type ActionKey = string;
+
+export interface GTOSolution {
+  actions: Map<ActionKey, ActionSolutionEntry>;
+  exploitability: number;
+  computeTime: number;
+  source: GTOSource;
+}
+
+export interface ActionSolutionEntry {
+  action: Action;
+  solution: ActionSolution;
+}
+
+export function createActionKey(action: Action): ActionKey {
+  const amountPart = action.amount === undefined ? "-" : action.amount.toFixed(2);
+  return `${action.street}:${action.position}:${action.type}:${amountPart}`;
+}
+
 export interface GameState {
   handId: string;
   gameType: GameType;

@@ -1,6 +1,9 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
+import type { GameState, GTOSolution } from "@poker-bot/shared";
+import { CacheLoader, GTOSolver } from "./solver";
+import { createSolverClient } from "./solver_client/client";
 
 export async function run() {
   const path = await import("path");
@@ -15,13 +18,8 @@ export async function run() {
   }
 
   if (process.env.ORCH_PING_SOLVER === "1") {
-    const { createSolverClient, makeRequest, parseResponse } = await import("./solver_client/client");
-    const client = createSolverClient();
-    client.close();
-    void makeRequest("ping");
-    type SubgameResponse = import("@poker-bot/shared/src/gen/solver").SubgameResponse;
-    const fake: SubgameResponse = { actions: ["fold"], probabilities: [1] };
-    parseResponse(fake);
+    const pingClient = createSolverClient();
+    pingClient.close();
   }
 
   const layoutPackConfigPath = configManager.get<string>("vision.layoutPack");
@@ -65,6 +63,26 @@ export async function run() {
     visionClient.close();
   }
 
+  const cachePathConfig = configManager.get<string>("gto.cachePath");
+  const resolvedCachePath = path.isAbsolute(cachePathConfig)
+    ? cachePathConfig
+    : path.resolve(process.cwd(), "../../config", cachePathConfig);
+
+  const cacheLoader = new CacheLoader(resolvedCachePath, { logger: console });
+  try {
+    await cacheLoader.loadCache();
+  } catch (error) {
+    console.warn("Failed to load solver cache. Subgame solves will be used for all streets.", error);
+  }
+
+  const solverClient = createSolverClient();
+  const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
+
+  async function makeDecision(state: GameState): Promise<GTOSolution> {
+    const budget = configManager.get<number>("gto.subgameBudgetMs");
+    return gtoSolver.solve(state, budget);
+  }
+
   return {
     ok: true,
     configLoaded: !!configManager,
@@ -72,6 +90,11 @@ export async function run() {
       serviceUrl: visionServiceUrl,
       layoutPath: resolvedLayoutPath,
       parserConfig
+    },
+    solver: {
+      cachePath: resolvedCachePath,
+      cacheManifest: cacheLoader.getManifest(),
+      makeDecision
     }
   };
 }

@@ -6,7 +6,7 @@
     "siteAllowlist": []
   },
   "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.9, "occlusionThreshold": 0.05 },
-  "gto": { "cachePath": "cache/preflop", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
+    "gto": { "cachePath": "cache", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
   "agents": {
     "models": [],
     "timeoutMs": 3000,
