@@ -23,21 +23,47 @@ export const protobufPackage = "solver";
 
 export interface SubgameRequest {
   stateFingerprint: string;
+  gameStateJson: string;
+  budgetMs: number;
+  effectiveStackBb: number;
+  actionSet: string[];
+}
+
+export interface ActionProb {
+  actionType: string;
+  amount: number;
+  frequency: number;
+  ev: number;
+  regret: number;
 }
 
 export interface SubgameResponse {
-  actions: string[];
-  probabilities: number[];
+  actions: ActionProb[];
+  exploitability: number;
+  computeTimeMs: number;
+  source: string;
 }
 
 function createBaseSubgameRequest(): SubgameRequest {
-  return { stateFingerprint: "" };
+  return { stateFingerprint: "", gameStateJson: "", budgetMs: 0, effectiveStackBb: 0, actionSet: [] };
 }
 
 export const SubgameRequest = {
   encode(message: SubgameRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.stateFingerprint !== "") {
       writer.uint32(10).string(message.stateFingerprint);
+    }
+    if (message.gameStateJson !== "") {
+      writer.uint32(18).string(message.gameStateJson);
+    }
+    if (message.budgetMs !== 0) {
+      writer.uint32(24).int32(message.budgetMs);
+    }
+    if (message.effectiveStackBb !== 0) {
+      writer.uint32(32).int32(message.effectiveStackBb);
+    }
+    for (const v of message.actionSet) {
+      writer.uint32(42).string(v!);
     }
     return writer;
   },
@@ -56,6 +82,34 @@ export const SubgameRequest = {
 
           message.stateFingerprint = reader.string();
           continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.gameStateJson = reader.string();
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.budgetMs = reader.int32();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.effectiveStackBb = reader.int32();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.actionSet.push(reader.string());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -66,13 +120,31 @@ export const SubgameRequest = {
   },
 
   fromJSON(object: any): SubgameRequest {
-    return { stateFingerprint: isSet(object.stateFingerprint) ? globalThis.String(object.stateFingerprint) : "" };
+    return {
+      stateFingerprint: isSet(object.stateFingerprint) ? globalThis.String(object.stateFingerprint) : "",
+      gameStateJson: isSet(object.gameStateJson) ? globalThis.String(object.gameStateJson) : "",
+      budgetMs: isSet(object.budgetMs) ? globalThis.Number(object.budgetMs) : 0,
+      effectiveStackBb: isSet(object.effectiveStackBb) ? globalThis.Number(object.effectiveStackBb) : 0,
+      actionSet: globalThis.Array.isArray(object?.actionSet) ? object.actionSet.map((e: any) => globalThis.String(e)) : [],
+    };
   },
 
   toJSON(message: SubgameRequest): unknown {
     const obj: any = {};
     if (message.stateFingerprint !== "") {
       obj.stateFingerprint = message.stateFingerprint;
+    }
+    if (message.gameStateJson !== "") {
+      obj.gameStateJson = message.gameStateJson;
+    }
+    if (message.budgetMs !== 0) {
+      obj.budgetMs = Math.trunc(message.budgetMs);
+    }
+    if (message.effectiveStackBb !== 0) {
+      obj.effectiveStackBb = Math.trunc(message.effectiveStackBb);
+    }
+    if (message.actionSet?.length) {
+      obj.actionSet = message.actionSet;
     }
     return obj;
   },
@@ -83,24 +155,151 @@ export const SubgameRequest = {
   fromPartial(object: DeepPartial<SubgameRequest>): SubgameRequest {
     const message = createBaseSubgameRequest();
     message.stateFingerprint = object.stateFingerprint ?? "";
+    message.gameStateJson = object.gameStateJson ?? "";
+    message.budgetMs = object.budgetMs ?? 0;
+    message.effectiveStackBb = object.effectiveStackBb ?? 0;
+    message.actionSet = object.actionSet?.map((e) => e) || [];
+    return message;
+  },
+};
+
+function createBaseActionProb(): ActionProb {
+  return { actionType: "", amount: 0, frequency: 0, ev: 0, regret: 0 };
+}
+
+export const ActionProb = {
+  encode(message: ActionProb, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.actionType !== "") {
+      writer.uint32(10).string(message.actionType);
+    }
+    if (message.amount !== 0) {
+      writer.uint32(17).double(message.amount);
+    }
+    if (message.frequency !== 0) {
+      writer.uint32(25).double(message.frequency);
+    }
+    if (message.ev !== 0) {
+      writer.uint32(33).double(message.ev);
+    }
+    if (message.regret !== 0) {
+      writer.uint32(41).double(message.regret);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ActionProb {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActionProb();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.actionType = reader.string();
+          continue;
+        case 2:
+          if (tag !== 17) {
+            break;
+          }
+
+          message.amount = reader.double();
+          continue;
+        case 3:
+          if (tag !== 25) {
+            break;
+          }
+
+          message.frequency = reader.double();
+          continue;
+        case 4:
+          if (tag !== 33) {
+            break;
+          }
+
+          message.ev = reader.double();
+          continue;
+        case 5:
+          if (tag !== 41) {
+            break;
+          }
+
+          message.regret = reader.double();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ActionProb {
+    return {
+      actionType: isSet(object.actionType) ? globalThis.String(object.actionType) : "",
+      amount: isSet(object.amount) ? globalThis.Number(object.amount) : 0,
+      frequency: isSet(object.frequency) ? globalThis.Number(object.frequency) : 0,
+      ev: isSet(object.ev) ? globalThis.Number(object.ev) : 0,
+      regret: isSet(object.regret) ? globalThis.Number(object.regret) : 0,
+    };
+  },
+
+  toJSON(message: ActionProb): unknown {
+    const obj: any = {};
+    if (message.actionType !== "") {
+      obj.actionType = message.actionType;
+    }
+    if (message.amount !== 0) {
+      obj.amount = message.amount;
+    }
+    if (message.frequency !== 0) {
+      obj.frequency = message.frequency;
+    }
+    if (message.ev !== 0) {
+      obj.ev = message.ev;
+    }
+    if (message.regret !== 0) {
+      obj.regret = message.regret;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ActionProb>): ActionProb {
+    return ActionProb.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ActionProb>): ActionProb {
+    const message = createBaseActionProb();
+    message.actionType = object.actionType ?? "";
+    message.amount = object.amount ?? 0;
+    message.frequency = object.frequency ?? 0;
+    message.ev = object.ev ?? 0;
+    message.regret = object.regret ?? 0;
     return message;
   },
 };
 
 function createBaseSubgameResponse(): SubgameResponse {
-  return { actions: [], probabilities: [] };
+  return { actions: [], exploitability: 0, computeTimeMs: 0, source: "" };
 }
 
 export const SubgameResponse = {
   encode(message: SubgameResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     for (const v of message.actions) {
-      writer.uint32(10).string(v!);
+      ActionProb.encode(v!, writer.uint32(10).fork()).ldelim();
     }
-    writer.uint32(18).fork();
-    for (const v of message.probabilities) {
-      writer.double(v);
+    if (message.exploitability !== 0) {
+      writer.uint32(17).double(message.exploitability);
     }
-    writer.ldelim();
+    if (message.computeTimeMs !== 0) {
+      writer.uint32(24).int32(message.computeTimeMs);
+    }
+    if (message.source !== "") {
+      writer.uint32(34).string(message.source);
+    }
     return writer;
   },
 
@@ -116,25 +315,29 @@ export const SubgameResponse = {
             break;
           }
 
-          message.actions.push(reader.string());
+          message.actions.push(ActionProb.decode(reader, reader.uint32()));
           continue;
         case 2:
-          if (tag === 17) {
-            message.probabilities.push(reader.double());
-
-            continue;
+          if (tag !== 17) {
+            break;
           }
 
-          if (tag === 18) {
-            const end2 = reader.uint32() + reader.pos;
-            while (reader.pos < end2) {
-              message.probabilities.push(reader.double());
-            }
-
-            continue;
+          message.exploitability = reader.double();
+          continue;
+        case 3:
+          if (tag !== 24) {
+            break;
           }
 
-          break;
+          message.computeTimeMs = reader.int32();
+          continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.source = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -146,20 +349,26 @@ export const SubgameResponse = {
 
   fromJSON(object: any): SubgameResponse {
     return {
-      actions: globalThis.Array.isArray(object?.actions) ? object.actions.map((e: any) => globalThis.String(e)) : [],
-      probabilities: globalThis.Array.isArray(object?.probabilities)
-        ? object.probabilities.map((e: any) => globalThis.Number(e))
-        : [],
+      actions: globalThis.Array.isArray(object?.actions) ? object.actions.map((e: any) => ActionProb.fromJSON(e)) : [],
+      exploitability: isSet(object.exploitability) ? globalThis.Number(object.exploitability) : 0,
+      computeTimeMs: isSet(object.computeTimeMs) ? globalThis.Number(object.computeTimeMs) : 0,
+      source: isSet(object.source) ? globalThis.String(object.source) : "",
     };
   },
 
   toJSON(message: SubgameResponse): unknown {
     const obj: any = {};
     if (message.actions?.length) {
-      obj.actions = message.actions;
+      obj.actions = message.actions.map((e) => ActionProb.toJSON(e));
     }
-    if (message.probabilities?.length) {
-      obj.probabilities = message.probabilities;
+    if (message.exploitability !== 0) {
+      obj.exploitability = message.exploitability;
+    }
+    if (message.computeTimeMs !== 0) {
+      obj.computeTimeMs = Math.trunc(message.computeTimeMs);
+    }
+    if (message.source !== "") {
+      obj.source = message.source;
     }
     return obj;
   },
@@ -169,8 +378,10 @@ export const SubgameResponse = {
   },
   fromPartial(object: DeepPartial<SubgameResponse>): SubgameResponse {
     const message = createBaseSubgameResponse();
-    message.actions = object.actions?.map((e) => e) || [];
-    message.probabilities = object.probabilities?.map((e) => e) || [];
+    message.actions = object.actions?.map((e) => ActionProb.fromPartial(e)) || [];
+    message.exploitability = object.exploitability ?? 0;
+    message.computeTimeMs = object.computeTimeMs ?? 0;
+    message.source = object.source ?? "";
     return message;
   },
 };

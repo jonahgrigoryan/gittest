@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "fingerprint": "sha256-v1",
+  "compression": "zlib",
+  "streets": ["preflop", "flop"],
+  "createdAt": "2025-01-01T00:00:00.000Z"
+}

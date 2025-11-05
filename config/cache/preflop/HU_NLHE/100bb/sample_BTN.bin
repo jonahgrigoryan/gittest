@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "fingerprint": "sample-preflop-aa-btn",
+  "exploitability": 0.02,
+  "computeTimeMs": 12,
+  "actions": [
+    {
+      "action": {
+        "type": "raise",
+        "amount": 2,
+        "position": "BTN",
+        "street": "preflop"
+      },
+      "solution": {
+        "frequency": 1,
+        "ev": 0.5,
+        "regret": 0
+      }
+    }
+  ]
+}
