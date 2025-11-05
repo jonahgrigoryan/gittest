@@ -1,4 +1,4 @@
-use crate::abstraction::{parse_action_set, GameStateSummary};
+use crate::abstraction::{parse_action_set, BlindSummary, GameStateSummary};
 use crate::budget::BudgetClock;
 use crate::cfr::{run_cfr, ActionStat};
 use crate::game_tree::GameTree;
@@ -14,7 +14,11 @@ impl SolverEngine {
     pub fn solve(&self, request: &SubgameRequest) -> SubgameResponse {
         let clock = BudgetClock::new(request.budget_ms);
         let summary = parse_game_state(&request.game_state_json);
-        let action_specs = parse_action_set(&request.action_set, request.effective_stack_bb as f64);
+        let action_specs = parse_action_set(
+            &request.action_set,
+            &summary,
+            request.effective_stack_bb as f64,
+        );
 
         if action_specs.is_empty() {
             return SubgameResponse {
@@ -72,5 +76,6 @@ fn parse_game_state(json: &str) -> GameStateSummary {
     serde_json::from_str(json).unwrap_or(GameStateSummary {
         pot: 0.0,
         street: String::new(),
+        blinds: BlindSummary::default(),
     })
 }

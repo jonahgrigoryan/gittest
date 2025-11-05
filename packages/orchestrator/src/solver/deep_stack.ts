@@ -44,5 +44,10 @@ export function selectActionSet(
 }
 
 export function actionSetToStrings(actionSet: ActionSizing[]): string[] {
-  return actionSet.map((value) => (typeof value === "number" ? value.toString() : value));
+  return actionSet.map(value => {
+    if (typeof value === "number") {
+      return `pot:${value}`;
+    }
+    return value;
+  });
 }

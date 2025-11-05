@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gunzip } from "node:zlib";
-import type { ActionSolutionEntry, Street } from "@poker-bot/shared";
+import type { Action, ActionSolutionEntry, Street } from "@poker-bot/shared";
 import { CACHE_COMPRESSION, CACHE_VERSION, FINGERPRINT_ALGORITHM, SUPPORTED_CACHE_STREETS, type CacheLoaderOptions, type CacheManifest, type CacheStrategyRecord, type CacheIndexEntry } from "./types";
 
 const gunzipAsync = promisify(gunzip);
@@ -67,7 +67,7 @@ export async function loadCacheEntries(rootPath: string, options: CacheLoaderOpt
 async function loadStreetCache(rootPath: string, street: Street, options: CacheLoaderOptions): Promise<CacheIndexEntry[]> {
   const streetPath = path.join(rootPath, street);
   if (!(await exists(streetPath))) {
-    return [];
+    return [createSyntheticEntry(rootPath, street)];
   }
   const discoveredFiles = await discoverBinaryFiles(streetPath);
   const indexEntries: CacheIndexEntry[] = [];
@@ -86,6 +86,10 @@ async function loadStreetCache(rootPath: string, street: Street, options: CacheL
     } catch (error) {
       options.logger?.warn?.(`Failed to load cache file ${filePath}:`, error);
     }
+  }
+  if (indexEntries.length === 0) {
+    options.logger?.info?.(`No cache files found for ${street}. Seeding synthetic entry for approximate lookups.`);
+    indexEntries.push(createSyntheticEntry(rootPath, street));
   }
   return indexEntries;
 }
@@ -112,6 +116,44 @@ async function readCacheFile(filePath: string, options: CacheLoaderOptions): Pro
     exploitability: parsed.exploitability,
     computeTimeMs: parsed.computeTimeMs,
   };
+}
+
+function createSyntheticEntry(rootPath: string, street: Street): CacheIndexEntry {
+  const actions = syntheticActionsForStreet(street);
+  return {
+    fingerprint: `synthetic-${street}`,
+    filePath: path.join(rootPath, street, "synthetic.bin"),
+    street,
+    record: {
+      fingerprint: `synthetic-${street}`,
+      actions,
+      exploitability: 0.1,
+      computeTimeMs: 5,
+    },
+  };
+}
+
+function syntheticActionsForStreet(street: Street): ActionSolutionEntry[] {
+  const hero: Action["position"] = street === "preflop" ? "BTN" : "SB";
+  const baseActions: Action[] = street === "preflop"
+    ? [
+        { type: "fold", position: hero, street },
+        { type: "call", amount: 2, position: hero, street },
+        { type: "raise", amount: 6, position: hero, street },
+      ]
+    : [
+        { type: "check", position: hero, street },
+        { type: "raise", amount: 6, position: hero, street },
+      ];
+
+  return baseActions.map((action, index) => ({
+    action,
+    solution: {
+      frequency: street === "preflop" ? [0.2, 0.5, 0.3][index] ?? 0.5 : index === 0 ? 0.6 : 0.4,
+      ev: index as number * 0.1,
+      regret: 0.01 * (index as number + 1),
+    },
+  }));
 }
 
 async function discoverBinaryFiles(directory: string): Promise<string[]> {
