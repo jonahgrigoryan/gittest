@@ -19,6 +19,30 @@ export interface AgentModelConfig {
   promptTemplate: string;
 }
 
+export interface AgentPersonaOverrideConfig {
+  description?: string;
+  promptTemplate?: string;
+  maxTokens?: number;
+  temperature?: number;
+  topP?: number;
+  stopSequences?: string[];
+  styleHints?: Record<string, unknown>;
+}
+
+export interface AgentCostPolicyConfig {
+  maxTokensDecision: number;
+  maxTokensDay: number;
+  maxLatencyMs: number;
+  consecutiveFailureThreshold: number;
+  recoveryHands: number;
+}
+
+export interface AgentCircuitBreakerConfig {
+  consecutiveFailureThreshold: number;
+  cooldownHands: number;
+  minCooldownMs?: number;
+}
+
 export interface BotConfig {
   compliance: {
     gameType: GameType;
@@ -41,6 +65,10 @@ export interface BotConfig {
     models: AgentModelConfig[];
     timeoutMs: number;
     outputSchema: JsonSchema;
+    weightStorePath?: string;
+    costPolicy: AgentCostPolicyConfig;
+    circuitBreaker: AgentCircuitBreakerConfig;
+    personaOverrides?: Record<string, AgentPersonaOverrideConfig>;
   };
   strategy: {
     alphaGTO: number;

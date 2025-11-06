@@ -22,6 +22,34 @@
       },
       "required": ["actions"],
       "additionalProperties": true
+    },
+    "weightStorePath": "data/agents/weights.json",
+    "costPolicy": {
+      "maxTokensDecision": 6000,
+      "maxTokensDay": 250000,
+      "maxLatencyMs": 2500,
+      "consecutiveFailureThreshold": 3,
+      "recoveryHands": 2
+    },
+    "circuitBreaker": {
+      "consecutiveFailureThreshold": 4,
+      "cooldownHands": 3,
+      "minCooldownMs": 60000
+    },
+    "personaOverrides": {
+      "exploit_aggressor": {
+        "temperature": 0.75,
+        "styleHints": {
+          "guidelines": ["Exploit autopilot continuation bets and capped turn ranges."],
+          "emphasis": ["Document villain leaks when deviating from balanced play."]
+        }
+      },
+      "risk_averse_value": {
+        "maxTokens": 220,
+        "styleHints": {
+          "emphasis": ["Avoid thin bluffs when effective stack < 30bb."]
+        }
+      }
     }
   },
   "strategy": { "alphaGTO": 0.7, "betSizingSets": { "preflop": [], "flop": [], "turn": [], "river": [] }, "divergenceThresholdPP": 30 },

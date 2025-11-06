@@ -69,11 +69,11 @@
         "deepStackThreshold": { "type": "number", "minimum": 0 }
       }
     },
-    "agents": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["models", "timeoutMs", "outputSchema"],
-      "properties": {
+      "agents": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["models", "timeoutMs", "outputSchema", "costPolicy", "circuitBreaker"],
+        "properties": {
         "models": {
           "type": "array",
           "items": {
@@ -94,9 +94,61 @@
           "default": []
         },
         "timeoutMs": { "type": "number", "minimum": 0 },
-        "outputSchema": {
-          "type": "object"
-        }
+          "outputSchema": {
+            "type": "object"
+          },
+          "weightStorePath": { "type": "string", "minLength": 1 },
+          "costPolicy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maxTokensDecision",
+              "maxTokensDay",
+              "maxLatencyMs",
+              "consecutiveFailureThreshold",
+              "recoveryHands"
+            ],
+            "properties": {
+              "maxTokensDecision": { "type": "integer", "minimum": 0 },
+              "maxTokensDay": { "type": "integer", "minimum": 0 },
+              "maxLatencyMs": { "type": "integer", "minimum": 0 },
+              "consecutiveFailureThreshold": { "type": "integer", "minimum": 1 },
+              "recoveryHands": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "circuitBreaker": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["consecutiveFailureThreshold", "cooldownHands"],
+            "properties": {
+              "consecutiveFailureThreshold": { "type": "integer", "minimum": 1 },
+              "cooldownHands": { "type": "integer", "minimum": 1 },
+              "minCooldownMs": { "type": "number", "minimum": 0 }
+            }
+          },
+          "personaOverrides": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "description": { "type": "string" },
+                "promptTemplate": { "type": "string" },
+                "maxTokens": { "type": "integer", "minimum": 1 },
+                "temperature": { "type": "number", "minimum": 0 },
+                "topP": { "type": "number", "minimum": 0, "maximum": 1 },
+                "stopSequences": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "styleHints": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "default": {}
+          }
       }
     },
     "strategy": {

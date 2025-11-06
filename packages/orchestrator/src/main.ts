@@ -2,6 +2,8 @@ import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
 
+// TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
+
 export async function run() {
   const path = await import("path");
   const shared = await import("@poker-bot/shared");

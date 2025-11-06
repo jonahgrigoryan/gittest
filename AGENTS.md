@@ -32,3 +32,12 @@
 ## Proto & Native Tooling
 - Update `.proto` definitions in lockstep with consumers, then run `pnpm run proto:gen` and `cargo build` before pushing.
 - Coordinate Buf or Rust toolchain bumps via `setup.md` and notify infra owners when requirements change.
+
+## Agent Coordinator Overview
+- `packages/agents/src/coordinator.ts` orchestrates persona prompts, transport execution, schema validation, weighting, and aggregation.
+- Personas live in `packages/agents/src/personas` with prompts constructed via `promptBuilder.ts`; overrides come from `agents.personaOverrides` config.
+- Transport adapters reside under `packages/agents/src/transports` (OpenAI-compatible, mock) and run concurrently via `coordinator/concurrency.ts` with per-agent aborts.
+- JSON output schema enforcement is handled by `schema/validator.ts` (strict AJV) and failures are reported through `AgentFailure` telemetry records.
+- Weighting, Brier updates, and persistence flow through `weighting/engine.ts` and `weighting/storage.ts`, with defaults stored at `agents.weightStorePath`.
+- Cost guard and circuit breaker enforcement is defined in `policy/costGuard.ts` and `policy/circuitBreaker.ts`; thresholds read from `agents.costPolicy` and `agents.circuitBreaker`.
+- Structured telemetry is emitted from `telemetry/logger.ts` with reasoning redaction respecting `LOG_VERBOSE_AGENTS`.
