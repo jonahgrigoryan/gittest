@@ -1,5 +1,6 @@
 import type { GameState, ActionType } from "@poker-bot/shared";
 import type { AgentProvider } from "@poker-bot/shared/src/config/types";
+import type { BudgetComponent } from "@poker-bot/shared/src/budget/timeBudget";
 
 export type AgentIdentifier = string;
 
@@ -234,8 +235,13 @@ export interface WeightUpdateRequest {
 }
 
 export interface TimeBudgetTracker {
-  reserve(component: string, durationMs: number): boolean;
-  remaining?(component?: string): number;
+  reserve(component: BudgetComponent, durationMs: number): boolean;
+  release?(component: BudgetComponent, durationMs: number): void;
+  start?(): void;
+  startComponent?(component: BudgetComponent): void;
+  endComponent?(component: BudgetComponent): number;
+  recordActual?(component: BudgetComponent, durationMs: number): void;
+  shouldPreempt?(component: BudgetComponent): boolean;
+  remaining?(component?: BudgetComponent): number;
   elapsed?(): number;
 }
-
