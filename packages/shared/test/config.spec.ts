@@ -95,6 +95,11 @@ describe("ConfigurationManager", () => {
       expect(threshold).toBe(0.9);
     });
 
+    it("retrieves agent cost policy", () => {
+      const maxTokens = manager!.get<number>("agents.costPolicy.maxTokensDecision");
+      expect(maxTokens).toBeGreaterThan(0);
+    });
+
     it("gets deeply nested property", () => {
       const small = manager!.get<number>("compliance.blinds.small");
       expect(typeof small).toBe("number");
