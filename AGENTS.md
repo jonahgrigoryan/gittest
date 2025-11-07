@@ -71,3 +71,4 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
 - Update schemas and persona defaults alongside `packages/shared` types.
 - When prompt or schema changes affect the solver interface, regenerate shared
   proto stubs with `pnpm run proto:gen` and re-run `pnpm run build`.
+- Treat every task as production work: no scaffolding, no placeholder code, and no partial implementations. Coding agents must follow the task requirements end-to-end so downstream collaborators can build on the result immediately.
