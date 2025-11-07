@@ -4,8 +4,13 @@ import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
 import type { GameState, GTOSolution } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
+import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
+
+interface DecisionOptions {
+  tracker?: TimeBudgetTracker;
+}
 
 export async function run() {
   const path = await import("path");
@@ -80,9 +85,29 @@ export async function run() {
   const solverClient = createSolverClient();
   const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
 
-  async function makeDecision(state: GameState): Promise<GTOSolution> {
-    const budget = configManager.get<number>("gto.subgameBudgetMs");
-    return gtoSolver.solve(state, budget);
+  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<GTOSolution> {
+    const tracker = ensureTracker(options.tracker);
+    if (tracker.shouldPreempt("gto")) {
+      return gtoSolver.solve(state, 0);
+    }
+
+    const configuredBudget = configManager.get<number>("gto.subgameBudgetMs");
+    const remainingBudget = tracker.remaining("gto");
+    const requestedBudget = Math.max(0, Math.min(configuredBudget, remainingBudget));
+
+    if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
+      return gtoSolver.solve(state, 0);
+    }
+
+    tracker.startComponent("gto");
+    try {
+      return await gtoSolver.solve(state, requestedBudget);
+    } finally {
+      const actual = tracker.endComponent("gto");
+      if (requestedBudget > actual && tracker.release) {
+        tracker.release("gto", requestedBudget - actual);
+      }
+    }
   }
 
   return {
@@ -97,6 +122,19 @@ export async function run() {
       cachePath: resolvedCachePath,
       cacheManifest: cacheLoader.getManifest(),
       makeDecision
+    },
+    budget: {
+      createTracker: () => new TimeBudgetTracker()
     }
   };
+}
+
+function ensureTracker(existing?: TimeBudgetTracker): TimeBudgetTracker {
+  if (existing) {
+    existing.start?.();
+    return existing;
+  }
+  const tracker = new TimeBudgetTracker();
+  tracker.start();
+  return tracker;
 }
