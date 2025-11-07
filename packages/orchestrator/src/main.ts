@@ -5,6 +5,8 @@ import type { GameState, GTOSolution } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
 
+// TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
+
 export async function run() {
   const path = await import("path");
   const shared = await import("@poker-bot/shared");

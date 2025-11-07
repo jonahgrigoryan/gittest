@@ -12,6 +12,7 @@
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
-    "@poker-bot/shared": "workspace:*"
+    "@poker-bot/shared": "workspace:*",
+    "ajv": "8.17.1"
   }
 }
