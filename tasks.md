@@ -166,9 +166,9 @@
 
 - [ ] 7. Implement Risk Guard
   - [ ] 7.1 Create risk limit enforcement
-    - Implement RiskGuard class with bankroll and session tracking
-    - Add checkLimits() method called before action finalization
-    - Trigger panic stop when limits exceeded
+    - Implement RiskGuard class with bankroll and session tracking plus persisted state (RiskStateStore)
+    - Add checkLimits() method called before action finalization; expose enforceRiskOrSafeAction helper for strategy layer
+    - Trigger panic stop when limits exceeded and emit PanicStopEvent with snapshot telemetry
     - _Requirements: 10.4_
   
   - [ ] 7.2 Write unit tests for RiskGuard
@@ -197,7 +197,7 @@
     - _Requirements: 4.3_
   
   - [ ] 8.4 Integrate risk checks and fallbacks
-    - Call RiskGuard.checkLimits() before finalizing decision
+    - Call enforceRiskOrSafeAction (RiskGuard) before finalizing decision
     - Implement GTO-only fallback when agents timeout (α=1.0)
     - Return SafeAction when risk limits exceeded
     - _Requirements: 4.5, 10.3_

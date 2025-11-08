@@ -13,6 +13,10 @@
 
 - **Task 4 – GTO Solver & Integration**  
   Added cache fingerprinting/loader infrastructure, CFR-based subgame solver with deep-stack action abstractions, expanded solver proto + codegen, shared GTOSolution types, and end-to-end orchestrator wiring (cache-first solve flow with SafeAction fallback). Rust crate passes `cargo fmt | clippy | test`; TypeScript packages pass `pnpm` lint/build/test.
+- **Task 5 – Agent Coordinator**  
+  Delivered the full @poker-bot/agents package: persona registry + prompt builder, transport adapters (OpenAI + mock) with parallel querying, strict JSON schema validation, Brier-weighted aggregation, cost guard & circuit breaker, and structured telemetry. Orchestrator wiring now consumes the coordinator output (or falls back to GTO) and AGENTS.md documents the workflow.
+- **Task 6 – Time Budget Tracker**  
+  Implemented a reusable TimeBudgetTracker with per-component allocations, preemption logic, dynamic redistribution, and percentile metrics. Shared budget types now live in @poker-bot/shared, orchestrator exposes a `budget.createTracker()` helper, and GTO solver integration reserves/reclaims time based on remaining budget.
 
 ## Workflow
 
@@ -31,3 +35,8 @@
 - `cd services/solver && cargo fmt && cargo clippy && cargo test` (whenever solver code changes)
 
 All commands must pass before declaring a task complete.
+
+## Upcoming Work
+
+- **Task 7 – Risk Guard (feat/task7-risk-guard)**  
+  Branch created and synced with main. Next steps: implement bankroll/session limit tracking, `checkLimits()` gating in orchestrator, panic-stop behavior, and the accompanying unit tests per tasks.md §7 / Requirement 10.4.

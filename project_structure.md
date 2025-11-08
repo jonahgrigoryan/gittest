@@ -33,6 +33,10 @@ poker-bot/
 │   │   │   ├── budget/
 │   │   │   ├── strategy/
 │   │   │   ├── safety/
+│   │   │   │   ├── safe-action.ts
+│   │   │   │   ├── forced-actions.ts
+│   │   │   │   ├── riskGuard.ts          # Task 7 – bankroll/session enforcement
+│   │   │   │   └── riskStateStore.ts     # Task 7 – persistence helper
 │   │   │   ├── solver_client/
 │   │   │   ├── agent_client/
 │   │   │   ├── execution/
