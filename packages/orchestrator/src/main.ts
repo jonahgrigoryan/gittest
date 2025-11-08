@@ -1,15 +1,33 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
-import type { GameState, GTOSolution } from "@poker-bot/shared";
+import type { GameState, GTOSolution, Action } from "@poker-bot/shared";
+import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
 import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
+import { RiskGuard } from "./safety/riskGuard";
+import { RiskStateStore } from "./safety/riskStateStore";
+import type { RiskCheckOptions, RiskCheckResult, RiskSnapshot } from "./safety/types";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
 interface DecisionOptions {
   tracker?: TimeBudgetTracker;
+}
+
+interface RiskController {
+  startHand(handId: string): void;
+  incrementHandCount(): number;
+  recordOutcome(update: { net: number; hands?: number }): Promise<RiskSnapshot>;
+  check(action: Action, state: GameState, options?: RiskCheckOptions): RiskCheckResult;
+  enforce(
+    action: Action,
+    state: GameState,
+    fallbackAction: () => Action,
+    options?: RiskCheckOptions
+  ): { action: Action; result: RiskCheckResult };
+  snapshot(): RiskSnapshot;
 }
 
 export async function run() {
@@ -23,6 +41,56 @@ export async function run() {
   if (process.env.CONFIG_WATCH === "1") {
     await configManager.startWatching();
   }
+
+  const safetyConfig = configManager.get<config.BotConfig["safety"]>("safety");
+  const riskStatePath = process.env.RISK_STATE_PATH
+    ? path.resolve(process.env.RISK_STATE_PATH)
+    : path.resolve(process.cwd(), "../../results/session/risk-state.json");
+  const riskStateStore = new RiskStateStore(riskStatePath);
+  const persistedRisk = await riskStateStore.load();
+  const riskGuard = new RiskGuard(
+    {
+      bankrollLimit: safetyConfig.bankrollLimit,
+      sessionLimit: safetyConfig.sessionLimit,
+      currentBankroll: persistedRisk.currentBankroll,
+      currentSessionHands: persistedRisk.currentSessionHands,
+    },
+    {
+      logger: console,
+      onPanicStop: event => {
+        riskStateStore.save(event.snapshot).catch(error => {
+          console.error("Failed to persist risk snapshot after panic stop", error);
+        });
+      },
+    }
+  );
+
+  configManager.subscribe("safety", value => {
+    const next = value as config.BotConfig["safety"];
+    riskGuard.updateLimits({ bankrollLimit: next.bankrollLimit, sessionLimit: next.sessionLimit });
+  });
+
+  const riskController: RiskController = {
+    startHand: handId => {
+      riskGuard.startHand(handId);
+    },
+    incrementHandCount: () => riskGuard.incrementHandCount(),
+    recordOutcome: async update => {
+      const snapshot = riskGuard.recordOutcome(update);
+      await riskStateStore.save(snapshot);
+      return snapshot;
+    },
+    check: (action, state, options) => riskGuard.checkLimits(action, state, options),
+    enforce: (action, state, fallbackAction, options) => {
+      const result = riskGuard.checkLimits(action, state, options);
+      if (result.allowed) {
+        return { action, result };
+      }
+      const safe = fallbackAction();
+      return { action: safe, result };
+    },
+    snapshot: () => riskGuard.getSnapshot(),
+  };
 
   if (process.env.ORCH_PING_SOLVER === "1") {
     const pingClient = createSolverClient();
@@ -125,6 +193,24 @@ export async function run() {
     },
     budget: {
       createTracker: () => new TimeBudgetTracker()
+    },
+    risk: {
+      statePath: riskStatePath,
+      startHand: (handId: string) => {
+        riskController.startHand(handId);
+        riskController.incrementHandCount();
+      },
+      incrementHandCount: () => riskController.incrementHandCount(),
+      recordOutcome: (update: { net: number; hands?: number }) => riskController.recordOutcome(update),
+      snapshot: () => riskController.snapshot(),
+      checkLimits: (action: Action, state: GameState, options?: RiskCheckOptions) =>
+        riskController.check(action, state, options),
+      enforceAction: (
+        action: Action,
+        state: GameState,
+        fallbackAction: () => Action,
+        options?: RiskCheckOptions
+      ) => riskController.enforce(action, state, fallbackAction, options)
     }
   };
 }
