@@ -2,7 +2,7 @@
 
 **Goal**: Implement the Strategy Engine that blends GTO solutions with multi-agent LLM recommendations, selects final actions with proper bet sizing, detects divergences, integrates risk checks, and produces deterministic decisions within the 2-second budget.
 
-**Architecture**: TypeScript module in orchestrator package that receives GTOSolution and AggregatedAgentOutput, applies α-blending formula, selects actions via seeded RNG, quantizes bet sizes, checks risk limits, and returns StrategyDecision with full reasoning trace.
+**Architecture**: TypeScript module in orchestrator package that receives GTOSolution and AggregatedAgentOutput, applies α-blending formula, selects actions via seeded RNG, quantizes bet sizes, checks risk limits, and returns StrategyDecision with full reasoning trace. All fallback decisions (SafeAction, GTO-only) are centralized via `packages/orchestrator/src/strategy/fallbacks.ts`; supporting helpers must raise invalid states instead of invoking SafeAction directly.
 
 ---
 
@@ -10,7 +10,7 @@
 
 - Task 1‑7 complete (RiskGuard + persistence already wired in orchestrator main)
 - GTO Solver returns `GTOSolution` with action probabilities keyed by `ActionKey`
-- Agent Coordinator returns `AggregatedAgentOutput` with `normalizedActions: Map<ActionType, number>` (ActionType ∈ {"fold","check","call","raise"})
+- Agent Coordinator returns `AggregatedAgentOutput` with the actual schema defined in `packages/agents/src/schema` (e.g., `normalizedActions`, `outputs`, `circuitBreakerTripped`); confirm field names before coding
 - Time Budget Tracker enforces 2‑second deadline
 - `risk` controller from Task 7 (startHand/incrementHandCount/enforceAction/recordOutcome/snapshot) is exposed to downstream modules
 - Configuration Manager provides `strategy.*` settings with hot reload
@@ -120,11 +120,16 @@ Implement class `StrategyBlender`:
   - Return { gto: alpha, agent: 1 - alpha }
 
 **Key Logic**:
-- **Action Distribution Mapping**: Agent output provides ActionType-level probabilities (fold, check, call, raise). GTO provides ActionKey-level probabilities (specific amounts). For each ActionType, distribute agent probability across all matching ActionKeys proportionally to their GTO probabilities.
-- Actions present in GTO but not agents get full GTO weight
-- Actions present in agents but not GTO get (1-α) weight distributed across matching keys
-- Common actions use blended formula
-- Probabilities renormalized to sum to 1.0
+- **Action Distribution Mapping**:
+  - `AggregatedAgentOutput.normalizedActions` exposes ActionType-level probabilities (`fold`, `check`, `call`, `raise`).
+  - GTO exposes ActionKey-level probabilities (street + position + type + optional amount).
+  - For each ActionType, distribute its probability across matching ActionKeys:
+    - `fold`, `check`, `call`: map directly to the single ActionKey that matches (if solver omitted the action, forward the agent probability to SafeAction fallback).
+    - `raise`: distribute proportionally across all solver-provided raise ActionKeys on the same street; if solver has no raises, defer to SafeAction or GTO-only fallback.
+- Actions present in GTO but not agents retain full GTO weight.
+- Agent-only probabilities with no legal GTO ActionKeys trigger SafeAction (via risk controller) or GTO-only fallback.
+- Common actions use blended formula.
+- Always renormalize blended probabilities to sum to 1.0; if the distribution becomes empty/NaN, emit telemetry and fall back to SafeAction or pure GTO.
 
 ### 8.1.3 Add Runtime Alpha Adjustment
 
@@ -140,9 +145,10 @@ Add to `StrategyBlender`:
   - Return current alpha value
 
 **Integration**:
-- Subscribe to config changes via ConfigurationManager
-- Update alpha when "strategy.alphaGTO" changes
-- Log alpha changes for debugging
+- Subscribe to config changes via ConfigurationManager.
+- Clamp runtime α to [0.3, 0.9]; reject config updates outside the bounds.
+- Strategy Engine may temporarily override α to `1.0` inside the GTO-only fallback path; restore the configured α afterward.
+- Log alpha changes for debugging.
 
 ---
 
@@ -198,6 +204,7 @@ Implement class `BetSizer`:
   - Find closest pot fraction in set
   - Convert to absolute chips: `amount = fraction * (pot + betToCall)`
   - Clamp to table limits and stack sizes
+  - Ensure resulting raise amount matches an entry in `state.legalActions`; if not, clamp again or fall back to SafeAction/GTO-only path
   - Return updated Action
 
 - `findNearestFraction(targetFraction: number, availableFractions: number[]): number`
@@ -216,7 +223,7 @@ Implement class `BetSizer`:
 - Quantize to nearest discrete size from config set
 - Enforce site minimum increment rules
 - Prevent over-betting stack
-- Assert final amount is valid before returning
+- Assert final amount exists in `state.legalActions`; otherwise clamp or revert to SafeAction/GTO-only
 
 ### 8.2.3 Integrate Action Selection Pipeline
 
@@ -226,6 +233,7 @@ Add to `ActionSelector`:
 - `selectAndSizeAction(actionKey: ActionKey, distribution: Map<ActionKey, number>, state: GameState, betSizer: BetSizer): Action`
   - Parse ActionKey back to Action object
   - Apply bet sizing quantization
+  - Verify legality against `state.legalActions` (shared helper). When illegal, clamp via BetSizer or fall back to SafeAction/GTO-only decision
   - Return complete Action with amount if raise
 
 - `parseActionKey(actionKey: ActionKey): Action`
@@ -296,7 +304,7 @@ Add to `StrategyEngine`:
 
 Implement a thin wrapper over the Task 7 risk controller:
 
-- `constructor(riskController: { enforceAction: (action: Action, state: GameState, fallback: () => Action, options?: RiskCheckOptions) => { action: Action; result: RiskCheckResult }; snapshot: () => RiskSnapshot })`
+- `constructor(riskController: RiskController)` (use the exported type from `packages/orchestrator/src/safety/types.ts` so signatures stay in sync with Task 7)
 - `enforceWithFallback(action: Action, state: GameState, safeActionFactory: () => Action, options?: RiskCheckOptions): { action: Action; result: RiskCheckResult }`
   - Delegates to `riskController.enforceAction`
   - Logs violations (reason, snapshot) when `result.allowed === false`
@@ -308,7 +316,7 @@ Implement a thin wrapper over the Task 7 risk controller:
 **Risk Integration Points**:
 - After bet sizing (and before returning the decision), call `riskIntegration.enforceWithFallback(action, state, () => selectSafeAction(state))`
 - If the returned `result.allowed` is false, use the fallback action from the enforcement result and surface the violation metadata inside `StrategyDecision.reasoning`/`metadata`
-- Strategy Engine never instantiates `RiskGuard`; orchestrator `run()` already handles lifecycle: `risk.startHand`, `risk.incrementHandCount`, `risk.recordOutcome`, configuration hot reload, and persistence.
+- Strategy Engine never instantiates `RiskGuard`; orchestrator `run()` already handles lifecycle: `risk.startHand`, `risk.incrementHandCount`, `risk.recordOutcome`, configuration hot reload, and persistence. Always rely on the orchestrator-provided controller/types.
 
 ### 8.4.2 Implement GTO-Only Fallback
 
@@ -329,8 +337,8 @@ Implement class `FallbackHandler`:
   - Return decision with GTO-only reasoning
 
 **Fallback Triggers**:
-- All agents timeout or fail validation
-- Circuit breaker tripped
+- All agents timeout or fail validation (`agentOutput.outputs.length === 0` or `failureSummary` indicates 100% failure)
+- Circuit breaker tripped (`agentOutput.circuitBreakerTripped === true`)
 - Agent coordinator returns empty outputs
 - Manual override via config
 
@@ -397,14 +405,14 @@ Add to `StrategyEngine`:
 **File**: `packages/orchestrator/src/strategy/engine.ts` (extend)
 
 Add to `StrategyEngine`:
-- `enforceDeadline(): void`
+- `enforceDeadline(): { preempted: boolean }`
   - Check remaining time via TimeBudgetTracker
-  - Preempt if <100ms remaining
-  - Return GTO-only decision if preempted
+  - If <100 ms remaining, return `{ preempted: true }` so `decide()` can route through the GTO-only fallback path (alpha forced to 1.0 for that decision only)
+  - Otherwise return `{ preempted: false }`
 
 **Deadline Enforcement**:
 - Query shouldPreempt() before expensive operations
-- Graceful degradation to GTO-only
+- `decide()` inspects `{ preempted }` and, when true, skips blending/selection and uses the central GTO-only fallback
 - Log preemption events
 - Target P95 < 2 seconds
 
@@ -445,10 +453,10 @@ Add to `StrategyEngine`:
   - Return adjusted distribution
 
 **Modeling Integration**:
-- Optional feature (disabled by default)
+- Controlled via config flag (e.g., `strategy.opponentModeling.enabled`, default `false`)
 - Requires sufficient sample size (>100 hands)
-- Log modeling adjustments
-- Fallback to base strategy if no data
+- All adjustments must be bounded and logged
+- Fallback to base strategy if no data or when the flag is disabled
 
 ---
 
@@ -521,7 +529,7 @@ Add to main decision loop:
 
 **File**: `config/bot/default.bot.json` (extend)
 
-Add strategy section:
+Add strategy section (illustrative only—keep this snippet in sync with `config/bot/default.bot.json`; ideally reference that file or generate docs directly from it):
 ```json
 {
   "strategy": {

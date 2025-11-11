@@ -1,222 +1,446 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BotConfig",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "compliance",
-    "vision",
-    "gto",
-    "agents",
-    "strategy",
-    "execution",
-    "safety",
-    "logging"
-  ],
-  "properties": {
-    "compliance": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["gameType", "blinds", "allowedEnvironments", "siteAllowlist"],
-      "properties": {
-        "gameType": {
-          "type": "string",
-          "enum": ["HU_NLHE", "NLHE_6max"]
-        },
-        "blinds": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["small", "big"],
-          "properties": {
-            "small": { "type": "number", "minimum": 0 },
-            "big": { "type": "number", "minimum": 0 },
-            "ante": { "type": "number", "minimum": 0 }
-          }
-        },
-        "allowedEnvironments": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "enum": ["private_sim", "owned_table", "api_permitted"]
-          }
-        },
-        "siteAllowlist": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "default": []
-        }
-      }
-    },
-    "vision": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["layoutPack", "dpiCalibration", "confidenceThreshold", "occlusionThreshold"],
-      "properties": {
-        "layoutPack": { "type": "string", "minLength": 1 },
-        "dpiCalibration": { "type": "number", "minimum": 0 },
-        "confidenceThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
-        "occlusionThreshold": { "type": "number", "minimum": 0, "maximum": 1 }
-      }
-    },
-    "gto": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["cachePath", "subgameBudgetMs", "deepStackThreshold"],
-      "properties": {
-        "cachePath": { "type": "string", "minLength": 1 },
-        "subgameBudgetMs": { "type": "number", "minimum": 0 },
-        "deepStackThreshold": { "type": "number", "minimum": 0 }
-      }
-    },
-      "agents": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["models", "timeoutMs", "outputSchema", "costPolicy", "circuitBreaker"],
-        "properties": {
-        "models": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["name", "provider", "modelId", "persona", "promptTemplate"],
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "provider": {
-                "type": "string",
-                "enum": ["openai", "anthropic", "local"]
-              },
-              "modelId": { "type": "string", "minLength": 1 },
-              "persona": { "type": "string", "minLength": 1 },
-              "promptTemplate": { "type": "string", "minLength": 1 }
-            }
-          },
-          "default": []
-        },
-        "timeoutMs": { "type": "number", "minimum": 0 },
-          "outputSchema": {
-            "type": "object"
-          },
-          "weightStorePath": { "type": "string", "minLength": 1 },
-          "costPolicy": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "maxTokensDecision",
-              "maxTokensDay",
-              "maxLatencyMs",
-              "consecutiveFailureThreshold",
-              "recoveryHands"
-            ],
-            "properties": {
-              "maxTokensDecision": { "type": "integer", "minimum": 0 },
-              "maxTokensDay": { "type": "integer", "minimum": 0 },
-              "maxLatencyMs": { "type": "integer", "minimum": 0 },
-              "consecutiveFailureThreshold": { "type": "integer", "minimum": 1 },
-              "recoveryHands": { "type": "integer", "minimum": 0 }
-            }
-          },
-          "circuitBreaker": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["consecutiveFailureThreshold", "cooldownHands"],
-            "properties": {
-              "consecutiveFailureThreshold": { "type": "integer", "minimum": 1 },
-              "cooldownHands": { "type": "integer", "minimum": 1 },
-              "minCooldownMs": { "type": "number", "minimum": 0 }
-            }
-          },
-          "personaOverrides": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "description": { "type": "string" },
-                "promptTemplate": { "type": "string" },
-                "maxTokens": { "type": "integer", "minimum": 1 },
-                "temperature": { "type": "number", "minimum": 0 },
-                "topP": { "type": "number", "minimum": 0, "maximum": 1 },
-                "stopSequences": {
-                  "type": "array",
-                  "items": { "type": "string" }
-                },
-                "styleHints": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              }
-            },
-            "default": {}
-          }
-      }
-    },
-    "strategy": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["alphaGTO", "betSizingSets", "divergenceThresholdPP"],
-      "properties": {
-        "alphaGTO": { "type": "number", "minimum": 0, "maximum": 1 },
-        "betSizingSets": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["preflop", "flop", "turn", "river"],
-          "properties": {
-            "preflop": { "type": "array", "items": { "type": "number", "minimum": 0 } },
-            "flop": { "type": "array", "items": { "type": "number", "minimum": 0 } },
-            "turn": { "type": "array", "items": { "type": "number", "minimum": 0 } },
-            "river": { "type": "array", "items": { "type": "number", "minimum": 0 } }
-          }
-        },
-        "divergenceThresholdPP": { "type": "number", "minimum": 0 }
-      }
-    },
-    "execution": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["mode"],
-      "properties": {
-        "mode": {
-          "type": "string",
-          "enum": ["simulator", "api", "research_ui"]
-        },
-        "researchUIAllowlist": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "safety": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "bankrollLimit",
-        "sessionLimit",
-        "panicStopConfidenceThreshold",
-        "panicStopConsecutiveFrames"
-      ],
-      "properties": {
-        "bankrollLimit": { "type": "number", "minimum": 0 },
-        "sessionLimit": { "type": "number", "minimum": 0 },
-        "panicStopConfidenceThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
-        "panicStopConsecutiveFrames": { "type": "integer", "minimum": 1 }
-      }
-    },
-    "logging": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["retentionDays", "exportFormats"],
-      "properties": {
-        "retentionDays": { "type": "integer", "minimum": 0 },
-        "exportFormats": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string",
-            "enum": ["json", "acpc"]
-          }
-        }
-      }
-    }
-  }
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "BotConfig",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"compliance",
+		"vision",
+		"gto",
+		"agents",
+		"strategy",
+		"execution",
+		"safety",
+		"logging"
+	],
+	"properties": {
+		"compliance": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"gameType",
+				"blinds",
+				"allowedEnvironments",
+				"siteAllowlist"
+			],
+			"properties": {
+				"gameType": {
+					"type": "string",
+					"enum": [
+						"HU_NLHE",
+						"NLHE_6max"
+					]
+				},
+				"blinds": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"small",
+						"big"
+					],
+					"properties": {
+						"small": {
+							"type": "number",
+							"minimum": 0
+						},
+						"big": {
+							"type": "number",
+							"minimum": 0
+						},
+						"ante": {
+							"type": "number",
+							"minimum": 0
+						}
+					}
+				},
+				"allowedEnvironments": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"type": "string",
+						"enum": [
+							"private_sim",
+							"owned_table",
+							"api_permitted"
+						]
+					}
+				},
+				"siteAllowlist": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"minLength": 1
+					},
+					"default": []
+				}
+			}
+		},
+		"vision": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"layoutPack",
+				"dpiCalibration",
+				"confidenceThreshold",
+				"occlusionThreshold"
+			],
+			"properties": {
+				"layoutPack": {
+					"type": "string",
+					"minLength": 1
+				},
+				"dpiCalibration": {
+					"type": "number",
+					"minimum": 0
+				},
+				"confidenceThreshold": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1
+				},
+				"occlusionThreshold": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1
+				}
+			}
+		},
+		"gto": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"cachePath",
+				"subgameBudgetMs",
+				"deepStackThreshold"
+			],
+			"properties": {
+				"cachePath": {
+					"type": "string",
+					"minLength": 1
+				},
+				"subgameBudgetMs": {
+					"type": "number",
+					"minimum": 0
+				},
+				"deepStackThreshold": {
+					"type": "number",
+					"minimum": 0
+				}
+			}
+		},
+		"agents": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"models",
+				"timeoutMs",
+				"outputSchema",
+				"costPolicy",
+				"circuitBreaker"
+			],
+			"properties": {
+				"models": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": [
+							"name",
+							"provider",
+							"modelId",
+							"persona",
+							"promptTemplate"
+						],
+						"properties": {
+							"name": {
+								"type": "string",
+								"minLength": 1
+							},
+							"provider": {
+								"type": "string",
+								"enum": [
+									"openai",
+									"anthropic",
+									"local"
+								]
+							},
+							"modelId": {
+								"type": "string",
+								"minLength": 1
+							},
+							"persona": {
+								"type": "string",
+								"minLength": 1
+							},
+							"promptTemplate": {
+								"type": "string",
+								"minLength": 1
+							}
+						}
+					},
+					"default": []
+				},
+				"timeoutMs": {
+					"type": "number",
+					"minimum": 0
+				},
+				"outputSchema": {
+					"type": "object"
+				},
+				"weightStorePath": {
+					"type": "string",
+					"minLength": 1
+				},
+				"costPolicy": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"maxTokensDecision",
+						"maxTokensDay",
+						"maxLatencyMs",
+						"consecutiveFailureThreshold",
+						"recoveryHands"
+					],
+					"properties": {
+						"maxTokensDecision": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"maxTokensDay": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"maxLatencyMs": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"consecutiveFailureThreshold": {
+							"type": "integer",
+							"minimum": 1
+						},
+						"recoveryHands": {
+							"type": "integer",
+							"minimum": 0
+						}
+					}
+				},
+				"circuitBreaker": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"consecutiveFailureThreshold",
+						"cooldownHands"
+					],
+					"properties": {
+						"consecutiveFailureThreshold": {
+							"type": "integer",
+							"minimum": 1
+						},
+						"cooldownHands": {
+							"type": "integer",
+							"minimum": 1
+						},
+						"minCooldownMs": {
+							"type": "number",
+							"minimum": 0
+						}
+					}
+				},
+				"personaOverrides": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"additionalProperties": false,
+						"properties": {
+							"description": {
+								"type": "string"
+							},
+							"promptTemplate": {
+								"type": "string"
+							},
+							"maxTokens": {
+								"type": "integer",
+								"minimum": 1
+							},
+							"temperature": {
+								"type": "number",
+								"minimum": 0
+							},
+							"topP": {
+								"type": "number",
+								"minimum": 0,
+								"maximum": 1
+							},
+							"stopSequences": {
+								"type": "array",
+								"items": {
+									"type": "string"
+								}
+							},
+							"styleHints": {
+								"type": "object",
+								"additionalProperties": true
+							}
+						}
+					},
+					"default": {}
+				}
+			}
+		},
+		"strategy": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"alphaGTO",
+				"betSizingSets",
+				"divergenceThresholdPP"
+			],
+			"properties": {
+				"alphaGTO": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1
+				},
+				"betSizingSets": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"preflop",
+						"flop",
+						"turn",
+						"river"
+					],
+					"properties": {
+						"preflop": {
+							"type": "array",
+							"minItems": 1,
+							"items": {
+								"type": "number",
+								"minimum": 0
+							}
+						},
+						"flop": {
+							"type": "array",
+							"minItems": 1,
+							"items": {
+								"type": "number",
+								"minimum": 0
+							}
+						},
+						"turn": {
+							"type": "array",
+							"minItems": 1,
+							"items": {
+								"type": "number",
+								"minimum": 0
+							}
+						},
+						"river": {
+							"type": "array",
+							"minItems": 1,
+							"items": {
+								"type": "number",
+								"minimum": 0
+							}
+						}
+					}
+				},
+				"divergenceThresholdPP": {
+					"type": "number",
+					"minimum": 0
+				},
+				"opponentModeling": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"enabled": {
+							"type": "boolean"
+						},
+						"minHands": {
+							"type": "integer",
+							"minimum": 0
+						}
+					}
+				}
+			}
+		},
+		"execution": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"mode"
+			],
+			"properties": {
+				"mode": {
+					"type": "string",
+					"enum": [
+						"simulator",
+						"api",
+						"research_ui"
+					]
+				},
+				"researchUIAllowlist": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"minLength": 1
+					}
+				}
+			}
+		},
+		"safety": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"bankrollLimit",
+				"sessionLimit",
+				"panicStopConfidenceThreshold",
+				"panicStopConsecutiveFrames"
+			],
+			"properties": {
+				"bankrollLimit": {
+					"type": "number",
+					"minimum": 0
+				},
+				"sessionLimit": {
+					"type": "number",
+					"minimum": 0
+				},
+				"panicStopConfidenceThreshold": {
+					"type": "number",
+					"minimum": 0,
+					"maximum": 1
+				},
+				"panicStopConsecutiveFrames": {
+					"type": "integer",
+					"minimum": 1
+				}
+			}
+		},
+		"logging": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"retentionDays",
+				"exportFormats"
+			],
+			"properties": {
+				"retentionDays": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"exportFormats": {
+					"type": "array",
+					"minItems": 1,
+					"items": {
+						"type": "string",
+						"enum": [
+							"json",
+							"acpc"
+						]
+					}
+				}
+			}
+		}
+	}
 }
