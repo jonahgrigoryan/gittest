@@ -1,14 +1,22 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
-import type { GameState, GTOSolution, Action } from "@poker-bot/shared";
+import type { GameState, GTOSolution, Action, ActionType } from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
 import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
 import { RiskGuard } from "./safety/riskGuard";
 import { RiskStateStore } from "./safety/riskStateStore";
-import type { RiskCheckOptions, RiskCheckResult, RiskSnapshot } from "./safety/types";
+import type {
+  RiskCheckOptions,
+  RiskCheckResult,
+  RiskSnapshot,
+  RiskGuardAPI
+} from "./safety/types";
+import type { StrategyConfig, StrategyDecision } from "./strategy/types";
+import { StrategyEngine } from "./strategy/engine";
+import type { AggregatedAgentOutput } from "@poker-bot/agents";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -16,19 +24,7 @@ interface DecisionOptions {
   tracker?: TimeBudgetTracker;
 }
 
-interface RiskController {
-  startHand(handId: string): void;
-  incrementHandCount(): number;
-  recordOutcome(update: { net: number; hands?: number }): Promise<RiskSnapshot>;
-  check(action: Action, state: GameState, options?: RiskCheckOptions): RiskCheckResult;
-  enforce(
-    action: Action,
-    state: GameState,
-    fallbackAction: () => Action,
-    options?: RiskCheckOptions
-  ): { action: Action; result: RiskCheckResult };
-  snapshot(): RiskSnapshot;
-}
+type RiskController = RiskGuardAPI;
 
 export async function run() {
   const path = await import("path");
@@ -71,25 +67,19 @@ export async function run() {
   });
 
   const riskController: RiskController = {
-    startHand: handId => {
-      riskGuard.startHand(handId);
+    startHand: (handId, options) => {
+      riskGuard.startHand(handId, options);
     },
     incrementHandCount: () => riskGuard.incrementHandCount(),
-    recordOutcome: async update => {
+    recordOutcome: update => {
       const snapshot = riskGuard.recordOutcome(update);
-      await riskStateStore.save(snapshot);
+      void riskStateStore.save(snapshot);
       return snapshot;
     },
-    check: (action, state, options) => riskGuard.checkLimits(action, state, options),
-    enforce: (action, state, fallbackAction, options) => {
-      const result = riskGuard.checkLimits(action, state, options);
-      if (result.allowed) {
-        return { action, result };
-      }
-      const safe = fallbackAction();
-      return { action: safe, result };
-    },
-    snapshot: () => riskGuard.getSnapshot(),
+    updateLimits: limits => riskGuard.updateLimits(limits),
+    checkLimits: (action, state, options) => riskGuard.checkLimits(action, state, options),
+    getSnapshot: () => riskGuard.getSnapshot(),
+    resetSession: () => riskGuard.resetSession()
   };
 
   if (process.env.ORCH_PING_SOLVER === "1") {
@@ -153,10 +143,20 @@ export async function run() {
   const solverClient = createSolverClient();
   const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
 
-  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<GTOSolution> {
+  const strategyConfig = configManager.get<StrategyConfig>("strategy");
+  const strategyEngine = new StrategyEngine(strategyConfig, riskController, {
+    logger: console,
+    timeBudgetTracker: new TimeBudgetTracker()
+  });
+
+  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<StrategyDecision> {
     const tracker = ensureTracker(options.tracker);
+
+    // 1) Solve GTO under time budget (existing logic).
     if (tracker.shouldPreempt("gto")) {
-      return gtoSolver.solve(state, 0);
+      const gtoOnly = await gtoSolver.solve(state, 0);
+      const agents = createEmptyAggregatedAgentOutput();
+      return strategyEngine.decide(state, gtoOnly, agents);
     }
 
     const configuredBudget = configManager.get<number>("gto.subgameBudgetMs");
@@ -164,18 +164,54 @@ export async function run() {
     const requestedBudget = Math.max(0, Math.min(configuredBudget, remainingBudget));
 
     if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
-      return gtoSolver.solve(state, 0);
+      const gtoOnly = await gtoSolver.solve(state, 0);
+      const agents = createEmptyAggregatedAgentOutput();
+      return strategyEngine.decide(state, gtoOnly, agents);
     }
 
     tracker.startComponent("gto");
     try {
-      return await gtoSolver.solve(state, requestedBudget);
+      const gto = await gtoSolver.solve(state, requestedBudget);
+
+      // 2) Obtain AggregatedAgentOutput from agents coordinator or stub.
+      // TODO: Replace createEmptyAggregatedAgentOutput() with actual coordinator integration.
+      const agents = createEmptyAggregatedAgentOutput();
+
+      // 3) Delegate final decision to StrategyEngine (blending, selection, risk, fallbacks).
+      return strategyEngine.decide(state, gto, agents);
     } finally {
       const actual = tracker.endComponent("gto");
       if (requestedBudget > actual && tracker.release) {
         tracker.release("gto", requestedBudget - actual);
       }
     }
+  }
+  
+  function createEmptyAggregatedAgentOutput(): AggregatedAgentOutput {
+    const now = Date.now();
+    const normalizedActions = new Map<ActionType, number>();
+    normalizedActions.set("fold", 0);
+    normalizedActions.set("check", 0);
+    normalizedActions.set("call", 0);
+    normalizedActions.set("raise", 0);
+  
+    return {
+      outputs: [],
+      normalizedActions,
+      consensus: 0,
+      winningAction: null,
+      budgetUsedMs: 0,
+      circuitBreakerTripped: false,
+      notes: "stubbed agent output (no agents wired)",
+      droppedAgents: [],
+      costSummary: {
+        totalTokens: 0,
+        promptTokens: 0,
+        completionTokens: 0
+      },
+      startedAt: now,
+      completedAt: now
+    };
   }
 
   return {
@@ -188,7 +224,9 @@ export async function run() {
     },
     solver: {
       cachePath: resolvedCachePath,
-      cacheManifest: cacheLoader.getManifest(),
+      cacheManifest: cacheLoader.getManifest()
+    },
+    strategy: {
       makeDecision
     },
     budget: {
@@ -197,20 +235,27 @@ export async function run() {
     risk: {
       statePath: riskStatePath,
       startHand: (handId: string) => {
-        riskController.startHand(handId);
+        riskController.startHand(handId, {});
         riskController.incrementHandCount();
       },
       incrementHandCount: () => riskController.incrementHandCount(),
-      recordOutcome: (update: { net: number; hands?: number }) => riskController.recordOutcome(update),
-      snapshot: () => riskController.snapshot(),
+      recordOutcome: (update: { net: number; hands?: number }) => riskGuard.recordOutcome(update),
+      snapshot: () => riskGuard.getSnapshot(),
       checkLimits: (action: Action, state: GameState, options?: RiskCheckOptions) =>
-        riskController.check(action, state, options),
+        riskGuard.checkLimits(action, state, options),
       enforceAction: (
         action: Action,
         state: GameState,
         fallbackAction: () => Action,
         options?: RiskCheckOptions
-      ) => riskController.enforce(action, state, fallbackAction, options)
+      ) => {
+        const result = riskGuard.checkLimits(action, state, options);
+        if (result.allowed) {
+          return { action, result };
+        }
+        const safe = fallbackAction();
+        return { action: safe, result };
+      }
     }
   };
 }

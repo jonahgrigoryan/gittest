@@ -77,6 +77,9 @@ importers:
       '@grpc/grpc-js':
         specifier: 1.11.1
         version: 1.11.1
+      '@poker-bot/agents':
+        specifier: workspace:*
+        version: link:../agents
       '@poker-bot/shared':
         specifier: workspace:*
         version: link:../shared

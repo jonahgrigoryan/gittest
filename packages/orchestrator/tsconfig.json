@@ -4,7 +4,10 @@
     "composite": true,
     "declaration": true,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": {
+      "@poker-bot/agents": ["../agents/src"]
+    }
   },
   "include": ["src/**/*"]
 }

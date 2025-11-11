@@ -577,31 +577,61 @@ class WindowManager {
 
 ### 7. Risk Guard
 
-**Responsibility**: Enforce bankroll and session limits before action execution
+**Responsibility**: Persist and enforce bankroll/session limits before any action leaves the Strategy Engine; emit panic-stop signals for downstream SafeAction handling.
 
-**Interface**:
+**Interfaces**:
 ```typescript
 interface RiskLimits {
-  bankrollLimit: number;
-  sessionLimit: number;
-  currentBankroll: number;
-  currentSessionHands: number;
+  bankrollLimit: number;          // hard cap in chips; 0 disables
+  sessionLimit: number;           // max hands per session; 0 disables
+  currentBankroll: number;        // persisted net profit relative to start
+  currentSessionHands: number;    // persisted hand count
+}
+
+interface RiskGuardOptions {
+  logger?: Pick<Console, "info" | "warn" | "error">;
+  now?: () => number;
+  onPanicStop?: (event: PanicStopEvent) => void;
+}
+
+interface PanicStopEvent {
+  triggeredAt: number;
+  handId?: string;
+  reason: RiskViolation;
+  snapshot: RiskSnapshot;
 }
 
 class RiskGuard {
-  checkLimits(action: Action, state: GameState): boolean;
-  updateBankroll(delta: number): void;
-  incrementHandCount(): void;
-  getRemainingBankroll(): number;
-  getRemainingHands(): number;
+  constructor(limits: RiskLimits, options?: RiskGuardOptions);
+  startHand(handId: string, opts?: { carryExposure?: number }): void;
+  incrementHandCount(): number;
+  recordOutcome(result: { net: number; hands?: number }): RiskSnapshot;
+  updateLimits(limits: Partial<RiskLimits>): RiskSnapshot;
+  resetSession(): RiskSnapshot;
+  getSnapshot(): RiskSnapshot;
+  checkLimits(action: Action, state: GameState, opts?: CheckOptions): RiskCheckResult;
 }
+
+class RiskStateStore {
+  load(): Promise<{ currentBankroll: number; currentSessionHands: number }>;
+  save(snapshot: RiskSnapshot): Promise<void>;
+}
+
+function enforceRiskOrSafeAction(
+  riskGuard: RiskGuard,
+  action: Action,
+  state: GameState
+): RiskCheckResult;
 ```
 
 **Design Decisions**:
-- Called by Strategy Engine before finalizing decision
-- If limits exceeded, trigger panic stop and return SafeAction
-- Bankroll tracked across session; decremented by bets, incremented by wins
-- Session limit is simple hand counter
+- RiskGuard tracks net profit, drawdown, live exposure, hand counts, and snaps to disk (`logs/session/risk-state.json`) via `RiskStateStore` after every outcome or panic stop so restarts resume with the latest bankroll/session state.
+- `startHand`/`incrementHandCount` run as soon as a parsed `GameState` arrives to keep session counters aligned even if the hand aborts early.
+- `checkLimits` computes incremental commitment (mirrors legal-action helper) and compares projected drawdown plus live exposure against `bankrollLimit`; session limit violations fire immediately before the action.
+- When a violation occurs, `panicStop` latches, `onPanicStop` publishes `PanicStopEvent`, and callers must force SafeAction until operators reset the session.
+- The Strategy Engine must call `enforceRiskOrSafeAction` before finalizing any action; on failure it returns SafeAction (Requirement 10.4 + 10.6). This helper encapsulates RiskGuard access so other modules (executor, logger) can reuse consistent snapshots/telemetry.
+- Configuration hot-reload wires through `ConfigurationManager.subscribe("safety", ...)`, updating limits without losing historical state.
+- Future SafeMode (Task 11) listens to PanicStop events to halt execution entirely.
 
 ---
 
@@ -665,7 +695,7 @@ class StrategyEngine {
 - Bet sizing: quantize agent-proposed sizing to nearest discrete size from config
 - Divergence: total variation distance between distributions; log if >30pp
 - Fallback: if agents timeout, use α=1.0 (pure GTO)
-- Risk check: call RiskGuard before finalizing; if limits exceeded, return SafeAction and trigger panic stop
+- Risk check: call `enforceRiskOrSafeAction` before finalizing; if limits exceeded, return SafeAction and trigger panic stop
 
 **Bet Sizing Example**:
 ```typescript
