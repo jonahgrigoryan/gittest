@@ -27,11 +27,12 @@ describe("ActionSelector", () => {
   it("selectAction falls back to last key when cumulative sampling misses", () => {
     const selector = new ActionSelector(1);
     const dist = new Map<ActionKey, number>();
-    dist.set("FOLD", 0.0);
-    dist.set("CALL", 0.0);
-    dist.set("RAISE_50", 1.0);
+    dist.set("flop:BTN:fold:-", 0.0);
+    dist.set("flop:BTN:call:10.00", 0.0);
+    dist.set("flop:BTN:raise:50.00", 1.0);
     const rng = selector.createRNG("hand_nonempty");
-    const key = selector.selectAction(dist, rng);
-    expect(key).toBe("RAISE_50");
+    const result = selector.selectAction(dist, rng);
+    expect(result.ok).toBe(true);
+    expect(result.key).toBe("flop:BTN:raise:50.00");
   });
 });

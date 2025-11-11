@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { createActionKey } from "@poker-bot/shared";
 import type { Action, ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import { FallbackHandler } from "../../src/strategy/fallbacks";
 import { ActionSelector, SeededRNG } from "../../src/strategy/selection";
@@ -31,7 +32,11 @@ function createState(legal: Action[]): GameState {
   } as unknown as GameState;
 }
 
-function gtoFromDist(dist: Record<string, number>): GTOSolution {
+const HERO_FOLD_KEY = createActionKey({ type: "fold", position: "BTN", street: "flop" } as Action);
+const HERO_CALL_KEY = createActionKey({ type: "call", position: "BTN", street: "flop", amount: 10 } as Action);
+const HERO_RAISE_KEY = createActionKey({ type: "raise", position: "BTN", street: "flop", amount: 50 } as Action);
+
+function gtoFromDist(dist: Record<ActionKey, number>): GTOSolution {
   const actions = new Map<ActionKey, any>();
   for (const [key, freq] of Object.entries(dist) as [ActionKey, number][]) {
     actions.set(key, {
@@ -81,8 +86,8 @@ describe("FallbackHandler", () => {
     const betSizer = new BetSizer(config);
 
     const gto = gtoFromDist({
-      FOLD: 0.2,
-      CALL: 0.8
+      [HERO_FOLD_KEY]: 0.2,
+      [HERO_CALL_KEY]: 0.8
     });
 
     const state = createState([
@@ -136,7 +141,7 @@ describe("FallbackHandler", () => {
       quantizeBetSize: vi.fn(() => ({ ok: false, reason: "test_failure" }))
     } as unknown as BetSizer;
 
-    const gto = gtoFromDist({ CALL: 1.0 });
+    const gto = gtoFromDist({ [HERO_CALL_KEY]: 1.0 });
     const state = createState([
       { type: "call", position: "BTN", street: "flop", amount: 10 } as any
     ]);
@@ -148,7 +153,9 @@ describe("FallbackHandler", () => {
       betSizer: failingSizer
     });
 
-    expect(decision.reasoning.fallbackReason).toContain("gto_only_sizing_failed");
+    // Implementation emits explicit gto_only_sizing_failed:<reason> tag for this path
+    expect(decision.reasoning.fallbackReason).toContain("gto_only_sizing_failed:");
+    expect(decision.metadata.usedGtoOnlyFallback).toBe(true);
     expect(decision.action.type).toBeDefined();
   });
 

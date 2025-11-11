@@ -40,3 +40,6 @@ All commands must pass before declaring a task complete.
 
 - **Task 7 – Risk Guard (feat/task7-risk-guard)**  
   Branch created and synced with main. Next steps: implement bankroll/session limit tracking, `checkLimits()` gating in orchestrator, panic-stop behavior, and the accompanying unit tests per tasks.md §7 / Requirement 10.4.
+
+- **Task 8 – Strategy Engine (feat/task8-strategy-engine)**  
+  Strategy Engine module, risk integration, and full test suite (blending, selection, sizing, divergence, risk wrapper, fallbacks, engine, integration smoke) implemented and green via `pnpm test --filter "@poker-bot/orchestrator"`. Config/schema now expose populated betSizingSets and opponent-modeling flag so the engine is configurable end-to-end. Remaining action: open PR so GitHub Actions can run before moving on to Task 9.

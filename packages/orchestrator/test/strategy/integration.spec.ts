@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createActionKey } from "@poker-bot/shared";
 import type { Action, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "../../../agents/src/types";
 import { StrategyEngine } from "../../src/strategy/engine";
@@ -52,25 +53,29 @@ function createState(id: string, legal: Action[]): GameState {
 }
 
 function createGTOSolution(): GTOSolution {
+  const foldAction = { type: "fold", position: "BTN", street: "flop" } as Action;
+  const callAction = { type: "call", position: "BTN", street: "flop", amount: 10 } as Action;
+  const raiseAction = { type: "raise", position: "BTN", street: "flop", amount: 50 } as Action;
+
   const actions = new Map<string, any>([
     [
-      "FOLD",
+      createActionKey(foldAction),
       {
-        action: { type: "fold" },
+        action: foldAction,
         solution: { frequency: 0.2 }
       }
     ],
     [
-      "CALL",
+      createActionKey(callAction),
       {
-        action: { type: "call", amount: 10 },
+        action: callAction,
         solution: { frequency: 0.5 }
       }
     ],
     [
-      "RAISE_50",
+      createActionKey(raiseAction),
       {
-        action: { type: "raise", amount: 50 },
+        action: raiseAction,
         solution: { frequency: 0.3 }
       }
     ]

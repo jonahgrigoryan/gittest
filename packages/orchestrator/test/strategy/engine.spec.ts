@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { createActionKey } from "@poker-bot/shared";
 import type { Action, GameState, GTOSolution, ActionKey } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "../../../agents/src/types";
 import { StrategyEngine } from "../../src/strategy/engine";
@@ -37,17 +38,20 @@ function createState(): GameState {
 
 function createGTOSolution(): GTOSolution {
   // Use simple, consistent test keys that match the StrategyEngine's parsing logic.
+  const fold = { type: "fold", position: "BTN", street: "flop" } as Action;
+  const call = { type: "call", position: "BTN", street: "flop", amount: 10 } as Action;
+  const raise = { type: "raise", position: "BTN", street: "flop", amount: 50 } as Action;
   const actions = new Map<string, any>();
-  actions.set("flop:BTN:fold:-", {
-    action: { type: "fold", position: "BTN", street: "flop" },
+  actions.set(createActionKey(fold), {
+    action: fold,
     solution: { frequency: 0.2 }
   });
-  actions.set("flop:BTN:call:10", {
-    action: { type: "call", position: "BTN", street: "flop", amount: 10 },
+  actions.set(createActionKey(call), {
+    action: call,
     solution: { frequency: 0.5 }
   });
-  actions.set("flop:BTN:raise:50", {
-    action: { type: "raise", position: "BTN", street: "flop", amount: 50 },
+  actions.set(createActionKey(raise), {
+    action: raise,
     solution: { frequency: 0.3 }
   });
   return { actions, meta: {} } as unknown as GTOSolution;
@@ -99,7 +103,10 @@ function createRiskController(allowed: boolean): RiskController {
     incrementHandCount: vi.fn(() => 1),
     recordOutcome: vi.fn(() => snapshot),
     updateLimits: vi.fn(() => snapshot),
-    checkLimits: vi.fn(),
+    checkLimits: vi.fn(() => ({
+      allowed,
+      snapshot
+    })),
     getSnapshot: vi.fn(() => snapshot),
     resetSession: vi.fn()
   } as unknown as RiskController;
@@ -134,7 +141,10 @@ function createFullRiskController(): {
     incrementHandCount: vi.fn(() => 1),
     recordOutcome: vi.fn(() => snapshot),
     updateLimits: vi.fn(() => snapshot),
-    checkLimits: vi.fn(),
+    checkLimits: vi.fn(() => ({
+      allowed: true,
+      snapshot
+    })),
     getSnapshot: vi.fn(() => snapshot),
     resetSession: vi.fn()
   } as unknown as RiskController;
@@ -254,7 +264,10 @@ describe("StrategyEngine", () => {
       incrementHandCount: vi.fn(() => 1),
       recordOutcome: vi.fn(() => snapshot),
       updateLimits: vi.fn(() => snapshot),
-      checkLimits: vi.fn(),
+      checkLimits: vi.fn(() => ({
+        allowed: true,
+        snapshot
+      })),
       getSnapshot: vi.fn(() => snapshot),
       resetSession: vi.fn()
     } as unknown as RiskController;
