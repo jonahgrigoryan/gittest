@@ -1,0 +1,68 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/packages/**/dist/**": true,
+    "**/packages/**/node_modules/**": true,
+    "**/packages/shared/src/gen/**": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true,
+    "**/config/cache/**": true,
+    "**/tsconfig.tsbuildinfo": true,
+    "**/*.tsbuildinfo": true
+  },
+  "search.useIgnoreFiles": true,
+  "search.followSymlinks": false,
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/packages/**/dist/**": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true,
+    "**/config/cache/**": true,
+    "**/*.tsbuildinfo": true
+  },
+  "typescript.tsserver.watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEventsRecursive"
+  },
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.suggest.autoImports": false,
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "javascript.suggest.autoImports": false,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.includeCompletionsForImportStatements": false,
+  "eslint.run": "onSave",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "python.linting.enabled": false,
+  "python.analysis.typeCheckingMode": "off",
+  "rust-analyzer.checkOnSave.command": "clippy",
+  "files.associations": {
+    "*.proto": "proto"
+  },
+  "files.exclude": {
+    "**/dist/**": true,
+    "**/node_modules/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/*.tsbuildinfo": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true
+  },
+  "git.autofetch": false,
+  "git.confirmSync": false,
+  "npm.autoDetect": "off",
+  "telemetry.telemetryLevel": "off"
+}

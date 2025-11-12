@@ -1,6 +1,6 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
-import type { ParserConfig } from "@poker-bot/shared/src/vision/parser-types";
+import type { ParserConfig } from "@poker-bot/shared/vision";
 import type { GameState, GTOSolution, Action, ActionType } from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
@@ -17,6 +17,9 @@ import type {
 import type { StrategyConfig, StrategyDecision } from "./strategy/types";
 import { StrategyEngine } from "./strategy/engine";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
+
+import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
+import type { ExecutionResult, ExecutorConfig } from "@poker-bot/executor";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -149,14 +152,37 @@ export async function run() {
     timeBudgetTracker: new TimeBudgetTracker()
   });
 
-  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<StrategyDecision> {
+  // Create execution infrastructure
+  const executionConfig = configManager.get<ExecutorConfig>("execution");
+
+  // Create verifier if execution is enabled
+  let verifier: ActionVerifier | undefined;
+  if (executionConfig.enabled) {
+    verifier = new ActionVerifier({
+      captureAndParse: async () => {
+        // Use vision client to capture and parse
+        return visionClient.captureAndParse();
+      }
+    }, console);
+  }
+
+  // Create action executor
+  const actionExecutor = executionConfig.enabled
+    ? createActionExecutor(executionConfig.mode, executionConfig, verifier, console)
+    : undefined;
+
+  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<{
+    decision: StrategyDecision;
+    execution?: ExecutionResult;
+  }> {
     const tracker = ensureTracker(options.tracker);
 
     // 1) Solve GTO under time budget (existing logic).
     if (tracker.shouldPreempt("gto")) {
       const gtoOnly = await gtoSolver.solve(state, 0);
       const agents = createEmptyAggregatedAgentOutput();
-      return strategyEngine.decide(state, gtoOnly, agents);
+      const decision = strategyEngine.decide(state, gtoOnly, agents);
+      return { decision };
     }
 
     const configuredBudget = configManager.get<number>("gto.subgameBudgetMs");
@@ -166,10 +192,12 @@ export async function run() {
     if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
       const gtoOnly = await gtoSolver.solve(state, 0);
       const agents = createEmptyAggregatedAgentOutput();
-      return strategyEngine.decide(state, gtoOnly, agents);
+      const decision = strategyEngine.decide(state, gtoOnly, agents);
+      return { decision };
     }
 
     tracker.startComponent("gto");
+    let decision: StrategyDecision;
     try {
       const gto = await gtoSolver.solve(state, requestedBudget);
 
@@ -178,15 +206,40 @@ export async function run() {
       const agents = createEmptyAggregatedAgentOutput();
 
       // 3) Delegate final decision to StrategyEngine (blending, selection, risk, fallbacks).
-      return strategyEngine.decide(state, gto, agents);
+      decision = strategyEngine.decide(state, gto, agents);
     } finally {
       const actual = tracker.endComponent("gto");
       if (requestedBudget > actual && tracker.release) {
         tracker.release("gto", requestedBudget - actual);
       }
     }
+
+    // 4) Execute the decision if execution is enabled and we have an executor
+    let executionResult: ExecutionResult | undefined;
+    if (actionExecutor && executionConfig.enabled) {
+      // Reserve time for execution in budget tracker
+      if (tracker.shouldPreempt("execution")) {
+        console.warn("Execution preempted due to time budget");
+      } else {
+        tracker.startComponent("execution");
+        try {
+          executionResult = await actionExecutor.execute(decision, {
+            verifyAction: executionConfig.verifyActions,
+            maxRetries: executionConfig.maxRetries,
+            timeoutMs: executionConfig.verificationTimeoutMs
+          });
+        } finally {
+          tracker.endComponent("execution");
+        }
+      }
+    }
+
+    return {
+      decision,
+      execution: executionResult
+    };
   }
-  
+
   function createEmptyAggregatedAgentOutput(): AggregatedAgentOutput {
     const now = Date.now();
     const normalizedActions = new Map<ActionType, number>();
@@ -194,7 +247,7 @@ export async function run() {
     normalizedActions.set("check", 0);
     normalizedActions.set("call", 0);
     normalizedActions.set("raise", 0);
-  
+
     return {
       outputs: [],
       normalizedActions,
@@ -228,6 +281,11 @@ export async function run() {
     },
     strategy: {
       makeDecision
+    },
+    execution: {
+      enabled: executionConfig.enabled,
+      mode: executionConfig.mode,
+      executor: actionExecutor
     },
     budget: {
       createTracker: () => new TimeBudgetTracker()

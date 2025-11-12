@@ -1,11 +1,12 @@
 import { credentials, type ChannelCredentials } from "@grpc/grpc-js";
 import type { ActionType } from "@poker-bot/shared";
-import {
-  SolverClient as SolverClientConstructor,
-  type SolverClient,
-  type SubgameRequest,
-  type SubgameResponse,
-} from "@poker-bot/shared/src/gen/solver";
+import { solverGen } from "@poker-bot/shared";
+
+type SolverClient = solverGen.SolverClient;
+type SubgameRequest = solverGen.SubgameRequest;
+type SubgameResponse = solverGen.SubgameResponse;
+
+const SolverClientConstructor = solverGen.SolverClient;
 
 const DEFAULT_SOLVER_ADDR = process.env.SOLVER_ADDR ?? "127.0.0.1:50051";
 

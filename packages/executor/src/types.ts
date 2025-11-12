@@ -1,0 +1,105 @@
+import type { Action, StrategyDecision } from "@poker-bot/shared";
+
+export interface ExecutionResult {
+  success: boolean;
+  actionExecuted?: Action;
+  error?: string;
+  verificationResult?: VerificationResult;
+  timing: {
+    executionMs: number;
+    verificationMs?: number;
+    totalMs: number;
+  };
+  metadata: {
+    executionMode: ExecutionMode;
+    platform?: string;
+    windowHandle?: string;
+  };
+}
+
+export interface VerificationResult {
+  passed: boolean;
+  expectedState?: any;
+  actualState?: any;
+  mismatchReason?: string;
+  retryCount: number;
+}
+
+export type ExecutionMode = 'simulator' | 'api' | 'research-ui';
+
+export interface ActionExecutor {
+  execute(decision: StrategyDecision, options?: ExecutionOptions): Promise<ExecutionResult>;
+  verify?(result: ExecutionResult): Promise<VerificationResult>;
+}
+
+export interface ExecutionOptions {
+  verifyAction?: boolean;
+  maxRetries?: number;
+  timeoutMs?: number;
+}
+
+export interface SimulatorCommand {
+  action: string;
+  amount?: number;
+  position?: string;
+}
+
+export interface APIResponse {
+  success: boolean;
+  error?: string;
+  executionId?: string;
+}
+
+export interface WindowHandle {
+  id: string | number;
+  title: string;
+  processName: string;
+}
+
+export interface WindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface WindowConfig {
+  titlePatterns: string[];
+  processNames: string[];
+  minWindowSize: { width: number; height: number };
+}
+
+export interface ComplianceConfig {
+  allowlist: string[];
+  prohibitedSites: string[];
+  requireBuildFlag: boolean;
+}
+
+export interface ComplianceResult {
+  allowed: boolean;
+  reason?: string;
+  violations: string[];
+}
+
+export interface ExecutorConfig {
+  enabled: boolean;
+  mode: ExecutionMode;
+  verifyActions: boolean;
+  maxRetries: number;
+  verificationTimeoutMs: number;
+  simulatorEndpoint?: string;
+  researchUI?: ComplianceConfig;
+}
+
+export interface StateChange {
+  type: 'pot_increase' | 'stack_decrease' | 'action_taken';
+  amount?: number;
+  position?: string;
+}
+
+export interface InputField {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}

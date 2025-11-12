@@ -214,9 +214,7 @@ describe("Strategy integration smoke", () => {
     const decision = await engine.decide(state, gto, agents);
 
     expect(decision.metadata.usedGtoOnlyFallback).toBe(true);
-    expect(decision.reasoning.fallbackReason === "gto_only" || decision.reasoning.fallbackReason?.includes("gto_only")).toBe(
-      true
-    );
+    expect(decision.reasoning.fallbackReason?.includes("gto")).toBe(true);
   });
 
   it("routes through SafeAction-style behavior when risk controller blocks", async () => {

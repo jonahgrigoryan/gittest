@@ -1,5 +1,5 @@
 import type { Action, GameState, Street } from "@poker-bot/shared";
-import type { StrategyConfig } from "./types";
+import type { StrategyConfig } from "@poker-bot/shared";
 
 /**
  * BetSizer quantizes raises to configured pot-fraction sets while respecting

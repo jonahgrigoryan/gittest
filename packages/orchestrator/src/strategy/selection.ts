@@ -1,12 +1,12 @@
 import type { Action, ActionKey, GameState } from "@poker-bot/shared";
-import type { RNG, StrategyConfig } from "./types";
+import type { RNG, StrategyConfig } from "@poker-bot/shared";
 import { decodeAndValidateActionKey, type ParsedActionKeyResult } from "./util";
 
 /**
  * Deterministic RNG using a simple LCG for reproducibility.
  */
 export class SeededRNG implements RNG {
-  private seed: number;
+  seed: number;
 
   constructor(seed: number) {
     if (!Number.isFinite(seed)) {

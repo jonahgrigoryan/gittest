@@ -1,12 +1,26 @@
 {
   "compliance": {
     "gameType": "NLHE_6max",
-    "blinds": { "small": 1, "big": 2 },
-    "allowedEnvironments": ["private_sim"],
+    "blinds": {
+      "small": 1,
+      "big": 2
+    },
+    "allowedEnvironments": [
+      "private_sim"
+    ],
     "siteAllowlist": []
   },
-  "vision": { "layoutPack": "simulator/default", "dpiCalibration": 1.0, "confidenceThreshold": 0.9, "occlusionThreshold": 0.05 },
-    "gto": { "cachePath": "cache", "subgameBudgetMs": 400, "deepStackThreshold": 100 },
+  "vision": {
+    "layoutPack": "simulator/default",
+    "dpiCalibration": 1.0,
+    "confidenceThreshold": 0.9,
+    "occlusionThreshold": 0.05
+  },
+  "gto": {
+    "cachePath": "cache",
+    "subgameBudgetMs": 400,
+    "deepStackThreshold": 100
+  },
   "agents": {
     "models": [],
     "timeoutMs": 3000,
@@ -16,11 +30,17 @@
       "properties": {
         "actions": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "rationale": { "type": "string" }
+        "rationale": {
+          "type": "string"
+        }
       },
-      "required": ["actions"],
+      "required": [
+        "actions"
+      ],
       "additionalProperties": true
     },
     "weightStorePath": "data/agents/weights.json",
@@ -40,14 +60,20 @@
       "exploit_aggressor": {
         "temperature": 0.75,
         "styleHints": {
-          "guidelines": ["Exploit autopilot continuation bets and capped turn ranges."],
-          "emphasis": ["Document villain leaks when deviating from balanced play."]
+          "guidelines": [
+            "Exploit autopilot continuation bets and capped turn ranges."
+          ],
+          "emphasis": [
+            "Document villain leaks when deviating from balanced play."
+          ]
         }
       },
       "risk_averse_value": {
         "maxTokens": 220,
         "styleHints": {
-          "emphasis": ["Avoid thin bluffs when effective stack < 30bb."]
+          "emphasis": [
+            "Avoid thin bluffs when effective stack < 30bb."
+          ]
         }
       }
     }
@@ -55,10 +81,30 @@
   "strategy": {
     "alphaGTO": 0.7,
     "betSizingSets": {
-      "preflop": [0.5, 1.0, 2.0, 3.0],
-      "flop": [0.33, 0.5, 0.75, 1.0],
-      "turn": [0.5, 0.75, 1.0, 1.5],
-      "river": [0.5, 1.0, 1.5, 2.0]
+      "preflop": [
+        0.5,
+        1.0,
+        2.0,
+        3.0
+      ],
+      "flop": [
+        0.33,
+        0.5,
+        0.75,
+        1.0
+      ],
+      "turn": [
+        0.5,
+        0.75,
+        1.0,
+        1.5
+      ],
+      "river": [
+        0.5,
+        1.0,
+        1.5,
+        2.0
+      ]
     },
     "divergenceThresholdPP": 30,
     "opponentModeling": {
@@ -66,7 +112,35 @@
       "minHands": 200
     }
   },
-  "execution": { "mode": "simulator" },
-  "safety": { "bankrollLimit": 5000, "sessionLimit": 0, "panicStopConfidenceThreshold": 0.99, "panicStopConsecutiveFrames": 3 },
-  "logging": { "retentionDays": 14, "exportFormats": ["json"] }
+  "execution": {
+    "enabled": false,
+    "mode": "simulator",
+    "verifyActions": true,
+    "maxRetries": 1,
+    "verificationTimeoutMs": 2000,
+    "simulatorEndpoint": "http://localhost:8080/api",
+    "researchUI": {
+      "allowlist": [
+        "pokerstars",
+        "ggpoker"
+      ],
+      "prohibitedSites": [
+        "bet365",
+        "williamhill"
+      ],
+      "requireBuildFlag": true
+    }
+  },
+  "safety": {
+    "bankrollLimit": 5000,
+    "sessionLimit": 0,
+    "panicStopConfidenceThreshold": 0.99,
+    "panicStopConsecutiveFrames": 3
+  },
+  "logging": {
+    "retentionDays": 14,
+    "exportFormats": [
+      "json"
+    ]
+  }
 }
