@@ -10,7 +10,7 @@ import type {
   StrategyMetadata,
   StrategyReasoningTrace,
   StrategyTimingBreakdown
-} from "./types";
+} from "@poker-bot/shared";
 
 /**
  * Centralized fallback and decision helpers.

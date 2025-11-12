@@ -15,8 +15,14 @@
   Added cache fingerprinting/loader infrastructure, CFR-based subgame solver with deep-stack action abstractions, expanded solver proto + codegen, shared GTOSolution types, and end-to-end orchestrator wiring (cache-first solve flow with SafeAction fallback). Rust crate passes `cargo fmt | clippy | test`; TypeScript packages pass `pnpm` lint/build/test.
 - **Task 5 – Agent Coordinator**  
   Delivered the full @poker-bot/agents package: persona registry + prompt builder, transport adapters (OpenAI + mock) with parallel querying, strict JSON schema validation, Brier-weighted aggregation, cost guard & circuit breaker, and structured telemetry. Orchestrator wiring now consumes the coordinator output (or falls back to GTO) and AGENTS.md documents the workflow.
-- **Task 6 – Time Budget Tracker**  
+- **Task 6 – Time Budget Tracker**
   Implemented a reusable TimeBudgetTracker with per-component allocations, preemption logic, dynamic redistribution, and percentile metrics. Shared budget types now live in @poker-bot/shared, orchestrator exposes a `budget.createTracker()` helper, and GTO solver integration reserves/reclaims time based on remaining budget.
+
+- **Task 7 – Risk Guard**
+  Implemented bankroll and session limit enforcement with RiskGuard class, panic-stop behavior, and risk state persistence. Added comprehensive unit tests covering limit checking, exposure tracking, and SafeAction fallbacks per Requirement 10.4.
+
+- **Task 8 – Strategy Engine**
+  Delivered complete Strategy Engine with α-blending algorithm, deterministic action selection via seeded RNG, bet sizing quantization, divergence detection/logging, risk integration, and multiple fallback layers (SafeAction → GTO-only → panic stop). Includes full test suite and maintains 2-second deadline compliance.
 
 ## Workflow
 
@@ -38,8 +44,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 7 – Risk Guard (feat/task7-risk-guard)**  
-  Branch created and synced with main. Next steps: implement bankroll/session limit tracking, `checkLimits()` gating in orchestrator, panic-stop behavior, and the accompanying unit tests per tasks.md §7 / Requirement 10.4.
-
-- **Task 8 – Strategy Engine (feat/task8-strategy-engine)**  
-  Strategy Engine module, risk integration, and full test suite (blending, selection, sizing, divergence, risk wrapper, fallbacks, engine, integration smoke) implemented and green via `pnpm test --filter "@poker-bot/orchestrator"`. Config/schema now expose populated betSizingSets and opponent-modeling flag so the engine is configurable end-to-end. Remaining action: open PR so GitHub Actions can run before moving on to Task 9.
+- **Task 9 – Action Executor (feat/task9-action-executor)**
+  Implement the execution layer that translates StrategyDecision actions into actual poker platform commands. Includes simulator/API execution modes, research UI automation with OS-level controls, action verification via post-execution state capture, bet sizing precision enforcement, Window Manager for platform detection, and compliance validation to prevent execution on prohibited sites.

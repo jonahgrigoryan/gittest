@@ -7,7 +7,7 @@ export interface ValidationResult {
 
 export type GameType = "HU_NLHE" | "NLHE_6max";
 export type AgentProvider = "openai" | "anthropic" | "local";
-export type ExecutionMode = "simulator" | "api" | "research_ui";
+export type ExecutionMode = "simulator" | "api" | "research-ui";
 export type AllowedEnvironment = "private_sim" | "owned_table" | "api_permitted";
 export type JsonSchema = JSONSchemaType<unknown>;
 
@@ -76,8 +76,17 @@ export interface BotConfig {
     divergenceThresholdPP: number;
   };
   execution: {
+    enabled: boolean;
     mode: ExecutionMode;
-    researchUIAllowlist?: string[];
+    verifyActions: boolean;
+    maxRetries: number;
+    verificationTimeoutMs: number;
+    simulatorEndpoint?: string;
+    researchUI?: {
+      allowlist: string[];
+      prohibitedSites: string[];
+      requireBuildFlag: boolean;
+    };
   };
   safety: {
     bankrollLimit: number;

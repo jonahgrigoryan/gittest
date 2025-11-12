@@ -95,6 +95,17 @@ describe("ConfigurationManager", () => {
       expect(threshold).toBe(0.9);
     });
 
+    it("reads execution configuration defaults", () => {
+      const execMode = manager!.get<string>("execution.mode");
+      const verify = manager!.get<boolean>("execution.verifyActions");
+      const retries = manager!.get<number>("execution.maxRetries");
+      expect(execMode).toBeTypeOf("string");
+      expect(execMode.length).toBeGreaterThan(0);
+      expect(typeof verify).toBe("boolean");
+      expect(typeof retries).toBe("number");
+      expect(retries).toBeGreaterThanOrEqual(0);
+    });
+
     it("retrieves agent cost policy", () => {
       const maxTokens = manager!.get<number>("agents.costPolicy.maxTokensDecision");
       expect(maxTokens).toBeGreaterThan(0);

@@ -6,8 +6,18 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
-      "@poker-bot/agents": ["../agents/src"]
+      "@poker-bot/agents": ["../agents/dist"],
+      "@poker-bot/agents/*": ["../agents/dist/*"],
+      "@poker-bot/shared": ["../shared/src"],
+      "@poker-bot/shared/*": ["../shared/src/*"],
+      "@poker-bot/executor": ["../executor/src"],
+      "@poker-bot/executor/*": ["../executor/src/*"]
     }
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../agents" },
+    { "path": "../shared" },
+    { "path": "../executor" }
+  ]
 }

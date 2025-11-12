@@ -1,14 +1,12 @@
 import { credentials, Metadata } from "@grpc/grpc-js";
 import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
-import type { vision } from "@poker-bot/shared";
+import { vision, visionGen } from "@poker-bot/shared";
 
-import {
-  type ActionButtons as RpcActionButtons,
-  type ButtonInfo as RpcButtonInfo,
-  type HealthStatus,
-  type VisionOutput as RpcVisionOutput,
-  VisionServiceClient
-} from "@poker-bot/shared/dist/gen/vision";
+const VisionServiceClient = visionGen.VisionServiceClient;
+type RpcVisionOutput = visionGen.VisionOutput;
+type HealthStatus = visionGen.HealthStatus;
+type RpcActionButtons = visionGen.ActionButtons;
+type RpcButtonInfo = visionGen.ButtonInfo;
 
 const POSITION_VALUES: Position[] = ["BTN", "SB", "BB", "UTG", "MP", "CO"];
 const RANK_VALUES: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];

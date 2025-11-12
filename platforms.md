@@ -198,3 +198,23 @@ export function createWindowManager(platform: Platform): IWindowManager {
 - Ensure implementations work with screen readers
 - Follow platform accessibility guidelines
 - Handle high contrast modes and scaling
+
+## Backend Hooks (non-GUI) Needed for Task 9
+
+- **Simulator/API transport** (packages/executor/src/simulators/simulator.ts)
+  - REST/WebSocket endpoint (currently `POST /action` JSON)
+  - Authentication / session management
+  - Retry/backoff policy
+  - Error telemetry (status codes, execution IDs)
+
+- **Vision gRPC service** (packages/orchestrator/src/vision/client.ts, verifier.ts)
+  - `VisionService.captureFrame` must return action button coordinates and turn state
+  - Used by ResearchUIExecutor for button detection
+  - Used by ActionVerifier for post-action state capture
+
+- **Solver gRPC service** (packages/orchestrator/src/solver_client/client.ts)
+  - `SolverClient.solve` already integrated; ensure execution layer reuses the same channel/budgeting
+
+- **Compliance telemetry/logging sink**
+  - Structured logs for environment violations
+  - Optional hook into monitoring pipeline for incident tracking
