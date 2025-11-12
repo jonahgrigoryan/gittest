@@ -1,0 +1,92 @@
+{
+  // File watching: exclude heavy directories to reduce CPU usage
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/packages/**/dist/**": true,
+    "**/packages/**/node_modules/**": true,
+    "**/packages/shared/src/gen/**": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true,
+    "**/config/cache/**": true,
+    "**/tsconfig.tsbuildinfo": true,
+    "**/*.tsbuildinfo": true
+  },
+
+  // Search & indexing optimizations
+  "search.useIgnoreFiles": true,
+  "search.followSymlinks": false,
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/packages/**/dist/**": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true,
+    "**/config/cache/**": true,
+    "**/*.tsbuildinfo": true
+  },
+
+  // TypeScript language service optimizations
+  "typescript.tsserver.watchOptions": {
+    "watchFile": "useFsEvents",
+    "watchDirectory": "useFsEventsRecursive"
+  },
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.suggest.autoImports": false,
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "javascript.suggest.autoImports": false,
+
+  // Project-specific TypeScript settings
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.suggest.includeCompletionsForImportStatements": false,
+
+  // Linting/formatting: avoid on-type work
+  "eslint.run": "onSave",
+  "eslint.workingDirectories": ["packages/**"],
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+
+  // Python settings (for vision service)
+  "python.linting.enabled": false,
+  "python.analysis.typeCheckingMode": "off",
+
+  // Rust settings (for solver service)
+  "rust-analyzer.checkOnSave.command": "clippy",
+
+  // File associations
+  "files.associations": {
+    "*.proto": "proto"
+  },
+
+  // Exclude from file explorer
+  "files.exclude": {
+    "**/dist/**": true,
+    "**/node_modules/**": true,
+    "**/coverage/**": true,
+    "**/results/**": true,
+    "**/logs/**": true,
+    "**/*.tsbuildinfo": true,
+    "**/services/solver/target/**": true,
+    "**/services/vision/__pycache__/**": true
+  },
+
+  // Git integration
+  "git.autofetch": false,
+  "git.confirmSync": false,
+
+  // Disable npm script detection (saves CPU)
+  "npm.autoDetect": "off",
+
+  // Disable telemetry
+  "telemetry.telemetryLevel": "off"
+}
