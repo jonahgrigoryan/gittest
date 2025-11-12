@@ -80,6 +80,9 @@ importers:
       '@poker-bot/agents':
         specifier: workspace:*
         version: link:../agents
+      '@poker-bot/executor':
+        specifier: workspace:*
+        version: link:../executor
       '@poker-bot/shared':
         specifier: workspace:*
         version: link:../shared
