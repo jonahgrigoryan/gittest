@@ -24,6 +24,9 @@
 - **Task 8 – Strategy Engine**
   Delivered complete Strategy Engine with α-blending algorithm, deterministic action selection via seeded RNG, bet sizing quantization, divergence detection/logging, risk integration, and multiple fallback layers (SafeAction → GTO-only → panic stop). Includes full test suite and maintains 2-second deadline compliance.
 
+- **Task 9 – Action Executor**
+  Built the execution layer (simulator + research UI modes) with ActionExecutor interfaces, WindowManager, ComplianceChecker, bet input handler, and action verification pipeline. Orchestrator now optionally runs StrategyDecision through execution/verification based on config, schema defaults were expanded, and a dedicated report/task9.md document the rollout and tests.
+
 ## Workflow
 
 1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
@@ -44,5 +47,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 9 – Action Executor (feat/task9-action-executor)**
-  Implement the execution layer that translates StrategyDecision actions into actual poker platform commands. Includes simulator/API execution modes, research UI automation with OS-level controls, action verification via post-execution state capture, bet sizing precision enforcement, Window Manager for platform detection, and compliance validation to prevent execution on prohibited sites.
+- **Task 10 – Action Executor Hardening (feat/task10-action-executor)**
+  Extend the executor work with production safeguards: hook real AgentCoordinator outputs into execution decisions, add executor telemetry/log streaming, tighten compliance + SafeAction fallbacks, and prepare for downstream integration (research UI turn-wait, simulator soaking) per tasks.md §10./Requirement set 6. This branch starts from the merged Task 9 foundation.
