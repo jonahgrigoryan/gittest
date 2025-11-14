@@ -83,6 +83,9 @@ importers:
       '@poker-bot/executor':
         specifier: workspace:*
         version: link:../executor
+      '@poker-bot/logger':
+        specifier: workspace:*
+        version: link:../logger
       '@poker-bot/shared':
         specifier: workspace:*
         version: link:../shared
