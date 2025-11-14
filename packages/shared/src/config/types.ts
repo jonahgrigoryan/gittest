@@ -95,7 +95,20 @@ export interface BotConfig {
     panicStopConsecutiveFrames: number;
   };
   logging: {
+    enabled: boolean;
+    outputDir: string;
+    sessionPrefix?: string;
+    flushIntervalMs: number;
+    maxFileSizeMb: number;
     retentionDays: number;
     exportFormats: Array<"json" | "acpc">;
+    redaction: {
+      enabled: boolean;
+      fields: Array<"playerNames" | "ids" | "ipAddresses">;
+    };
+    metrics: {
+      enabled: boolean;
+      windowHands: number;
+    };
   };
 }

@@ -138,9 +138,25 @@
     "panicStopConsecutiveFrames": 3
   },
   "logging": {
+    "enabled": true,
+    "outputDir": "../../results/hands",
+    "sessionPrefix": "session",
+    "flushIntervalMs": 250,
+    "maxFileSizeMb": 50,
     "retentionDays": 14,
     "exportFormats": [
       "json"
-    ]
+    ],
+    "redaction": {
+      "enabled": true,
+      "fields": [
+        "playerNames",
+        "ids"
+      ]
+    },
+    "metrics": {
+      "enabled": true,
+      "windowHands": 200
+    }
   }
 }

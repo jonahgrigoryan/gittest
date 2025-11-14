@@ -15,6 +15,7 @@
     "@grpc/grpc-js": "1.11.1",
     "@poker-bot/shared": "workspace:*",
     "@poker-bot/agents": "workspace:*",
-    "@poker-bot/executor": "workspace:*"
+    "@poker-bot/executor": "workspace:*",
+    "@poker-bot/logger": "workspace:*"
   }
 }

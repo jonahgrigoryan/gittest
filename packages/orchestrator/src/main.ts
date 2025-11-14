@@ -1,7 +1,21 @@
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/vision";
-import type { GameState, GTOSolution, Action, ActionType } from "@poker-bot/shared";
+import {
+  computeConfigHash,
+  serializeAgentOutput,
+  serializeExecutionResult,
+  serializeGameState,
+  serializeStrategyDecision,
+  summarizeGTOSolution
+} from "@poker-bot/shared";
+import type {
+  GameState,
+  GTOSolution,
+  Action,
+  ActionType,
+  HandRecord
+} from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
@@ -20,6 +34,7 @@ import type { AggregatedAgentOutput } from "@poker-bot/agents";
 
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
 import type { ExecutionResult, ExecutorConfig } from "@poker-bot/executor";
+import { createHandHistoryLogger } from "@poker-bot/logger";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -69,14 +84,27 @@ export async function run() {
     riskGuard.updateLimits({ bankrollLimit: next.bankrollLimit, sessionLimit: next.sessionLimit });
   });
 
+  let lastHandId: string | undefined;
+
   const riskController: RiskController = {
     startHand: (handId, options) => {
+      lastHandId = handId;
       riskGuard.startHand(handId, options);
     },
     incrementHandCount: () => riskGuard.incrementHandCount(),
     recordOutcome: update => {
       const snapshot = riskGuard.recordOutcome(update);
       void riskStateStore.save(snapshot);
+      if (handLogger) {
+        const targetHandId = update.handId ?? lastHandId;
+        if (targetHandId) {
+          void handLogger.recordOutcome(targetHandId, {
+            handId: targetHandId,
+            netChips: update.net,
+            recordedAt: Date.now()
+          });
+        }
+      }
       return snapshot;
     },
     updateLimits: limits => riskGuard.updateLimits(limits),
@@ -151,6 +179,24 @@ export async function run() {
     logger: console,
     timeBudgetTracker: new TimeBudgetTracker()
   });
+  const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
+  const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
+  const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
+  const handLogger = loggingConfig.enabled
+    ? await createHandHistoryLogger({
+        sessionId,
+        outputDir: logOutputDir,
+        sessionPrefix: loggingConfig.sessionPrefix,
+        flushIntervalMs: loggingConfig.flushIntervalMs,
+        maxFileSizeMb: loggingConfig.maxFileSizeMb,
+        retentionDays: loggingConfig.retentionDays,
+        formats: loggingConfig.exportFormats,
+        redaction: loggingConfig.redaction,
+        metrics: loggingConfig.metrics,
+        logger: console
+      })
+    : undefined;
+  const configHash = computeConfigHash(strategyConfig);
 
   // Create execution infrastructure
   const executionConfig = configManager.get<ExecutorConfig>("execution");
@@ -176,13 +222,34 @@ export async function run() {
     execution?: ExecutionResult;
   }> {
     const tracker = ensureTracker(options.tracker);
+    lastHandId = state.handId;
+    let gtoResult: GTOSolution | undefined;
+    let agents: AggregatedAgentOutput | undefined;
+    let decision: StrategyDecision;
+    let executionResult: ExecutionResult | undefined;
+
+    const finalize = async () => {
+      if (handLogger) {
+        const record = buildHandRecord({
+          state,
+          decision,
+          execution: executionResult,
+          gto: gtoResult,
+          agents,
+          sessionId,
+          configHash
+        });
+        await handLogger.append(record);
+      }
+      return { decision, execution: executionResult };
+    };
 
     // 1) Solve GTO under time budget (existing logic).
     if (tracker.shouldPreempt("gto")) {
-      const gtoOnly = await gtoSolver.solve(state, 0);
-      const agents = createEmptyAggregatedAgentOutput();
-      const decision = strategyEngine.decide(state, gtoOnly, agents);
-      return { decision };
+      gtoResult = await gtoSolver.solve(state, 0);
+      agents = createEmptyAggregatedAgentOutput();
+      decision = strategyEngine.decide(state, gtoResult, agents);
+      return finalize();
     }
 
     const configuredBudget = configManager.get<number>("gto.subgameBudgetMs");
@@ -190,23 +257,22 @@ export async function run() {
     const requestedBudget = Math.max(0, Math.min(configuredBudget, remainingBudget));
 
     if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
-      const gtoOnly = await gtoSolver.solve(state, 0);
-      const agents = createEmptyAggregatedAgentOutput();
-      const decision = strategyEngine.decide(state, gtoOnly, agents);
-      return { decision };
+      gtoResult = await gtoSolver.solve(state, 0);
+      agents = createEmptyAggregatedAgentOutput();
+      decision = strategyEngine.decide(state, gtoResult, agents);
+      return finalize();
     }
 
     tracker.startComponent("gto");
-    let decision: StrategyDecision;
     try {
-      const gto = await gtoSolver.solve(state, requestedBudget);
+      gtoResult = await gtoSolver.solve(state, requestedBudget);
 
       // 2) Obtain AggregatedAgentOutput from agents coordinator or stub.
       // TODO: Replace createEmptyAggregatedAgentOutput() with actual coordinator integration.
-      const agents = createEmptyAggregatedAgentOutput();
+      agents = createEmptyAggregatedAgentOutput();
 
       // 3) Delegate final decision to StrategyEngine (blending, selection, risk, fallbacks).
-      decision = strategyEngine.decide(state, gto, agents);
+      decision = strategyEngine.decide(state, gtoResult, agents);
     } finally {
       const actual = tracker.endComponent("gto");
       if (requestedBudget > actual && tracker.release) {
@@ -215,7 +281,6 @@ export async function run() {
     }
 
     // 4) Execute the decision if execution is enabled and we have an executor
-    let executionResult: ExecutionResult | undefined;
     if (actionExecutor && executionConfig.enabled) {
       // Reserve time for execution in budget tracker
       if (tracker.shouldPreempt("execution")) {
@@ -234,10 +299,7 @@ export async function run() {
       }
     }
 
-    return {
-      decision,
-      execution: executionResult
-    };
+    return finalize();
   }
 
   function createEmptyAggregatedAgentOutput(): AggregatedAgentOutput {
@@ -326,4 +388,31 @@ function ensureTracker(existing?: TimeBudgetTracker): TimeBudgetTracker {
   const tracker = new TimeBudgetTracker();
   tracker.start();
   return tracker;
+}
+
+function buildHandRecord(params: {
+  state: GameState;
+  decision: StrategyDecision;
+  execution?: ExecutionResult;
+  gto?: GTOSolution;
+  agents?: AggregatedAgentOutput;
+  sessionId: string;
+  configHash: string;
+}): HandRecord {
+  const { state, decision, execution, gto, agents, sessionId, configHash } = params;
+  return {
+    handId: state.handId,
+    sessionId,
+    createdAt: Date.now(),
+    rawGameState: serializeGameState(state),
+    decision: serializeStrategyDecision(decision, configHash),
+    execution: serializeExecutionResult(execution),
+    solver: summarizeGTOSolution(gto),
+    agents: agents ? serializeAgentOutput(agents) : undefined,
+    timing: decision.timing,
+    metadata: {
+      configHash,
+      redactionApplied: false
+    }
+  };
 }

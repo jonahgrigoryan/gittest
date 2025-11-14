@@ -60,6 +60,7 @@ export interface RiskGuardStatePersistence {
 export interface RiskOutcomeUpdate {
   net: number;
   hands?: number;
+  handId?: string;
 }
 
 export interface StartHandOptions {

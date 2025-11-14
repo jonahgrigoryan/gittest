@@ -11,6 +11,7 @@ export default defineConfig({
     alias: [
       { find: "@poker-bot/agents", replacement: path.resolve(__dirname, "../agents/src") },
       { find: "@poker-bot/executor", replacement: path.resolve(__dirname, "../executor/src") },
+      { find: "@poker-bot/logger", replacement: path.resolve(__dirname, "../logger/src") },
       { find: "@poker-bot/shared", replacement: sharedSrc },
       {
         find: /^@poker-bot\/shared\/dist\/(.*)$/,
