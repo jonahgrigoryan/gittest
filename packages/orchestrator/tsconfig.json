@@ -11,13 +11,16 @@
       "@poker-bot/shared": ["../shared/src"],
       "@poker-bot/shared/*": ["../shared/src/*"],
       "@poker-bot/executor": ["../executor/src"],
-      "@poker-bot/executor/*": ["../executor/src/*"]
+      "@poker-bot/executor/*": ["../executor/src/*"],
+      "@poker-bot/logger": ["../logger/src"],
+      "@poker-bot/logger/*": ["../logger/src/*"]
     }
   },
   "include": ["src/**/*"],
   "references": [
     { "path": "../agents" },
     { "path": "../shared" },
-    { "path": "../executor" }
+    { "path": "../executor" },
+    { "path": "../logger" }
   ]
 }

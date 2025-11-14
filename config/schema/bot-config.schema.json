@@ -468,10 +468,35 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "enabled",
+        "outputDir",
+        "flushIntervalMs",
+        "maxFileSizeMb",
         "retentionDays",
-        "exportFormats"
+        "exportFormats",
+        "redaction",
+        "metrics"
       ],
       "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "outputDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sessionPrefix": {
+          "type": "string"
+        },
+        "flushIntervalMs": {
+          "type": "integer",
+          "minimum": 50
+        },
+        "maxFileSizeMb": {
+          "type": "integer",
+          "minimum": 1
+        },
         "retentionDays": {
           "type": "integer",
           "minimum": 0
@@ -485,6 +510,50 @@
               "json",
               "acpc"
             ]
+          }
+        },
+        "redaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "fields"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "playerNames",
+                  "ids",
+                  "ipAddresses"
+                ]
+              },
+              "default": []
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "windowHands"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "windowHands": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         }
       }
