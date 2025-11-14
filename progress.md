@@ -27,6 +27,9 @@
 - **Task 9 – Action Executor**
   Built the execution layer (simulator + research UI modes) with ActionExecutor interfaces, WindowManager, ComplianceChecker, bet input handler, and action verification pipeline. Orchestrator now optionally runs StrategyDecision through execution/verification based on config, schema defaults were expanded, and a dedicated report/task9.md document the rollout and tests.
 
+- **Task 10 – Hand History Logger**
+  Implemented the shared logging schema/serializers, production-ready `@poker-bot/logger` with redaction, exporters, metrics, retention, and orchestrator wiring that records every StrategyDecision + outcome for auditing. Config/schema extended with logging knobs; full logger/orchestrator test suites remain green.
+
 ## Workflow
 
 1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
@@ -47,5 +50,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 10 – Action Executor Hardening (feat/task10-action-executor)**
-  Extend the executor work with production safeguards: hook real AgentCoordinator outputs into execution decisions, add executor telemetry/log streaming, tighten compliance + SafeAction fallbacks, and prepare for downstream integration (research UI turn-wait, simulator soaking) per tasks.md §10./Requirement set 6. This branch starts from the merged Task 9 foundation.
+- **Task 11 – Hand History Logger (next branch)**
+  Based on tasks.md §11, implement the health-monitor and safe-mode system (component checks, panic-stop telemetry, manual recovery) now that logging/execution are in place.```*** End Patch
