@@ -15,7 +15,8 @@ import type {
   GTOSolution,
   Action,
   ActionType,
-  HandRecord
+  HandRecord,
+  ModelVersions
 } from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
@@ -23,24 +24,20 @@ import { createSolverClient } from "./solver_client/client";
 import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
 import { RiskGuard } from "./safety/riskGuard";
 import { RiskStateStore } from "./safety/riskStateStore";
-import type {
-  RiskCheckOptions,
-  RiskCheckResult,
-  RiskSnapshot,
-  RiskGuardAPI
-} from "./safety/types";
+import type { RiskCheckOptions, RiskGuardAPI } from "./safety/types";
 import type { StrategyConfig, StrategyDecision } from "./strategy/types";
 import { StrategyEngine } from "./strategy/engine";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
-import type { ExecutionResult, ExecutorConfig } from "@poker-bot/executor";
+import type { ExecutionResult, ExecutorConfig, VisionClientInterface } from "@poker-bot/executor";
 import { createHandHistoryLogger } from "@poker-bot/logger";
 import { HealthMonitor } from "./health/monitor";
 import { SafeModeController } from "./health/safeModeController";
 import { PanicStopController } from "./health/panicStopController";
 import { HealthDashboardServer } from "./health/dashboard";
 import { HealthMetricsStore } from "./health/metricsStore";
+import { ModelVersionCollector } from "./version/collector";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -181,6 +178,12 @@ export async function run() {
   const resolvedCachePath = path.isAbsolute(cachePathConfig)
     ? cachePathConfig
     : path.resolve(process.cwd(), "../../config", cachePathConfig);
+  const modelVersionCollector = new ModelVersionCollector({
+    configManager,
+    cachePath: resolvedCachePath,
+    layoutPath: resolvedLayoutPath,
+    logger: console
+  });
 
   const cacheLoader = new CacheLoader(resolvedCachePath, { logger: console });
   try {
@@ -227,12 +230,19 @@ export async function run() {
   // Create verifier if execution is enabled
   let verifier: ActionVerifier | undefined;
   if (executionConfig.enabled) {
-    verifier = new ActionVerifier({
+    const verifierVisionClient: VisionClientInterface = {
       captureAndParse: async () => {
-        // Use vision client to capture and parse
-        return visionClient.captureAndParse();
+        const snapshot = await visionClient.captureAndParse();
+        return {
+          confidence: { overall: snapshot.positions?.confidence ?? 1 },
+          pot: { amount: snapshot.pot?.amount ?? 0 },
+          cards: { communityCards: snapshot.cards?.communityCards ?? [] },
+          actionHistory: [],
+          players: snapshot.stacks
+        };
       }
-    }, console);
+    };
+    verifier = new ActionVerifier(verifierVisionClient, console);
   }
 
   // Create action executor
@@ -308,6 +318,13 @@ export async function run() {
     let decision: StrategyDecision;
     let executionResult: ExecutionResult | undefined;
     let solverTimedOut = false;
+    let modelVersions: ModelVersions | undefined;
+
+    try {
+      modelVersions = await modelVersionCollector.collect();
+    } catch (error) {
+      console.warn("Model version collection failed", error);
+    }
 
     const finalize = async () => {
       healthMetrics.recordSolverSample(decision.timing.gtoTime, solverTimedOut, Date.now());
@@ -321,7 +338,8 @@ export async function run() {
           agents,
           sessionId,
           configHash,
-          healthSnapshotId: healthMonitor.getLatestSnapshot()?.id
+          healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
+          modelVersions
         });
         await handLogger.append(record);
       }
@@ -333,7 +351,7 @@ export async function run() {
       solverTimedOut = true;
       gtoResult = await gtoSolver.solve(state, 0);
       agents = createEmptyAggregatedAgentOutput();
-      decision = strategyEngine.decide(state, gtoResult, agents);
+      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
       return finalize();
     }
 
@@ -345,7 +363,7 @@ export async function run() {
       solverTimedOut = true;
       gtoResult = await gtoSolver.solve(state, 0);
       agents = createEmptyAggregatedAgentOutput();
-      decision = strategyEngine.decide(state, gtoResult, agents);
+      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
       return finalize();
     }
 
@@ -358,7 +376,7 @@ export async function run() {
       agents = createEmptyAggregatedAgentOutput();
 
       // 3) Delegate final decision to StrategyEngine (blending, selection, risk, fallbacks).
-      decision = strategyEngine.decide(state, gtoResult, agents);
+      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
     } finally {
       const actual = tracker.endComponent("gto");
       if (requestedBudget > actual && tracker.release) {
@@ -490,8 +508,19 @@ function buildHandRecord(params: {
   sessionId: string;
   configHash: string;
   healthSnapshotId?: string;
+  modelVersions?: ModelVersions;
 }): HandRecord {
-  const { state, decision, execution, gto, agents, sessionId, configHash, healthSnapshotId } = params;
+  const {
+    state,
+    decision,
+    execution,
+    gto,
+    agents,
+    sessionId,
+    configHash,
+    healthSnapshotId,
+    modelVersions
+  } = params;
   return {
     handId: state.handId,
     sessionId,
@@ -504,8 +533,10 @@ function buildHandRecord(params: {
     timing: decision.timing,
     metadata: {
       configHash,
+      rngSeed: decision.metadata.rngSeed,
       redactionApplied: false,
-      healthSnapshotId
+      healthSnapshotId,
+      modelVersions
     }
   };
 }

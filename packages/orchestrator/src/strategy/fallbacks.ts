@@ -1,10 +1,8 @@
 import type { Action, ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
-import { ActionSelector, SeededRNG, deriveRngForDecision } from "./selection";
+import { ActionSelector, SeededRNG } from "./selection";
 import { BetSizer } from "./sizing";
-import { StrategyRiskIntegration } from "./risk";
 import type {
-  BlendedDistribution,
   StrategyConfig,
   StrategyDecision,
   StrategyMetadata,
@@ -62,7 +60,7 @@ export class FallbackHandler {
     gto: GTOSolution;
     selector: ActionSelector;
     betSizer: BetSizer;
-    rngSeed?: number;
+    rngSeed: number;
     timing?: Partial<StrategyTimingBreakdown>;
     metadataBase?: Partial<StrategyMetadata>;
   }): StrategyDecision {
@@ -84,7 +82,7 @@ export class FallbackHandler {
       );
     }
 
-    const rng = rngSeed !== undefined ? new SeededRNG(rngSeed) : deriveRngForDecision(selector, this.config, state);
+    const rng = new SeededRNG(rngSeed);
     const selected = selector.selectActionForState(dist, state, rng);
     if (!selected.ok) {
       const safe = this.buildLocalSafeAction(state);

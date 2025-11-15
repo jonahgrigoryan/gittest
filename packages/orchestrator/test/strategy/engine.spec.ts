@@ -176,7 +176,7 @@ describe("StrategyEngine", () => {
     const gto = createGTOSolution();
     const agents = createAgentsOk();
 
-    const decision = await engine.decide(state, gto, agents);
+    const decision = await engine.decide(state, gto, agents, "session-test");
 
     expect(decision).toBeDefined();
     expect(decision.action.type).toBeDefined();
@@ -206,7 +206,7 @@ describe("StrategyEngine", () => {
     const gto = createGTOSolution();
     const agents = createAgentsEmpty();
 
-    const decision = await engine.decide(state, gto, agents);
+    const decision = await engine.decide(state, gto, agents, "session-test");
 
     expect(decision.metadata.usedGtoOnlyFallback).toBe(true);
     expect(decision.reasoning.fallbackReason === "gto_only" || decision.reasoning.fallbackReason?.includes("gto_only")).toBe(
@@ -240,7 +240,7 @@ describe("StrategyEngine", () => {
     const gto = createGTOSolution();
     const agents = createAgentsOk();
 
-    const decision = await engine.decide(state, gto, agents);
+    const decision = await engine.decide(state, gto, agents, "session-test");
 
     expect(decision.action).toBeDefined();
     expect(decision.reasoning.fallbackReason).toBeDefined();
@@ -290,7 +290,7 @@ describe("StrategyEngine", () => {
     const gto = createGTOSolution();
     const agents = createAgentsOk();
 
-    const decision: StrategyDecision = await engine.decide(state, gto, agents);
+    const decision: StrategyDecision = await engine.decide(state, gto, agents, "session-test");
 
     expect(decision.metadata.riskSnapshot).toBeDefined();
     expect(decision.metadata.riskSnapshot!.remainingHands).toBe(95);

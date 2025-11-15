@@ -3,6 +3,7 @@ import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import { vision, visionGen } from "@poker-bot/shared";
 
 const VisionServiceClient = visionGen.VisionServiceClient;
+type VisionServiceClientInstance = InstanceType<typeof visionGen.VisionServiceClient>;
 type RpcVisionOutput = visionGen.VisionOutput;
 type HealthStatus = visionGen.HealthStatus;
 type RpcActionButtons = visionGen.ActionButtons;
@@ -14,7 +15,7 @@ const SUIT_VALUES: Suit[] = ["h", "d", "c", "s"];
 type RpcCardData = NonNullable<RpcVisionOutput["cards"]>;
 
 export class VisionClient {
-  private readonly client: VisionServiceClient;
+  private readonly client: VisionServiceClientInstance;
 
   private readonly layoutJson: string;
 
@@ -26,9 +27,13 @@ export class VisionClient {
   async captureAndParse(): Promise<vision.VisionOutput> {
     const request = { layoutJson: this.layoutJson };
     const response = await new Promise<RpcVisionOutput>((resolve, reject) => {
-      this.client.captureFrame(request, (error, result) => {
+      this.client.captureFrame(request, (error: Error | null, result?: RpcVisionOutput) => {
         if (error) {
           reject(error);
+          return;
+        }
+        if (!result) {
+          reject(new Error("Vision capture returned empty result"));
           return;
         }
         resolve(result);
@@ -40,7 +45,7 @@ export class VisionClient {
   async healthCheck(metadata?: Metadata): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const md = metadata ?? new Metadata();
-      this.client.healthCheck({}, md, (error, status: HealthStatus) => {
+      this.client.healthCheck({}, md, (error: Error | null, status: HealthStatus) => {
         if (error) {
           reject(error);
           return;
@@ -125,13 +130,15 @@ export class VisionClient {
     return { rank: card.rank, suit: card.suit };
   }
 
-  private transformActionButtons(actionButtons?: RpcActionButtons): vision.VisionOutput["actionButtons"] {
+  private transformActionButtons(
+    actionButtons?: RpcActionButtons
+  ): vision.VisionOutput["actionButtons"] {
     if (!actionButtons) {
       return undefined;
     }
 
     const map: Record<string, vision.ButtonInfo> = {};
-    const entries: Array<[keyof RpcActionButtons, RpcButtonInfo | undefined]> = [
+    const entries: Array<[keyof RpcActionButtons & string, RpcButtonInfo | undefined]> = [
       ["fold", actionButtons.fold],
       ["check", actionButtons.check],
       ["call", actionButtons.call],

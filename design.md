@@ -115,6 +115,12 @@ graph TB
    - Hand History Logger persists full trace: state, solver output, agent texts, decision, timings, seeds, hashes
    - Exports to JSON and ACPC formats
 
+### Deterministic Replay & Model Versioning
+
+- Every StrategyDecision now records `metadata.rngSeed`, derived from `generateRngSeed(handId, sessionId)` so that replaying the same hand/session pair produces identical RNG sequences across StrategyEngine, SafeAction fallbacks, and Action Executor jitter.
+- HandRecord metadata carries a `modelVersions` object describing the LLM agents (model IDs/providers), the vision layout/model hash, and the GTO cache manifest/fingerprint. Logs plus seeds are sufficient to reconstruct the full environment for audits.
+- Executors consume the same seed to drive jitter/backoff delays, ensuring simulator/research UI automation timelines remain deterministic when rerun with the same decision metadata.
+
 ## Components and Interfaces
 
 ### 1. Configuration Manager

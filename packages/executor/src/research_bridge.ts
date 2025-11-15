@@ -4,6 +4,7 @@ import { BetInputHandler } from './bet_input_handler';
 import type { ActionExecutor, ExecutionResult, ExecutionOptions } from './types';
 import type { StrategyDecision } from '@poker-bot/shared';
 import type { ActionVerifier } from './verifier';
+import { deterministicRandom } from './rng';
 
 // Local interfaces to avoid import issues
 interface ButtonInfo {
@@ -44,6 +45,7 @@ export class ResearchUIExecutor implements ActionExecutor {
   private readonly betInputHandler: BetInputHandler;
   private readonly verifier?: ActionVerifier;
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
+  private jitterCounter = 0;
 
   constructor(
     windowManager: WindowManager,
@@ -126,7 +128,7 @@ export class ResearchUIExecutor implements ActionExecutor {
 
       // 6. Execute action via OS automation
       const executionTime = Date.now() - startTime;
-      const actionResult = await this.performAction(decision.action, actionButton, windowHandle);
+      const actionResult = await this.performAction(decision, actionButton, windowHandle);
 
       if (!actionResult.success) {
         return actionResult;
@@ -203,10 +205,11 @@ export class ResearchUIExecutor implements ActionExecutor {
    * Performs the actual action via OS-level automation
    */
   private async performAction(
-    action: StrategyDecision['action'],
+    decision: StrategyDecision,
     buttonInfo: ButtonInfo,
     windowHandle: WindowHandle
   ): Promise<ExecutionResult> {
+    const action = decision.action;
     this.logger.debug('ResearchUIExecutor: Performing action', {
       action,
       buttonInfo,
@@ -221,7 +224,7 @@ export class ResearchUIExecutor implements ActionExecutor {
       this.logger.debug('ResearchUIExecutor: Converted to screen coordinates', { screenCoords });
 
       // 2. Add human-like delay before clicking (1-3 seconds)
-      const humanDelay = 1000 + Math.random() * 2000;
+      const humanDelay = 1000 + this.drawRandom(decision) * 2000;
       this.logger.debug('ResearchUIExecutor: Adding human delay', { delayMs: humanDelay });
       await this.delay(humanDelay);
 
@@ -230,7 +233,7 @@ export class ResearchUIExecutor implements ActionExecutor {
       this.logger.debug('ResearchUIExecutor: Moved mouse to button');
 
       // 4. Small random delay before click
-      await this.delay(50 + Math.random() * 150);
+      await this.delay(50 + this.drawRandom(decision) * 150);
 
       // 5. Execute click
       await this.clickMouse();
@@ -242,7 +245,7 @@ export class ResearchUIExecutor implements ActionExecutor {
       // 6. Handle bet sizing for raise actions
       if (action.type === 'raise' && action.amount !== undefined) {
         this.logger.debug('ResearchUIExecutor: Handling bet sizing');
-        await this.betInputHandler.inputBetAmount(action, windowHandle);
+        await this.betInputHandler.inputBetAmount(action, windowHandle, decision.metadata?.rngSeed);
       }
 
       return {
@@ -358,7 +361,7 @@ export class ResearchUIExecutor implements ActionExecutor {
     this.logger.info('ResearchUIExecutor: Retrying execution after verification failure');
 
     // Wait a brief moment before retry (100-300ms random jitter)
-    const jitter = 100 + Math.random() * 200;
+    const jitter = 100 + this.drawRandom(decision) * 200;
     await this.delay(jitter);
 
     // Create a new execution attempt
@@ -407,5 +410,12 @@ export class ResearchUIExecutor implements ActionExecutor {
    */
   private async delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private drawRandom(decision: StrategyDecision): number {
+    const base = decision.metadata?.rngSeed ?? 0;
+    const value = deterministicRandom(base, this.jitterCounter);
+    this.jitterCounter += 1;
+    return value;
   }
 }

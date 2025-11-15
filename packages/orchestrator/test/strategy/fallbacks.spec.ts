@@ -125,7 +125,8 @@ describe("FallbackHandler", () => {
       state,
       gto,
       selector,
-      betSizer
+      betSizer,
+      rngSeed: 42
     });
 
     expect(decision.action.type).toBeDefined();
@@ -150,7 +151,8 @@ describe("FallbackHandler", () => {
       state,
       gto,
       selector,
-      betSizer: failingSizer
+      betSizer: failingSizer,
+      rngSeed: 77
     });
 
     // Implementation emits explicit gto_only_sizing_failed:<reason> tag for this path

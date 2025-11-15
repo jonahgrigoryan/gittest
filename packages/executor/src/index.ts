@@ -79,3 +79,4 @@ export { WindowManager } from './window_manager';
 export { ComplianceChecker } from './compliance';
 export { BetInputHandler } from './bet_input_handler';
 export { ActionVerifier } from './verifier';
+export type { VisionClientInterface } from './verifier';

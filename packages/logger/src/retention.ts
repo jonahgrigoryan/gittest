@@ -1,4 +1,4 @@
-import { promises as fs } from "node:fs";
+import { promises as fs, Dirent } from "node:fs";
 import { join } from "node:path";
 
 interface RetentionOptions {
@@ -24,7 +24,7 @@ async function walkDirectory(
   retentionDays: number,
   options: RetentionOptions
 ) {
-  let entries: fs.Dirent[];
+  let entries: Dirent[];
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {

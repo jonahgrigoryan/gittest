@@ -68,6 +68,27 @@ export interface StrategyDecision {
   metadata: StrategyMetadata;
 }
 
+export interface ModelVersions {
+  llm?: {
+    [agentId: string]: {
+      modelId: string;
+      provider: string;
+      weightsHash?: string;
+      version?: string;
+    };
+  };
+  vision?: {
+    modelFiles: string[];
+    versions?: Record<string, string>;
+    modelDir?: string;
+  };
+  gtoCache?: {
+    manifestVersion: string;
+    fingerprintAlgorithm: string;
+    cachePath?: string;
+  };
+}
+
 export interface SerializedGameState {
   handId: string;
   gameType: GameState["gameType"];
@@ -219,6 +240,7 @@ export interface SerializedExecutionResult {
   metadata?: {
     executionMode: string;
     platform?: string;
+    windowHandle?: string;
   };
 }
 
@@ -248,9 +270,11 @@ export interface HandRecord {
   outcome?: HandOutcome;
   metadata: {
     configHash: string;
+    rngSeed: number;
     redactionApplied: boolean;
     redactedFields?: string[];
     healthSnapshotId?: string;
+    modelVersions?: ModelVersions;
   };
 }
 
