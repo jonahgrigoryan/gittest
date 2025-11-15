@@ -531,7 +531,8 @@
                 "enum": [
                   "playerNames",
                   "ids",
-                  "ipAddresses"
+                  "ipAddresses",
+                  "reasoning"
                 ]
               },
               "default": []
@@ -553,6 +554,82 @@
             "windowHands": {
               "type": "integer",
               "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "health"
+      ],
+      "properties": {
+        "health": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "intervalMs",
+            "degradedThresholds",
+            "safeMode",
+            "panicStop",
+            "dashboard"
+          ],
+          "properties": {
+            "intervalMs": {
+              "type": "integer",
+              "minimum": 1000,
+              "default": 5000
+            },
+            "degradedThresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visionConfidenceMin": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.99
+                },
+                "solverLatencyMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 800
+                },
+                "executorFailureRate": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.2
+                }
+              }
+            },
+            "safeMode": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean", "default": true },
+                "autoExitSeconds": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "panicStop": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "visionConfidenceFrames": { "type": "integer", "minimum": 1, "default": 3 },
+                "minConfidence": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.99 },
+                "riskGuardAutoTrip": { "type": "boolean", "default": true }
+              }
+            },
+            "dashboard": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean", "default": false },
+                "port": { "type": "integer", "minimum": 1024, "default": 7777 },
+                "authToken": { "type": "string" }
+              }
             }
           }
         }

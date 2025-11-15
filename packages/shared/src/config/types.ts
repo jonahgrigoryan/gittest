@@ -104,11 +104,37 @@ export interface BotConfig {
     exportFormats: Array<"json" | "acpc">;
     redaction: {
       enabled: boolean;
-      fields: Array<"playerNames" | "ids" | "ipAddresses">;
+      fields: Array<"playerNames" | "ids" | "ipAddresses" | "reasoning">;
     };
     metrics: {
       enabled: boolean;
       windowHands: number;
     };
+  };
+  monitoring: {
+    health: HealthMonitoringConfig;
+  };
+}
+
+export interface HealthMonitoringConfig {
+  intervalMs: number;
+  degradedThresholds: {
+    visionConfidenceMin: number;
+    solverLatencyMs: number;
+    executorFailureRate: number;
+  };
+  safeMode: {
+    enabled: boolean;
+    autoExitSeconds?: number;
+  };
+  panicStop: {
+    visionConfidenceFrames: number;
+    minConfidence: number;
+    riskGuardAutoTrip: boolean;
+  };
+  dashboard: {
+    enabled: boolean;
+    port: number;
+    authToken?: string;
   };
 }
