@@ -30,6 +30,9 @@
 - **Task 10 – Hand History Logger**
   Implemented the shared logging schema/serializers, production-ready `@poker-bot/logger` with redaction, exporters, metrics, retention, and orchestrator wiring that records every StrategyDecision + outcome for auditing. Config/schema extended with logging knobs; full logger/orchestrator test suites remain green.
 
+- **Task 11 – Health Monitor & Safe Mode**
+  Added shared health contracts/config, built HealthMonitor + SafeMode/PanicStop controllers with an optional dashboard, wired snapshot logging, and blocked the Action Executor whenever health degrades or panic stop triggers. Vitest suites now cover the new health modules.
+
 ## Workflow
 
 1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
@@ -50,5 +53,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 11 – Hand History Logger (next branch)**
-  Based on tasks.md §11, implement the health-monitor and safe-mode system (component checks, panic-stop telemetry, manual recovery) now that logging/execution are in place.```*** End Patch
+- **Task 12 – Deterministic Replay & RNG Seeding**
+  Implement seeded RNG plumbing, model hashing/versioning, and deterministic replay tooling so health/decision logs from Tasks 10-11 can be reproduced end-to-end (Req. 10.1/10.2).

@@ -1,3 +1,4 @@
+import { appendFile, mkdir } from "node:fs/promises";
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import type { ParserConfig } from "@poker-bot/shared/vision";
@@ -35,6 +36,11 @@ import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
 import type { ExecutionResult, ExecutorConfig } from "@poker-bot/executor";
 import { createHandHistoryLogger } from "@poker-bot/logger";
+import { HealthMonitor } from "./health/monitor";
+import { SafeModeController } from "./health/safeModeController";
+import { PanicStopController } from "./health/panicStopController";
+import { HealthDashboardServer } from "./health/dashboard";
+import { HealthMetricsStore } from "./health/metricsStore";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -84,6 +90,8 @@ export async function run() {
     riskGuard.updateLimits({ bankrollLimit: next.bankrollLimit, sessionLimit: next.sessionLimit });
   });
 
+  let panicStopControllerRef: PanicStopController | undefined;
+
   let lastHandId: string | undefined;
 
   const riskController: RiskController = {
@@ -108,7 +116,17 @@ export async function run() {
       return snapshot;
     },
     updateLimits: limits => riskGuard.updateLimits(limits),
-    checkLimits: (action, state, options) => riskGuard.checkLimits(action, state, options),
+    checkLimits: (action, state, options) => {
+      const result = riskGuard.checkLimits(action, state, options);
+      if (!result.allowed && healthConfig.panicStop.riskGuardAutoTrip && panicStopControllerRef) {
+        panicStopControllerRef.trigger({
+          type: "risk_limit",
+          detail: result.reason ? result.reason.type : "risk_limit",
+          triggeredAt: Date.now()
+        });
+      }
+      return result;
+    },
     getSnapshot: () => riskGuard.getSnapshot(),
     resetSession: () => riskGuard.resetSession()
   };
@@ -180,8 +198,10 @@ export async function run() {
     timeBudgetTracker: new TimeBudgetTracker()
   });
   const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
+  const healthConfig = configManager.get<config.BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
   const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
+  await mkdir(logOutputDir, { recursive: true });
   const handLogger = loggingConfig.enabled
     ? await createHandHistoryLogger({
         sessionId,
@@ -196,6 +216,9 @@ export async function run() {
         logger: console
       })
     : undefined;
+  const resultsDir = path.resolve(process.cwd(), "../../results/session");
+  await mkdir(resultsDir, { recursive: true });
+  const healthLogPath = path.resolve(resultsDir, `health-${sessionId}.jsonl`);
   const configHash = computeConfigHash(strategyConfig);
 
   // Create execution infrastructure
@@ -217,18 +240,78 @@ export async function run() {
     ? createActionExecutor(executionConfig.mode, executionConfig, verifier, console)
     : undefined;
 
+  const safeModeController = new SafeModeController(console);
+  const panicStopController = new PanicStopController(safeModeController, console);
+  panicStopControllerRef = panicStopController;
+  const healthMetrics = new HealthMetricsStore(healthConfig.panicStop, detail => {
+    panicStopController.trigger({
+      type: "vision_confidence",
+      detail,
+      triggeredAt: Date.now()
+    });
+  });
+  let dashboard: HealthDashboardServer | undefined;
+  const healthMonitor = new HealthMonitor(healthConfig, {
+    logger: console,
+    safeMode: safeModeController,
+    panicStop: panicStopController,
+    onSnapshot: snapshot => {
+      void appendFile(healthLogPath, `${JSON.stringify(snapshot)}\n`).catch(error =>
+        console.warn("Failed to write health snapshot", error)
+      );
+      dashboard?.handleSnapshot(snapshot);
+    }
+  });
+  healthMonitor.registerCheck({
+    name: "vision",
+    fn: async () => ({
+      ...healthMetrics.buildVisionStatus(healthConfig.degradedThresholds.visionConfidenceMin),
+      checkedAt: Date.now()
+    })
+  });
+  healthMonitor.registerCheck({
+    name: "solver",
+    fn: async () => ({
+      ...healthMetrics.buildSolverStatus(healthConfig.degradedThresholds.solverLatencyMs),
+      checkedAt: Date.now()
+    })
+  });
+  healthMonitor.registerCheck({
+    name: "executor",
+    fn: async () => ({
+      ...healthMetrics.buildExecutorStatus(healthConfig.degradedThresholds.executorFailureRate),
+      checkedAt: Date.now()
+    })
+  });
+  healthMonitor.registerCheck({
+    name: "strategy",
+    fn: async () => ({
+      ...healthMetrics.buildStrategyStatus(),
+      checkedAt: Date.now()
+    })
+  });
+  healthMonitor.start();
+  if (healthConfig.dashboard.enabled) {
+    dashboard = new HealthDashboardServer(healthConfig.dashboard, healthMonitor, console);
+    await dashboard.start();
+  }
+
   async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<{
     decision: StrategyDecision;
     execution?: ExecutionResult;
   }> {
+    healthMetrics.recordVisionSample(state.confidence?.overall ?? 1, Date.now());
     const tracker = ensureTracker(options.tracker);
     lastHandId = state.handId;
     let gtoResult: GTOSolution | undefined;
     let agents: AggregatedAgentOutput | undefined;
     let decision: StrategyDecision;
     let executionResult: ExecutionResult | undefined;
+    let solverTimedOut = false;
 
     const finalize = async () => {
+      healthMetrics.recordSolverSample(decision.timing.gtoTime, solverTimedOut, Date.now());
+      healthMetrics.recordStrategySample(decision, Date.now());
       if (handLogger) {
         const record = buildHandRecord({
           state,
@@ -237,7 +320,8 @@ export async function run() {
           gto: gtoResult,
           agents,
           sessionId,
-          configHash
+          configHash,
+          healthSnapshotId: healthMonitor.getLatestSnapshot()?.id
         });
         await handLogger.append(record);
       }
@@ -246,6 +330,7 @@ export async function run() {
 
     // 1) Solve GTO under time budget (existing logic).
     if (tracker.shouldPreempt("gto")) {
+      solverTimedOut = true;
       gtoResult = await gtoSolver.solve(state, 0);
       agents = createEmptyAggregatedAgentOutput();
       decision = strategyEngine.decide(state, gtoResult, agents);
@@ -257,6 +342,7 @@ export async function run() {
     const requestedBudget = Math.max(0, Math.min(configuredBudget, remainingBudget));
 
     if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
+      solverTimedOut = true;
       gtoResult = await gtoSolver.solve(state, 0);
       agents = createEmptyAggregatedAgentOutput();
       decision = strategyEngine.decide(state, gtoResult, agents);
@@ -281,8 +367,7 @@ export async function run() {
     }
 
     // 4) Execute the decision if execution is enabled and we have an executor
-    if (actionExecutor && executionConfig.enabled) {
-      // Reserve time for execution in budget tracker
+    if (actionExecutor && executionConfig.enabled && !panicStopController.isActive() && !safeModeController.isActive()) {
       if (tracker.shouldPreempt("execution")) {
         console.warn("Execution preempted due to time budget");
       } else {
@@ -293,10 +378,16 @@ export async function run() {
             maxRetries: executionConfig.maxRetries,
             timeoutMs: executionConfig.verificationTimeoutMs
           });
+          healthMetrics.recordExecutorSample(executionResult.success, Date.now());
         } finally {
           tracker.endComponent("execution");
         }
       }
+    } else if (panicStopController.isActive() || safeModeController.isActive()) {
+      console.warn(
+        `Skipping automatic execution due to ${panicStopController.isActive() ? "panic_stop" : "safe_mode"}`
+      );
+      healthMetrics.recordExecutorSample(false, Date.now());
     }
 
     return finalize();
@@ -398,8 +489,9 @@ function buildHandRecord(params: {
   agents?: AggregatedAgentOutput;
   sessionId: string;
   configHash: string;
+  healthSnapshotId?: string;
 }): HandRecord {
-  const { state, decision, execution, gto, agents, sessionId, configHash } = params;
+  const { state, decision, execution, gto, agents, sessionId, configHash, healthSnapshotId } = params;
   return {
     handId: state.handId,
     sessionId,
@@ -412,7 +504,8 @@ function buildHandRecord(params: {
     timing: decision.timing,
     metadata: {
       configHash,
-      redactionApplied: false
+      redactionApplied: false,
+      healthSnapshotId
     }
   };
 }

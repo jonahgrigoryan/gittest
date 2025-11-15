@@ -250,6 +250,7 @@ export interface HandRecord {
     configHash: string;
     redactionApplied: boolean;
     redactedFields?: string[];
+    healthSnapshotId?: string;
   };
 }
 

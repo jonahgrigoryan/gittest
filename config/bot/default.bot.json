@@ -151,12 +151,36 @@
       "enabled": true,
       "fields": [
         "playerNames",
-        "ids"
+        "ids",
+        "reasoning"
       ]
     },
     "metrics": {
       "enabled": true,
       "windowHands": 200
+    }
+  },
+  "monitoring": {
+    "health": {
+      "intervalMs": 5000,
+      "degradedThresholds": {
+        "visionConfidenceMin": 0.99,
+        "solverLatencyMs": 800,
+        "executorFailureRate": 0.2
+      },
+      "safeMode": {
+        "enabled": true,
+        "autoExitSeconds": 60
+      },
+      "panicStop": {
+        "visionConfidenceFrames": 3,
+        "minConfidence": 0.99,
+        "riskGuardAutoTrip": true
+      },
+      "dashboard": {
+        "enabled": false,
+        "port": 7777
+      }
     }
   }
 }
