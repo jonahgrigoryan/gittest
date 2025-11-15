@@ -187,7 +187,7 @@ describe("Strategy integration smoke", () => {
     const gto = createGTOSolution();
     const agents = createAgentsBlended();
 
-    const decision: StrategyDecision = await engine.decide(state, gto, agents);
+    const decision: StrategyDecision = await engine.decide(state, gto, agents, "session-int");
 
     expect(decision.action.type).toBeDefined();
     expect(decision.reasoning.blendedDistribution.size).toBeGreaterThan(0);
@@ -211,7 +211,7 @@ describe("Strategy integration smoke", () => {
     const gto = createGTOSolution();
     const agents = createAgentsEmpty();
 
-    const decision = await engine.decide(state, gto, agents);
+    const decision = await engine.decide(state, gto, agents, "session-int");
 
     expect(decision.metadata.usedGtoOnlyFallback).toBe(true);
     expect(decision.reasoning.fallbackReason?.includes("gto")).toBe(true);
@@ -233,7 +233,7 @@ describe("Strategy integration smoke", () => {
     const gto = createGTOSolution();
     const agents = createAgentsBlended();
 
-    const decision = await engine.decide(state, gto, agents);
+    const decision = await engine.decide(state, gto, agents, "session-int");
 
     expect(decision.action.type).toBeDefined();
     // Panic stop / violation should be reflected in metadata or reasoning.

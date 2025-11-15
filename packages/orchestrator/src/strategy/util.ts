@@ -132,22 +132,6 @@ function isValidType(type: Action["type"]): boolean {
 }
 
 /**
- * Infer the call amount from current GameState.
- * Uses the same semantics as vision/legal-actions helpers.
- */
-function inferCallAmount(state: GameState): number {
-  const { legalActions } = state;
-  if (!legalActions) {
-    return 0;
-  }
-  const call = legalActions.find(a => a.type === "call");
-  if (!call) {
-    return 0;
-  }
-  return typeof call.amount === "number" && Number.isFinite(call.amount) ? call.amount : 0;
-}
-
-/**
  * Given a GTOSolution ActionKey and current GameState, attempt to reconstruct
  * a legal Action. Returns a ParsedActionKeyResult used by higher-level
  * components (selector/engine) to decide on fallbacks instead of throwing.

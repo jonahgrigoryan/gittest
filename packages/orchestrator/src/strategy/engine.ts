@@ -1,9 +1,5 @@
-import type {
-  Action,
-  ActionKey,
-  GameState,
-  GTOSolution
-} from "@poker-bot/shared";
+import { generateRngSeed } from "@poker-bot/shared";
+import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import { TimeBudgetTracker } from "../budget/timeBudgetTracker";
 import type { RiskGuardAPI as RiskController } from "../safety/types";
@@ -18,7 +14,6 @@ import type {
   BlendedDistribution,
   StrategyConfig,
   StrategyDecision,
-  StrategyInputs,
   StrategyEngineDeps,
   StrategyMetadata,
   StrategyReasoningTrace,
@@ -84,22 +79,23 @@ export class StrategyEngine {
   decide(
     state: GameState,
     gtoSolution: GTOSolution,
-    agentOutput: AggregatedAgentOutput
+    agentOutput: AggregatedAgentOutput,
+    sessionId: string
   ): StrategyDecision {
     const start = performanceNow();
     const timing: Partial<StrategyTimingBreakdown> = {};
     const baseMetadata: Partial<StrategyMetadata> = {};
+    const rngSeed = this.resolveRngSeed(state.handId, sessionId);
 
     // 1. Fast path: determine if we must use pure GTO-only.
     if (this.fallback.shouldUseGTOOnly(agentOutput)) {
       this.logger?.info?.("StrategyEngine: using GTO-only fallback (agent failure/circuit breaker)");
-      const rng = deriveRngForDecision(this.selector, this.config, state);
       const decision = this.fallback.createGTOOnlyDecision({
         state,
         gto: gtoSolution,
         selector: this.selector,
         betSizer: this.betSizer,
-        rngSeed: (rng as any).seed ?? undefined,
+        rngSeed,
         timing,
         metadataBase: {
           ...baseMetadata,
@@ -116,13 +112,12 @@ export class StrategyEngine {
     const preempted = this.shouldPreempt();
     if (preempted) {
       this.logger?.warn?.("StrategyEngine: preempting to GTO-only due to time budget");
-      const rng = deriveRngForDecision(this.selector, this.config, state);
       const decision = this.fallback.createGTOOnlyDecision({
         state,
         gto: gtoSolution,
         selector: this.selector,
         betSizer: this.betSizer,
-        rngSeed: (rng as any).seed ?? undefined,
+        rngSeed,
         timing,
         metadataBase: {
           ...baseMetadata,
@@ -142,7 +137,6 @@ export class StrategyEngine {
       : new Map<ActionKey, number>();
 
     // 4. Divergence detection & logging.
-    const rngSeed = this.config.rngSeed ?? hashSeed(state.handId ?? "");
     const divergencePP = this.divergence.logIfNeeded(
       state.handId,
       gtoDist,
@@ -152,7 +146,11 @@ export class StrategyEngine {
     );
 
     // 5. Selection from blended distribution.
-    const rng = deriveRngForDecision(this.selector, this.config, state);
+    const rng = deriveRngForDecision(this.selector, this.config, {
+      state,
+      sessionId,
+      seedOverride: rngSeed
+    });
     const pickResult = this.selector.selectActionForState(blended.actions, state, rng);
     if (!pickResult.ok) {
       this.logger?.warn?.("StrategyEngine: blended selection failed, using SafeAction fallback", {
@@ -165,9 +163,8 @@ export class StrategyEngine {
         timing,
         metadataBase: {
           ...baseMetadata,
-          rngSeed,
-          alphaGTO: this.config.alphaGTO
-        } as any
+          rngSeed
+        }
       });
       const enforced = this.applyRisk(safeDecision, state, "selection_failed");
       return this.finalizeDecision(enforced, start, timing);
@@ -187,10 +184,12 @@ export class StrategyEngine {
         state,
         reason: `selection_failed:sizing_failed:${sizedResult.reason}`,
         timing,
-        metadataBase: this.buildMetadata(state, rngSeed, {
+        metadataBase: {
+          ...baseMetadata,
+          rngSeed,
           preempted: false,
           usedGtoOnlyFallback: true
-        }) as any
+        }
       });
 
       const enforcedSafe = this.applyRisk(safeDecision, state, "selection_failed");
@@ -465,6 +464,15 @@ export class StrategyEngine {
       }
     };
   }
+
+  private resolveRngSeed(handId: string | undefined, sessionId: string): number {
+    if (typeof this.config.rngSeed === "number") {
+      return this.config.rngSeed >>> 0;
+    }
+    const normalizedHandId = handId ?? "unknown-hand";
+    const normalizedSession = sessionId ?? "unknown-session";
+    return generateRngSeed(normalizedHandId, normalizedSession);
+  }
 }
 
 /**
@@ -476,13 +484,4 @@ function performanceNow(): number {
   }
   const [sec, nano] = process.hrtime();
   return sec * 1000 + nano / 1e6;
-}
-
-function hashSeed(input: string): number {
-  let hash = 2166136261 >>> 0;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
 }

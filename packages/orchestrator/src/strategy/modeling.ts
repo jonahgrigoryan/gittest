@@ -30,7 +30,7 @@ export class OpponentModeler {
   private readonly store: Map<Position, PositionStats>;
 
   constructor(config: StrategyConfig) {
-    const cfg = (config as any).opponentModeling ?? {};
+    const cfg = config.opponentModeling ?? { enabled: false, minHands: 100 };
     this.enabled = cfg.enabled === true;
     this.minSamples = typeof cfg.minHands === "number" && cfg.minHands > 0 ? cfg.minHands : 100;
     this.store = new Map();

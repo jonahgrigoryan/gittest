@@ -2,6 +2,7 @@ import type { ActionExecutor, ExecutionResult, ExecutionOptions, SimulatorComman
 import type { StrategyDecision } from '@poker-bot/shared';
 import type { ActionVerifier } from '../verifier';
 import { createActionKey } from '@poker-bot/shared';
+import { deterministicRandom } from '../rng';
 
 /**
  * Production-grade simulator executor that translates StrategyDecision actions
@@ -11,6 +12,7 @@ export class SimulatorExecutor implements ActionExecutor {
   private readonly apiEndpoint: string;
   private readonly verifier?: ActionVerifier;
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
+  private jitterCounter = 0;
 
   constructor(
     apiEndpoint: string = 'http://localhost:8080/api',
@@ -249,7 +251,7 @@ export class SimulatorExecutor implements ActionExecutor {
     this.logger.info('Retrying execution after verification failure');
 
     // Wait a brief moment before retry (100-300ms random jitter)
-    const jitter = 100 + Math.random() * 200;
+    const jitter = 100 + this.drawRandom(decision) * 200;
     await new Promise(resolve => setTimeout(resolve, jitter));
 
     // Create a new execution attempt
@@ -261,5 +263,12 @@ export class SimulatorExecutor implements ActionExecutor {
     }
 
     return retryResult;
+  }
+
+  private drawRandom(decision: StrategyDecision): number {
+    const base = decision.metadata?.rngSeed ?? 0;
+    const value = deterministicRandom(base, this.jitterCounter);
+    this.jitterCounter += 1;
+    return value;
   }
 }

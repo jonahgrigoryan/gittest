@@ -1,5 +1,6 @@
 import type { Action } from '@poker-bot/shared';
 import type { WindowHandle, InputField } from './types';
+import { deterministicRandom } from './rng';
 
 /**
  * Production-grade bet sizing input handler for research UI mode.
@@ -7,6 +8,7 @@ import type { WindowHandle, InputField } from './types';
  */
 export class BetInputHandler {
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
+  private jitterCounter = 0;
 
   constructor(logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console) {
     this.logger = logger;
@@ -16,7 +18,7 @@ export class BetInputHandler {
    * Handles bet sizing input fields for research UI
    * Relies on pre-quantized amounts from StrategyEngine
    */
-  async inputBetAmount(action: Action, windowHandle: WindowHandle): Promise<void> {
+  async inputBetAmount(action: Action, windowHandle: WindowHandle, rngSeed?: number): Promise<void> {
     if (action.type !== 'raise') {
       this.logger.debug('BetInputHandler: Not a raise action, skipping bet input');
       return;
@@ -42,7 +44,7 @@ export class BetInputHandler {
 
     // Input the pre-calculated amount (sizing already done in strategy layer)
     const amount = action.amount;
-    await this.typeBetAmount(inputField, amount);
+    await this.typeBetAmount(inputField, amount, rngSeed);
 
     this.logger.info('BetInputHandler: Successfully input bet amount', { amount });
   }
@@ -76,7 +78,7 @@ export class BetInputHandler {
   /**
    * Types bet amount into input field using cross-platform keyboard simulation
    */
-  private async typeBetAmount(inputField: InputField, amount: number): Promise<void> {
+  private async typeBetAmount(inputField: InputField, amount: number, rngSeed?: number): Promise<void> {
     this.logger.debug('BetInputHandler: Typing bet amount', {
       amount,
       inputField
@@ -96,8 +98,8 @@ export class BetInputHandler {
     // Type the amount character by character with small delays
     for (const char of amountStr) {
       await this.typeCharacter(char);
-      // Small delay between characters to simulate human typing
-      await this.delay(50 + Math.random() * 100);
+      const jitter = 50 + deterministicRandom(rngSeed ?? 0, this.jitterCounter++) * 100;
+      await this.delay(jitter);
     }
 
     // Verify the amount was typed correctly

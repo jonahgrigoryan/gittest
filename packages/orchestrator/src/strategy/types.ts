@@ -1,11 +1,5 @@
-import type { Action, ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
+import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
-import type {
-  RiskCheckOptions,
-  RiskCheckResult,
-  RiskSnapshot,
-  RiskGuardAPI as RiskController
-} from "../safety/types";
 import type { TimeBudgetTracker } from "../budget/timeBudgetTracker";
 
 // Re-export strategy types from shared package

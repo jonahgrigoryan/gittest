@@ -1,5 +1,6 @@
 import type { Action, ActionKey, GameState } from "@poker-bot/shared";
 import type { RNG, StrategyConfig } from "@poker-bot/shared";
+import { generateRngSeed, validateSeed } from "@poker-bot/shared";
 import { decodeAndValidateActionKey, type ParsedActionKeyResult } from "./util";
 
 /**
@@ -7,12 +8,14 @@ import { decodeAndValidateActionKey, type ParsedActionKeyResult } from "./util";
  */
 export class SeededRNG implements RNG {
   seed: number;
+  readonly initialSeed: number;
 
   constructor(seed: number) {
-    if (!Number.isFinite(seed)) {
+    if (!validateSeed(seed)) {
       throw new Error("SeededRNG: seed must be a finite number");
     }
     this.seed = seed >>> 0;
+    this.initialSeed = this.seed;
   }
 
   next(): number {
@@ -33,13 +36,16 @@ export class ActionSelector {
    * Create a deterministic RNG instance.
    * If an explicit seed is provided, use it; otherwise derive from handId+timestamp.
    */
-  createRNG(handId?: string, extra?: number): RNG {
+  createRNG(handId: string, sessionId: string, extra?: number): RNG {
     if (Number.isFinite(this.baseSeed!)) {
       return new SeededRNG(this.baseSeed as number);
     }
-    const hashInput = `${handId ?? "unknown"}:${extra ?? Date.now()}`;
-    const seed = this.hashStringToSeed(hashInput);
-    return new SeededRNG(seed);
+    if (!handId) {
+      throw new Error("ActionSelector.createRNG requires a handId");
+    }
+    const derivedSeed = generateRngSeed(handId, sessionId);
+    const finalSeed = typeof extra === "number" ? (derivedSeed + extra) >>> 0 : derivedSeed;
+    return new SeededRNG(finalSeed);
   }
 
   /**
@@ -125,15 +131,6 @@ export class ActionSelector {
     return normalized;
   }
 
-  private hashStringToSeed(input: string): number {
-    let hash = 2166136261 >>> 0; // FNV-1a basis
-    for (let i = 0; i < input.length; i++) {
-      hash ^= input.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return hash >>> 0;
-  }
-
 }
 
 /**
@@ -142,10 +139,13 @@ export class ActionSelector {
 export function deriveRngForDecision(
   selector: ActionSelector,
   config: StrategyConfig,
-  state: GameState
+  params: { state: GameState; sessionId: string; seedOverride?: number }
 ): RNG {
+  if (typeof params.seedOverride === "number") {
+    return new SeededRNG(params.seedOverride);
+  }
   if (config.rngSeed !== undefined) {
     return new SeededRNG(config.rngSeed);
   }
-  return selector.createRNG(state.handId);
+  return selector.createRNG(params.state.handId, params.sessionId);
 }

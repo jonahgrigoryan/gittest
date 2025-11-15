@@ -1,15 +1,14 @@
-# Task 11 – Health Monitor & Safe Mode Report
+# Task 12 – Deterministic Replay & RNG Seeding Report
 
 ## Summary
-- Added shared health contracts (`packages/shared/src/health.ts`) plus config/schema defaults for `monitoring.health`.
-- Implemented orchestrator health modules:
-  - `HealthMetricsStore` gathers vision/solver/executor/strategy stats.
-  - `HealthMonitor` drives periodic checks, toggles safe mode, and emits snapshots.
-  - `SafeModeController` and `PanicStopController` gate execution.
-  - Optional HTTP/SSE dashboard streams current health.
-- Wired `main.ts` to update metrics each decision, append snapshots to `results/session/health-<session>.jsonl`, reference health snapshot IDs in hand history, and block executor when safe mode or panic stop is active.
-- Added vitest coverage for monitor/safe-mode/panic-stop flows plus Task 11 checklist.
+- Added shared RNG helpers (`packages/shared/src/rng.ts`) and updated `ActionSelector`, `StrategyEngine`, and all fallbacks to derive seeds deterministically from `handId:sessionId`, storing the value in every `StrategyDecision`.
+- Extended executor jitter/backoff code (simulator + research UI + bet input handler) to consume the logged seed instead of `Math.random`, ensuring end-to-end replay fidelity.
+- Introduced `ModelVersionCollector` plus serialized `modelVersions` metadata so HandRecords capture LLM persona models, vision layout hash, and GTO cache manifest per hand.
+- Updated orchestrator logging (`buildHandRecord`) to include the RNG seed + model versions, added replay documentation (`docs/replay.md`), a Task 12 checklist, and new unit/integration tests (shared RNG helpers, selector determinism, collector caching, deterministic replay).
 
 ## Testing
-- `pnpm test --filter "@poker-bot/logger"`
-- `pnpm test --filter "@poker-bot/orchestrator"`
+- `pnpm --filter "@poker-bot/shared" test`
+- `pnpm --filter "@poker-bot/logger" test`
+- `pnpm --filter "@poker-bot/orchestrator" lint`
+- `pnpm --filter "@poker-bot/orchestrator" test`
+- `pnpm --filter "@poker-bot/orchestrator" build`

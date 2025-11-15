@@ -33,6 +33,9 @@
 - **Task 11 – Health Monitor & Safe Mode**
   Added shared health contracts/config, built HealthMonitor + SafeMode/PanicStop controllers with an optional dashboard, wired snapshot logging, and blocked the Action Executor whenever health degrades or panic stop triggers. Vitest suites now cover the new health modules.
 
+- **Task 12 – Deterministic Replay & RNG Seeding**
+  Added shared RNG helpers (`generateRngSeed/validateSeed`), made StrategyEngine + fallbacks + executors consume the standardized seed derived from `handId:sessionId`, and captured the value in every `HandRecord`. Wired a `ModelVersionCollector` so LLM/vision/cache versions are logged per hand, added replay documentation (`docs/replay.md`), plus new unit/integration tests covering RNG determinism, collector caching, and end-to-end replay guarantees (Req. 10.1/10.2).
+
 ## Workflow
 
 1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
@@ -53,5 +56,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 12 – Deterministic Replay & RNG Seeding**
-  Implement seeded RNG plumbing, model hashing/versioning, and deterministic replay tooling so health/decision logs from Tasks 10-11 can be reproduced end-to-end (Req. 10.1/10.2).
+- **Task 13 – Replay Harness & Evaluation Prep**
+  Build the deterministic replay CLI / offline harness outlined in `tasks.md` so the Task 12 seeds + model metadata can drive validation runs and set the stage for upcoming monitoring/evaluation milestones (Req. 9.x / 10.3).
