@@ -181,6 +181,48 @@
         "enabled": false,
         "port": 7777
       }
+    },
+    "observability": {
+      "logs": {
+        "level": "info",
+        "sinks": {
+          "console": {
+            "enabled": true
+          },
+          "file": {
+            "enabled": false,
+            "outputDir": "../../results/session/audit",
+            "maxFileSizeMb": 25,
+            "maxFiles": 10
+          },
+          "webhook": {
+            "enabled": false,
+            "url": "https://example.com/webhook",
+            "batchSize": 10,
+            "retry": {
+              "attempts": 3,
+              "backoffMs": 1000
+            }
+          }
+        }
+      },
+      "metrics": {
+        "flushIntervalMs": 5000,
+        "maxRecentHands": 200,
+        "emitHandSummaries": false
+      },
+      "alerts": {
+        "enabled": false,
+        "cooldownMs": 60000,
+        "channels": [],
+        "triggers": {
+          "panicStop": { "enabled": true, "cooldownMs": 60000 },
+          "safeMode": { "enabled": true, "cooldownMs": 60000 },
+          "solverTimeouts": { "enabled": true, "cooldownMs": 60000, "windowHands": 5 },
+          "agentCost": { "enabled": true, "cooldownMs": 60000, "threshold": 500 },
+          "healthDegradedMs": { "enabled": true, "cooldownMs": 60000 }
+        }
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ export * from "./strategy";
 export * from "./health";
 export * from "./rng";
 export * from "./replay";
+export * from "./observability";
 export * as config from "./config";
 export { ConfigurationManager, createConfigManager } from "./config/manager";
 export * as solverGen from "./gen/solver";
