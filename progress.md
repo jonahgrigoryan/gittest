@@ -37,6 +37,8 @@
   Added shared RNG helpers (`generateRngSeed/validateSeed`), made StrategyEngine + fallbacks + executors consume the standardized seed derived from `handId:sessionId`, and captured the value in every `HandRecord`. Wired a `ModelVersionCollector` so LLM/vision/cache versions are logged per hand, added replay documentation (`docs/replay.md`), plus new unit/integration tests covering RNG determinism, collector caching, and end-to-end replay guarantees (Req. 10.1/10.2).
 - **Task 13 – Replay Harness & Evaluation Prep**
   Added shared replay/report types, a JSONL HandRecord reader, and extracted the decision pipeline for reuse. Built a `ModelVersionValidator`, `ReplayEngine`, and CLI (`pnpm --filter "@poker-bot/orchestrator" replay …`) that batch-replays logged hands, validates RNG seeds/model versions, computes divergence/timing deltas, and emits JSON reports—meeting Req. 9.x / 10.3 and Checkpoint 17.
+- **Task 14 – Monitoring & Observability**
+  Delivered shared observability contracts/config plus defaults, production structured logging sinks (console/file/webhook), a `StructuredLogger`, improved metrics collector, and the `ObservabilityReporter`. Orchestrator now instantiates an `ObservabilityService` + `AlertManager`, records every decision/health snapshot, honors hot-reloaded sinks/alerts, and feeds alert channels + dashboard metrics. Verified via shared/logger/orchestrator lint/test/build and documented in `docs/observability.md`.
 
 ## Workflow
 
@@ -58,5 +60,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 14 – Observability / Audit Logging**
-  Extend logging/metrics to satisfy Req. 6.8 & 7.5 (structured audit logs, alert hooks) now that replay tooling is in place.
+- **Task 15 – Evaluation Framework**
+  Build the offline evaluation harness and shadow-mode runner (Req. 9.x): add simulator smoke tests, opponent pools with win-rate/CI tracking, integrate replayed decisions into an A/B harness, and prepare the instrumentation needed for shadow mode before live deployment.
