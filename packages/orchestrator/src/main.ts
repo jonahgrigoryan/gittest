@@ -14,7 +14,6 @@ import type {
   GameState,
   GTOSolution,
   Action,
-  ActionType,
   HandRecord,
   ModelVersions
 } from "@poker-bot/shared";
@@ -27,6 +26,9 @@ import { RiskStateStore } from "./safety/riskStateStore";
 import type { RiskCheckOptions, RiskGuardAPI } from "./safety/types";
 import type { StrategyConfig, StrategyDecision } from "./strategy/types";
 import { StrategyEngine } from "./strategy/engine";
+import {
+  makeDecision as makeDecisionPipeline
+} from "./decision/pipeline";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
@@ -346,43 +348,17 @@ export async function run() {
       return { decision, execution: executionResult };
     };
 
-    // 1) Solve GTO under time budget (existing logic).
-    if (tracker.shouldPreempt("gto")) {
-      solverTimedOut = true;
-      gtoResult = await gtoSolver.solve(state, 0);
-      agents = createEmptyAggregatedAgentOutput();
-      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
-      return finalize();
-    }
-
-    const configuredBudget = configManager.get<number>("gto.subgameBudgetMs");
-    const remainingBudget = tracker.remaining("gto");
-    const requestedBudget = Math.max(0, Math.min(configuredBudget, remainingBudget));
-
-    if (requestedBudget <= 0 || !tracker.reserve("gto", requestedBudget)) {
-      solverTimedOut = true;
-      gtoResult = await gtoSolver.solve(state, 0);
-      agents = createEmptyAggregatedAgentOutput();
-      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
-      return finalize();
-    }
-
-    tracker.startComponent("gto");
-    try {
-      gtoResult = await gtoSolver.solve(state, requestedBudget);
-
-      // 2) Obtain AggregatedAgentOutput from agents coordinator or stub.
-      // TODO: Replace createEmptyAggregatedAgentOutput() with actual coordinator integration.
-      agents = createEmptyAggregatedAgentOutput();
-
-      // 3) Delegate final decision to StrategyEngine (blending, selection, risk, fallbacks).
-      decision = strategyEngine.decide(state, gtoResult, agents, sessionId);
-    } finally {
-      const actual = tracker.endComponent("gto");
-      if (requestedBudget > actual && tracker.release) {
-        tracker.release("gto", requestedBudget - actual);
-      }
-    }
+    const pipelineResult = await makeDecisionPipeline(state, sessionId, {
+      strategyEngine,
+      gtoSolver,
+      tracker,
+      gtoBudgetMs: configManager.get<number>("gto.subgameBudgetMs"),
+      logger: console
+    });
+    decision = pipelineResult.decision;
+    gtoResult = pipelineResult.gtoSolution;
+    agents = pipelineResult.agentOutput;
+    solverTimedOut = pipelineResult.solverTimedOut;
 
     // 4) Execute the decision if execution is enabled and we have an executor
     if (actionExecutor && executionConfig.enabled && !panicStopController.isActive() && !safeModeController.isActive()) {
@@ -409,33 +385,6 @@ export async function run() {
     }
 
     return finalize();
-  }
-
-  function createEmptyAggregatedAgentOutput(): AggregatedAgentOutput {
-    const now = Date.now();
-    const normalizedActions = new Map<ActionType, number>();
-    normalizedActions.set("fold", 0);
-    normalizedActions.set("check", 0);
-    normalizedActions.set("call", 0);
-    normalizedActions.set("raise", 0);
-
-    return {
-      outputs: [],
-      normalizedActions,
-      consensus: 0,
-      winningAction: null,
-      budgetUsedMs: 0,
-      circuitBreakerTripped: false,
-      notes: "stubbed agent output (no agents wired)",
-      droppedAgents: [],
-      costSummary: {
-        totalTokens: 0,
-        promptTokens: 0,
-        completionTokens: 0
-      },
-      startedAt: now,
-      completedAt: now
-    };
   }
 
   return {

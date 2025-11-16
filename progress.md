@@ -35,6 +35,8 @@
 
 - **Task 12 – Deterministic Replay & RNG Seeding**
   Added shared RNG helpers (`generateRngSeed/validateSeed`), made StrategyEngine + fallbacks + executors consume the standardized seed derived from `handId:sessionId`, and captured the value in every `HandRecord`. Wired a `ModelVersionCollector` so LLM/vision/cache versions are logged per hand, added replay documentation (`docs/replay.md`), plus new unit/integration tests covering RNG determinism, collector caching, and end-to-end replay guarantees (Req. 10.1/10.2).
+- **Task 13 – Replay Harness & Evaluation Prep**
+  Added shared replay/report types, a JSONL HandRecord reader, and extracted the decision pipeline for reuse. Built a `ModelVersionValidator`, `ReplayEngine`, and CLI (`pnpm --filter "@poker-bot/orchestrator" replay …`) that batch-replays logged hands, validates RNG seeds/model versions, computes divergence/timing deltas, and emits JSON reports—meeting Req. 9.x / 10.3 and Checkpoint 17.
 
 ## Workflow
 
@@ -56,5 +58,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 13 – Replay Harness & Evaluation Prep**
-  Build the deterministic replay CLI / offline harness outlined in `tasks.md` so the Task 12 seeds + model metadata can drive validation runs and set the stage for upcoming monitoring/evaluation milestones (Req. 9.x / 10.3).
+- **Task 14 – Observability / Audit Logging**
+  Extend logging/metrics to satisfy Req. 6.8 & 7.5 (structured audit logs, alert hooks) now that replay tooling is in place.

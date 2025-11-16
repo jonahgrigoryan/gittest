@@ -56,3 +56,23 @@ Developers can temporarily set `strategy.rngSeed` in the bot config to pin the R
 
 - If replay diverges, confirm the `modelVersions` (LLM prompt templates, layout pack hash, GTO cache manifest) match the original session.
 - Health/safe-mode transitions can still alter the control flow, but every branch reuses the derived seed so SafeAction/GTO-only fallbacks remain reproducible.
+
+## 6. Replay CLI
+
+Task 13 adds a CLI wrapper so you can run deterministic replays without touching the orchestrator entrypoint.
+
+```
+pnpm --filter "@poker-bot/orchestrator" build
+pnpm --filter "@poker-bot/orchestrator" replay --sessionId <session> [--handId <id>] [--limit N] [--offset N] [--resultsDir <path>] [--strict-versions] [--output report.json]
+```
+
+Key flags:
+
+- `--sessionId`: looks up the JSONL under `logging.outputDir` (defaults to `../../results/hands`).
+- `--file`: alternatively pass a path to a JSONL file directly.
+- `--handId`: replay a single hand from the file.
+- `--limit/--offset`: window into large logs for spot checks.
+- `--strict-versions`: fail fast when the current model versions differ from the logged metadata.
+- `--output`: write the full `BatchReplayReport` (JSON) for later analysis.
+
+The CLI prints a summary (total hands, matches, mismatches, version warnings). Use the JSON report to inspect per-hand comparisons, timing deltas, and divergence metrics.
