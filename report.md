@@ -1,14 +1,16 @@
-# Task 12 – Deterministic Replay & RNG Seeding Report
+# Task 13 – Replay Harness & Evaluation Prep Report
 
 ## Summary
-- Added shared RNG helpers (`packages/shared/src/rng.ts`) and updated `ActionSelector`, `StrategyEngine`, and all fallbacks to derive seeds deterministically from `handId:sessionId`, storing the value in every `StrategyDecision`.
-- Extended executor jitter/backoff code (simulator + research UI + bet input handler) to consume the logged seed instead of `Math.random`, ensuring end-to-end replay fidelity.
-- Introduced `ModelVersionCollector` plus serialized `modelVersions` metadata so HandRecords capture LLM persona models, vision layout hash, and GTO cache manifest per hand.
-- Updated orchestrator logging (`buildHandRecord`) to include the RNG seed + model versions, added replay documentation (`docs/replay.md`), a Task 12 checklist, and new unit/integration tests (shared RNG helpers, selector determinism, collector caching, deterministic replay).
+- Added shared replay/report interfaces plus streaming HandRecord readers and a `deserializeGameState` helper so logged JSONL entries can be rehydrated exactly.
+- Extracted the orchestrator decision pipeline into `decision/pipeline.ts`, built a `ModelVersionValidator`, and implemented a `ReplayEngine` that compares actions, RNG seeds, blended distributions, timing, and model versions per hand while aggregating batch statistics.
+- Introduced a `pnpm --filter "@poker-bot/orchestrator" replay …` CLI that loads the production config/solvers/strategy engine, locates session JSONL files, validates model versions (strict mode optional), and emits JSON reports for offline analysis—closing Req. 9.x / 10.3.
+- Updated `docs/replay.md`, `task13_check.md`, and `progress.md` to describe the workflow and verification steps.
 
-## Testing
+## Testing / Verification
 - `pnpm --filter "@poker-bot/shared" test`
-- `pnpm --filter "@poker-bot/logger" test`
 - `pnpm --filter "@poker-bot/orchestrator" lint`
 - `pnpm --filter "@poker-bot/orchestrator" test`
 - `pnpm --filter "@poker-bot/orchestrator" build`
+- Manual CLI smoke:
+  - `pnpm --filter "@poker-bot/orchestrator" replay --sessionId <session>`
+  - `pnpm --filter "@poker-bot/orchestrator" replay --sessionId <session> --strict-versions`

@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "clean": "rimraf dist",
+    "replay": "node dist/cli/replay.js",
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
