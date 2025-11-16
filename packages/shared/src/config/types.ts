@@ -1,4 +1,9 @@
 import type { JSONSchemaType } from "ajv";
+import type {
+  AlertChannelConfig,
+  AlertTriggerConfig,
+  LogLevel
+} from "../observability";
 
 export interface ValidationResult {
   valid: boolean;
@@ -113,6 +118,7 @@ export interface BotConfig {
   };
   monitoring: {
     health: HealthMonitoringConfig;
+    observability: ObservabilityConfig;
   };
 }
 
@@ -137,4 +143,53 @@ export interface HealthMonitoringConfig {
     port: number;
     authToken?: string;
   };
+}
+
+export interface ObservabilityLogSinkConfig {
+  enabled: boolean;
+  level?: LogLevel;
+  outputDir?: string;
+  maxFileSizeMb?: number;
+  maxFiles?: number;
+  url?: string;
+  headers?: Record<string, string>;
+  batchSize?: number;
+  retry?: {
+    attempts: number;
+    backoffMs: number;
+  };
+}
+
+export interface ObservabilityLogsConfig {
+  level: LogLevel;
+  sinks: {
+    console?: ObservabilityLogSinkConfig;
+    file?: ObservabilityLogSinkConfig;
+    webhook?: ObservabilityLogSinkConfig;
+  };
+}
+
+export interface ObservabilityMetricsConfig {
+  flushIntervalMs: number;
+  maxRecentHands: number;
+  emitHandSummaries: boolean;
+}
+
+export interface ObservabilityAlertsConfig {
+  enabled: boolean;
+  cooldownMs: number;
+  channels: AlertChannelConfig[];
+  triggers: {
+    panicStop: AlertTriggerConfig;
+    safeMode: AlertTriggerConfig;
+    solverTimeouts: AlertTriggerConfig & { windowHands: number };
+    agentCost: AlertTriggerConfig & { threshold: number };
+    healthDegradedMs: AlertTriggerConfig;
+  };
+}
+
+export interface ObservabilityConfig {
+  logs: ObservabilityLogsConfig;
+  metrics: ObservabilityMetricsConfig;
+  alerts: ObservabilityAlertsConfig;
 }

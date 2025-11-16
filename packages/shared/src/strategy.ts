@@ -8,6 +8,7 @@ import type {
   GTOSolution,
   Position
 } from "./types";
+import type { MetricsSnapshot } from "./observability";
 
 export interface StrategyConfig {
   alphaGTO: number;  // [0.3, 0.9] - GTO weight in blend
@@ -278,29 +279,7 @@ export interface HandRecord {
   };
 }
 
-export interface SessionMetrics {
-  sessionId: string;
-  handsLogged: number;
-  winRateBb100: number;
-  evAccuracy: {
-    meanDelta: number;
-    p50Delta: number;
-    p95Delta: number;
-    p99Delta: number;
-  };
-  latency: {
-    gto: { p50: number; p95: number; p99: number };
-    agents: { p50: number; p95: number; p99: number };
-    execution: { p50: number; p95: number; p99: number };
-    total: { p50: number; p95: number; p99: number };
-  };
-  decisionQuality: {
-    divergenceMean: number;
-    riskFallbackCount: number;
-    gtoOnlyFallbackCount: number;
-  };
-  computedAt: number;
-}
+export type SessionMetrics = MetricsSnapshot;
 
 export function serializeGameState(state: GameState): SerializedGameState {
   return {

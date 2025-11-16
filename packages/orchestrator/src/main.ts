@@ -40,6 +40,8 @@ import { PanicStopController } from "./health/panicStopController";
 import { HealthDashboardServer } from "./health/dashboard";
 import { HealthMetricsStore } from "./health/metricsStore";
 import { ModelVersionCollector } from "./version/collector";
+import { ObservabilityService } from "./observability/service";
+import { AlertManager } from "./observability/alertManager";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -224,6 +226,28 @@ export async function run() {
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
   await mkdir(resultsDir, { recursive: true });
   const healthLogPath = path.resolve(resultsDir, `health-${sessionId}.jsonl`);
+  const observabilityConfig = configManager.get<config.ObservabilityConfig>(
+    "monitoring.observability"
+  );
+  const sessionDir = path.join(resultsDir, sessionId);
+  await mkdir(sessionDir, { recursive: true });
+  const observabilityService = new ObservabilityService({
+    sessionId,
+    sessionDir,
+    config: observabilityConfig,
+    logger: console
+  });
+  await observabilityService.init();
+  const alertManager = new AlertManager(observabilityConfig.alerts, observabilityService);
+  observabilityService.registerAlertConsumer(alertManager);
+  process.on("beforeExit", () => {
+    void observabilityService.flush();
+  });
+  configManager.subscribe("monitoring.observability", value => {
+    const next = value as config.ObservabilityConfig;
+    alertManager.updateConfig(next.alerts);
+    void observabilityService.applyConfig(next);
+  });
   const configHash = computeConfigHash(strategyConfig);
 
   // Create execution infrastructure
@@ -271,6 +295,7 @@ export async function run() {
       void appendFile(healthLogPath, `${JSON.stringify(snapshot)}\n`).catch(error =>
         console.warn("Failed to write health snapshot", error)
       );
+      observabilityService.recordHealthSnapshot(snapshot);
       dashboard?.handleSnapshot(snapshot);
     }
   });
@@ -331,18 +356,19 @@ export async function run() {
     const finalize = async () => {
       healthMetrics.recordSolverSample(decision.timing.gtoTime, solverTimedOut, Date.now());
       healthMetrics.recordStrategySample(decision, Date.now());
+      const record = buildHandRecord({
+        state,
+        decision,
+        execution: executionResult,
+        gto: gtoResult,
+        agents,
+        sessionId,
+        configHash,
+        healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
+        modelVersions
+      });
+      observabilityService.recordDecision(record);
       if (handLogger) {
-        const record = buildHandRecord({
-          state,
-          decision,
-          execution: executionResult,
-          gto: gtoResult,
-          agents,
-          sessionId,
-          configHash,
-          healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
-          modelVersions
-        });
         await handLogger.append(record);
       }
       return { decision, execution: executionResult };
@@ -359,6 +385,12 @@ export async function run() {
     gtoResult = pipelineResult.gtoSolution;
     agents = pipelineResult.agentOutput;
     solverTimedOut = pipelineResult.solverTimedOut;
+    if (agents?.costSummary) {
+      observabilityService.recordAgentTelemetry({
+        totalTokens: agents.costSummary.totalTokens,
+        totalCostUsd: agents.costSummary.totalCostUsd
+      });
+    }
 
     // 4) Execute the decision if execution is enabled and we have an executor
     if (actionExecutor && executionConfig.enabled && !panicStopController.isActive() && !safeModeController.isActive()) {
@@ -382,6 +414,9 @@ export async function run() {
         `Skipping automatic execution due to ${panicStopController.isActive() ? "panic_stop" : "safe_mode"}`
       );
       healthMetrics.recordExecutorSample(false, Date.now());
+    }
+    if (executionResult) {
+      observabilityService.recordExecutionResult(executionResult.success);
     }
 
     return finalize();

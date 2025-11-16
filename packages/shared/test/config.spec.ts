@@ -76,6 +76,22 @@ describe("ConfigurationManager", () => {
       expect(result.errors).toBeDefined();
       expect(result.errors!.length).toBeGreaterThan(0);
     });
+
+    it("fails validation on invalid observability log level", async () => {
+      const defaultConfig = JSON.parse(
+        await fs.promises.readFile(tempConfigPath, "utf-8")
+      ) as BotConfig;
+      (defaultConfig.monitoring as any).observability.logs.level = "verbose";
+      const invalidPath = path.join(tempDir, "invalid-observability.json");
+      await fs.promises.writeFile(
+        invalidPath,
+        JSON.stringify(defaultConfig, null, 2),
+        "utf-8"
+      );
+
+      manager = new ConfigurationManager(schemaPath);
+      await expect(manager.load(invalidPath)).rejects.toThrow("Config validation failed");
+    });
   });
 
   describe("get<T> method", () => {
@@ -109,6 +125,15 @@ describe("ConfigurationManager", () => {
     it("retrieves agent cost policy", () => {
       const maxTokens = manager!.get<number>("agents.costPolicy.maxTokensDecision");
       expect(maxTokens).toBeGreaterThan(0);
+    });
+
+    it("reads observability defaults", () => {
+      const logLevel = manager!.get<string>("monitoring.observability.logs.level");
+      expect(logLevel).toBe("info");
+      const flushInterval = manager!.get<number>("monitoring.observability.metrics.flushIntervalMs");
+      expect(flushInterval).toBe(5000);
+      const alertsEnabled = manager!.get<boolean>("monitoring.observability.alerts.enabled");
+      expect(alertsEnabled).toBe(false);
     });
 
     it("gets deeply nested property", () => {

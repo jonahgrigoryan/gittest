@@ -1,5 +1,5 @@
-import { createActionKey } from "@poker-bot/shared";
-import type { HandRecord, SessionMetrics } from "@poker-bot/shared";
+import { createActionKey, type MetricsSnapshot } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared";
 import type { MetricsConfig } from "./types";
 
 class RingBuffer {
@@ -53,8 +53,17 @@ export class MetricsCollector {
     total: RingBuffer;
   };
   private totalHands = 0;
+  private readonly createdAt = Date.now();
   private riskFallbacks = 0;
   private gtoFallbacks = 0;
+  private solverTimeouts = 0;
+  private safeModeEntries = 0;
+  private panicStops = 0;
+  private agentTokens = 0;
+  private agentCostUsd = 0;
+  private executionSuccess = 0;
+  private executionFailure = 0;
+  private safeModeState?: { active: boolean; since?: number };
 
   constructor(private readonly config: MetricsConfig) {
     const capacity = Math.max(1, config.windowHands);
@@ -98,26 +107,78 @@ export class MetricsCollector {
     }
 
     this.divergence.push(hand.decision.reasoning.divergence);
-
+    this.recordFallback(hand.decision.reasoning.fallbackReason);
     if (hand.decision.metadata.panicStop) {
-      this.riskFallbacks += 1;
+      this.recordPanicStop();
     }
-
     if (hand.decision.metadata.usedGtoOnlyFallback) {
       this.gtoFallbacks += 1;
     }
   }
 
-  snapshot(sessionId: string): SessionMetrics {
+  recordFallback(reason: string | undefined) {
+    if (!reason) {
+      return;
+    }
+    if (reason.startsWith("panic") || reason.includes("risk")) {
+      this.riskFallbacks += 1;
+    } else if (reason.includes("gto_only")) {
+      this.gtoFallbacks += 1;
+    }
+  }
+
+  recordSafeMode(active: boolean) {
+    if (active && !this.safeModeState?.active) {
+      this.safeModeEntries += 1;
+      this.safeModeState = { active: true, since: Date.now() };
+    } else if (!active && this.safeModeState?.active) {
+      this.safeModeState = { active: false };
+    } else if (this.safeModeState) {
+      this.safeModeState.active = active;
+    } else {
+      this.safeModeState = { active };
+    }
+  }
+
+  recordPanicStop() {
+    this.panicStops += 1;
+  }
+
+  recordAgentCost(summary: { totalTokens?: number; totalCostUsd?: number }) {
+    this.agentTokens += summary.totalTokens ?? 0;
+    this.agentCostUsd += summary.totalCostUsd ?? 0;
+  }
+
+  recordSolverTimeout(_durationMs?: number) {
+    this.solverTimeouts += 1;
+  }
+
+  recordExecutionResult(success: boolean) {
+    if (success) {
+      this.executionSuccess += 1;
+    } else {
+      this.executionFailure += 1;
+    }
+  }
+
+  snapshot(sessionId: string): MetricsSnapshot {
+    const runtimeHours = (Date.now() - this.createdAt) / 3_600_000;
+    const executionTotal = this.executionSuccess + this.executionFailure;
     return {
       sessionId,
-      handsLogged: this.totalHands,
-      winRateBb100: this.winRate.mean() * 100,
-      evAccuracy: {
-        meanDelta: this.evAccuracy.mean(),
-        p50Delta: this.evAccuracy.quantile(0.5),
-        p95Delta: this.evAccuracy.quantile(0.95),
-        p99Delta: this.evAccuracy.quantile(0.99)
+      computedAt: Date.now(),
+      totals: {
+        handsLogged: this.totalHands,
+        handsPerHour: runtimeHours > 0 ? this.totalHands / runtimeHours : this.totalHands,
+        solverTimeouts: this.solverTimeouts,
+        safeModeEntries: this.safeModeEntries,
+        panicStops: this.panicStops,
+        fallbackRisk: this.riskFallbacks,
+        fallbackGtoOnly: this.gtoFallbacks,
+        agentTokens: this.agentTokens,
+        agentCostUsd: Number(this.agentCostUsd.toFixed(4)),
+        executionSuccessRate:
+          executionTotal === 0 ? 1 : this.executionSuccess / executionTotal
       },
       latency: {
         gto: quantiles(this.latency.gto),
@@ -125,12 +186,21 @@ export class MetricsCollector {
         execution: quantiles(this.latency.execution),
         total: quantiles(this.latency.total)
       },
+      evAccuracy: {
+        meanDelta: this.evAccuracy.mean(),
+        p50Delta: this.evAccuracy.quantile(0.5),
+        p95Delta: this.evAccuracy.quantile(0.95),
+        p99Delta: this.evAccuracy.quantile(0.99)
+      },
       decisionQuality: {
         divergenceMean: this.divergence.mean(),
-        riskFallbackCount: this.riskFallbacks,
-        gtoOnlyFallbackCount: this.gtoFallbacks
+        solverTimeoutRate: this.totalHands ? this.solverTimeouts / this.totalHands : 0,
+        fallbackCounts: {
+          risk: this.riskFallbacks,
+          gtoOnly: this.gtoFallbacks
+        }
       },
-      computedAt: Date.now()
+      safeMode: this.safeModeState
     };
   }
 }
