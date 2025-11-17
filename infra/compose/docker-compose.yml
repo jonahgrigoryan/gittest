@@ -1,13 +1,92 @@
 version: "3.9"
+
+networks:
+  poker-bot-net:
+    driver: bridge
+
 services:
-  orchestrator:
-    build: ../../packages/orchestrator
+  solver:
+    build:
+      context: ../..
+      dockerfile: services/solver/Dockerfile
+    image: poker-bot/solver:dev
+    env_file:
+      - ../../env/.env.solver
+    environment:
+      SOLVER_ADDR: 0.0.0.0:${SOLVER_PORT:-50051}
     volumes:
-      - ../../:/workspace
+      - ../../config/cache:/cache
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 50051"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks:
+      - poker-bot-net
+
+  vision:
+    build:
+      context: ../..
+      dockerfile: services/vision/Dockerfile
+    image: poker-bot/vision:dev
+    env_file:
+      - ../../env/.env.vision
+    volumes:
+      - ../../config/layout-packs:/layout-packs:ro
+      - ../../config/models:/models
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 50052"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks:
+      - poker-bot-net
+
+  orchestrator:
+    build:
+      context: ../..
+      dockerfile: infra/docker/workspace.Dockerfile
+      args:
+        WORKSPACE: "@poker-bot/orchestrator"
+        START_COMMAND: "node dist/main.js"
+    image: poker-bot/orchestrator:dev
+    env_file:
+      - ../../env/.env.orchestrator
+    environment:
+      WAIT_FOR: "solver:${SOLVER_PORT:-50051},vision:${VISION_PORT:-50052}"
+      BOT_CONFIG: /config/bot/default.bot.json
+      RISK_STATE_PATH: /results/session/risk-state.json
+      LOGGER_OUTPUT_DIR: /results/hands
+    depends_on:
+      solver:
+        condition: service_healthy
+      vision:
+        condition: service_healthy
+    volumes:
       - ../../config:/config:ro
       - ../../results:/results
       - ../../logs:/logs
-      - ../../coverage:/coverage
-    working_dir: /workspace/packages/orchestrator
-    command: ["pnpm","test"]
-volumes: {}
+    networks:
+      - poker-bot-net
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'process.exit(0)'" ]
+      interval: 30s
+      timeout: 5s
+      retries: 2
+
+  evaluator:
+    build:
+      context: ../..
+      dockerfile: infra/docker/workspace.Dockerfile
+      args:
+        WORKSPACE: "@poker-bot/evaluator"
+        START_COMMAND: "node dist/cli/eval.js shadow --handsDir /results/hands --outputDir /results/eval"
+    image: poker-bot/evaluator:dev
+    env_file:
+      - ../../env/.env.evaluator
+    profiles:
+      - tools
+    volumes:
+      - ../../results:/results
+    networks:
+      - poker-bot-net

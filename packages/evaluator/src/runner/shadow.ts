@@ -1,0 +1,73 @@
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import type { HandRecord } from "@poker-bot/shared";
+import { nanoid } from "nanoid";
+import { readHandRecords, resolveSessionFile, ensureOutputDir } from "../util/records";
+import type { EvaluationSummary, ShadowEvaluationOptions } from "../types";
+
+export async function runShadowEvaluation(options: ShadowEvaluationOptions): Promise<EvaluationSummary> {
+  const runId = options.runId ?? `shadow-${nanoid(8)}`;
+  const sourceFile = await resolveSessionFile(options.handsDir, options.sessionId);
+  const limit = options.limit ?? Number.POSITIVE_INFINITY;
+ 
+  const aggregates = {
+    totalHands: 0,
+    fallbackCount: 0,
+    safeActionCount: 0,
+    confidenceTotal: 0,
+    netChips: 0
+  };
+  const fallbackReasons: Record<string, number> = {};
+  const perHand: HandRecord[] = [];
+
+  for await (const record of readHandRecords(sourceFile)) {
+    aggregates.totalHands += 1;
+    if (record.decision.fallbackReason) {
+      aggregates.fallbackCount += 1;
+      fallbackReasons[record.decision.fallbackReason] = (fallbackReasons[record.decision.fallbackReason] ?? 0) + 1;
+      if (record.decision.fallbackReason.includes("safe_action")) {
+        aggregates.safeActionCount += 1;
+      }
+    }
+    if (typeof record.decision.confidence === "number") {
+      aggregates.confidenceTotal += record.decision.confidence;
+    }
+    if (record.outcome?.net !== undefined) {
+      aggregates.netChips += record.outcome.net;
+    }
+    perHand.push(record);
+    if (aggregates.totalHands >= limit) {
+      break;
+    }
+  }
+
+  if (aggregates.totalHands === 0) {
+    throw new Error(`No hands read from ${sourceFile}`);
+  }
+
+  const summary: EvaluationSummary = {
+    metadata: {
+      runId,
+      mode: "shadow",
+      startedAt: Date.now(),
+      completedAt: Date.now(),
+      sessionId: options.sessionId,
+      handsProcessed: aggregates.totalHands,
+      handsLimit: Number.isFinite(limit) ? limit : undefined,
+      sourcePath: sourceFile
+    },
+    aggregates: {
+      totalHands: aggregates.totalHands,
+      fallbackCount: aggregates.fallbackCount,
+      safeActionCount: aggregates.safeActionCount,
+      averageConfidence: aggregates.confidenceTotal / aggregates.totalHands,
+      netChips: aggregates.netChips
+    },
+    fallbackReasons
+  };
+
+  const outputDir = await ensureOutputDir(options.outputDir, runId);
+  const summaryPath = path.join(outputDir, "summary.json");
+  await writeFile(summaryPath, JSON.stringify(summary, null, 2), "utf8");
+  return summary;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@poker-bot/evaluator",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "dependencies": {
+    "@poker-bot/shared": "workspace:*",
+    "yargs": "17.7.2",
+    "nanoid": "5.0.7"
+  },
+  "devDependencies": {
+    "@types/yargs": "17.0.32"
+  }
+}

@@ -297,4 +297,7 @@ def serve(
 
 if __name__ == "__main__":
   logging.basicConfig(level=logging.INFO)
-  serve().wait_for_termination()
+  port = int(os.environ.get("VISION_PORT", "50052"))
+  model_dir = os.environ.get("VISION_MODEL_PATH") or os.environ.get("VISION_MODEL_DIR")
+  max_workers = int(os.environ.get("VISION_MAX_WORKERS", "4"))
+  serve(port=port, model_dir=model_dir, max_workers=max_workers).wait_for_termination()
