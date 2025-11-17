@@ -37,11 +37,12 @@
   Added shared RNG helpers (`generateRngSeed/validateSeed`), made StrategyEngine + fallbacks + executors consume the standardized seed derived from `handId:sessionId`, and captured the value in every `HandRecord`. Wired a `ModelVersionCollector` so LLM/vision/cache versions are logged per hand, added replay documentation (`docs/replay.md`), plus new unit/integration tests covering RNG determinism, collector caching, and end-to-end replay guarantees (Req. 10.1/10.2).
 - **Task 13 – Replay Harness & Evaluation Prep**
   Added shared replay/report types, a JSONL HandRecord reader, and extracted the decision pipeline for reuse. Built a `ModelVersionValidator`, `ReplayEngine`, and CLI (`pnpm --filter "@poker-bot/orchestrator" replay …`) that batch-replays logged hands, validates RNG seeds/model versions, computes divergence/timing deltas, and emits JSON reports—meeting Req. 9.x / 10.3 and Checkpoint 17.
-- **Task 14 – Monitoring & Observability**
-  Added shared observability contracts/config, structured logging sinks (console/file/webhook), the `StructuredLogger`, upgraded metrics collector, and an `ObservabilityService` + `AlertManager` in the orchestrator. Every decision/health snapshot now yields structured logs, metrics JSON, and alert fan-out; docs/observability.md and task14_check.md capture the rollout and verification.
-
-- **Task 15 – Evaluation Framework**
-  Delivered the @poker-bot/evaluator workspace with the orchestration-backed evaluation harness, deterministic simulator, opponent registry, and CLI modes (`smoke`, `offline`, `shadow`, `ab-test`). Shared evaluation types/config schema were added, HandRecord metadata/loggers now stamp `EvaluationRunMetadata`, and shadow mode reuses the replay reader for recorded sessions. Docs (`docs/evaluation.md`) explain the runbook, and task15_check.md’s suite (shared tests, evaluator lint/test/build, CLI smoke run) passes end-to-end.
+- **Task 14 – Observability & Alerting**
+  Implemented the structured observability stack: shared contracts/config, structured log sinks, observability reporter, alert manager, and orchestrator wiring that emits audit logs, metrics, and alerts for panic-stop / safe-mode / solver timeouts. Added docs plus CLI tools for replaying observability snapshots.
+- **Task 15 – Evaluation Harness**
+  Delivered the evaluation runner with smoke/offline/shadow/AB modes, CLI tooling, opponent registry, and metadata plumbing so evaluation runs are logged alongside hand histories.
+- **Task 16 – Deployment & Environment Integration**
+  Added deterministic Dockerfiles, solver/vision containers, a Compose stack, env/secrets governance (`.env.example`, `env/.env.*`), and deployment docs/runbooks so the full system can run via `docker compose up`.
 
 ## Workflow
 
@@ -63,5 +64,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 16 – Deployment & Environment Integration**
-  Package every service into reproducible Docker images, assemble a Compose stack (solver/vision/orchestrator/evaluator), and formalize environment management + documentation per task16_final.md.
+- **Task 17 – Production Hardening**
+  Finalize CI/CD, security scans, and chaos/safety rehearsals to promote the deployment artifacts.

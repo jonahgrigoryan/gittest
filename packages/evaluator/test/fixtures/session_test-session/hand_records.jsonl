@@ -1,0 +1,2 @@
+{"rawGameState": {"handId": "hand-1", "street": "preflop"}, "decision": {"action": {"type": "call"}, "fallbackReason": "safe_action:vision", "confidence": 0.8}, "metadata": {"configHash": "abc", "rngSeed": 123, "redactionApplied": false}}
+{"rawGameState": {"handId": "hand-2", "street": "preflop"}, "decision": {"action": {"type": "raise"}, "confidence": 0.3}, "outcome": {"net": 15}, "metadata": {"configHash": "abc", "rngSeed": 456, "redactionApplied": false}}

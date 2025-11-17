@@ -62,15 +62,12 @@ importers:
 
   packages/evaluator:
     dependencies:
-      '@poker-bot/agents':
-        specifier: workspace:*
-        version: link:../agents
-      '@poker-bot/orchestrator':
-        specifier: workspace:*
-        version: link:../orchestrator
       '@poker-bot/shared':
         specifier: workspace:*
         version: link:../shared
+      nanoid:
+        specifier: 5.0.7
+        version: 5.0.7
       yargs:
         specifier: 17.7.2
         version: 17.7.2
@@ -78,12 +75,6 @@ importers:
       '@types/yargs':
         specifier: 17.0.32
         version: 17.0.32
-      typescript:
-        specifier: 5.6.3
-        version: 5.6.3
-      vitest:
-        specifier: 2.1.3
-        version: 2.1.3(@types/node@20.14.11)
 
   packages/executor:
     dependencies:
@@ -1230,6 +1221,11 @@ packages:
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
+  nanoid@5.0.7:
+    resolution: {integrity: sha512-oLxFY2gd2IqnjcYyOXD8XGCftpGtZP2AbHbOkthDkvRywH5ayNtPVy9YlOPcHckXzbLTCHpkb7FB+yuxKV13pQ==}
+    engines: {node: ^18 || >=20}
     hasBin: true
 
   natural-compare@1.4.0:
@@ -2640,6 +2636,8 @@ snapshots:
       thenify-all: 1.6.0
 
   nanoid@3.3.11: {}
+
+  nanoid@5.0.7: {}
 
   natural-compare@1.4.0: {}
 

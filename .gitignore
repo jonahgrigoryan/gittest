@@ -1,7 +1,7 @@
 node_modules/
 dist/
 .venv/
-.env
+#.env
 .DS_Store
 coverage/
 logs/
