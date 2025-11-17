@@ -11,7 +11,8 @@
     "strategy",
     "execution",
     "safety",
-    "logging"
+    "logging",
+    "evaluation"
   ],
   "properties": {
     "compliance": {
@@ -563,7 +564,8 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "health"
+        "health",
+        "observability"
       ],
       "properties": {
         "health": {
@@ -631,6 +633,331 @@
                 "authToken": { "type": "string" }
               }
             }
+          }
+        },
+        "observability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "logs",
+            "metrics",
+            "alerts"
+          ],
+          "properties": {
+            "logs": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "level",
+                "sinks"
+              ],
+              "properties": {
+                "level": {
+                  "type": "string",
+                  "enum": [
+                    "debug",
+                    "info",
+                    "warn",
+                    "error",
+                    "critical"
+                  ],
+                  "default": "info"
+                },
+                "sinks": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "console": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "enabled": { "type": "boolean", "default": true },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "debug",
+                            "info",
+                            "warn",
+                            "error",
+                            "critical"
+                          ]
+                        }
+                      }
+                    },
+                    "file": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "enabled": { "type": "boolean", "default": false },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "debug",
+                            "info",
+                            "warn",
+                            "error",
+                            "critical"
+                          ]
+                        },
+                        "outputDir": { "type": "string", "minLength": 1 },
+                        "maxFileSizeMb": { "type": "integer", "minimum": 1, "default": 50 },
+                        "maxFiles": { "type": "integer", "minimum": 1, "default": 10 }
+                      }
+                    },
+                    "webhook": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "enabled": { "type": "boolean", "default": false },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "debug",
+                            "info",
+                            "warn",
+                            "error",
+                            "critical"
+                          ]
+                        },
+                        "url": { "type": "string", "format": "uri" },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": { "type": "string" }
+                        },
+                        "batchSize": { "type": "integer", "minimum": 1, "default": 10 },
+                        "retry": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "attempts": { "type": "integer", "minimum": 1, "default": 3 },
+                            "backoffMs": { "type": "integer", "minimum": 0, "default": 1000 }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "metrics": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "flushIntervalMs",
+                "maxRecentHands",
+                "emitHandSummaries"
+              ],
+              "properties": {
+                "flushIntervalMs": { "type": "integer", "minimum": 1000, "default": 5000 },
+                "maxRecentHands": { "type": "integer", "minimum": 10, "default": 100 },
+                "emitHandSummaries": { "type": "boolean", "default": false }
+              }
+            },
+            "alerts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "cooldownMs",
+                "channels",
+                "triggers"
+              ],
+              "properties": {
+                "enabled": { "type": "boolean", "default": false },
+                "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                "channels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["id", "type", "enabled"],
+                    "properties": {
+                      "id": { "type": "string", "minLength": 1 },
+                      "type": {
+                        "type": "string",
+                        "enum": ["console", "file", "webhook"]
+                      },
+                      "enabled": { "type": "boolean", "default": true },
+                      "level": {
+                        "type": "string",
+                        "enum": [
+                          "debug",
+                          "info",
+                          "warn",
+                          "error",
+                          "critical"
+                        ]
+                      },
+                      "path": { "type": "string" },
+                      "url": { "type": "string", "format": "uri" },
+                      "headers": {
+                        "type": "object",
+                        "additionalProperties": { "type": "string" }
+                      },
+                      "batchSize": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                },
+                "triggers": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "panicStop",
+                    "safeMode",
+                    "solverTimeouts",
+                    "agentCost",
+                    "healthDegradedMs"
+                  ],
+                  "properties": {
+                    "panicStop": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "enabled": { "type": "boolean", "default": true },
+                        "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                        "threshold": { "type": ["number", "integer"] }
+                      }
+                    },
+                    "safeMode": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "enabled": { "type": "boolean", "default": true },
+                        "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                        "threshold": { "type": ["number", "integer"] }
+                      }
+                    },
+                    "solverTimeouts": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "enabled": { "type": "boolean", "default": true },
+                        "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                        "threshold": { "type": ["number", "integer"] },
+                        "windowHands": { "type": "integer", "minimum": 1, "default": 5 }
+                      }
+                    },
+                    "agentCost": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "enabled": { "type": "boolean", "default": true },
+                        "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                        "threshold": { "type": "number", "minimum": 0 }
+                      }
+                    },
+                    "healthDegradedMs": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "id": { "type": "string" },
+                        "enabled": { "type": "boolean", "default": true },
+                        "cooldownMs": { "type": "integer", "minimum": 0, "default": 60000 },
+                        "threshold": { "type": ["number", "integer"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opponents",
+        "smoke",
+        "offline",
+        "shadow",
+        "abTest"
+      ],
+      "properties": {
+        "opponents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "style",
+              "aggressionFactor",
+              "bluffFrequency"
+            ],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "tight_aggressive",
+                  "loose_passive",
+                  "mixed_gto",
+                  "baseline_proxy"
+                ]
+              },
+              "aggressionFactor": { "type": "number", "minimum": 0 },
+              "bluffFrequency": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "smoke": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "opponents"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1 },
+            "opponents": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "seed": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "offline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "checkpointHands"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1000 },
+            "checkpointHands": { "type": "integer", "minimum": 1000 }
+          }
+        },
+        "shadow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "defaultResultsDir"
+          ],
+          "properties": {
+            "defaultResultsDir": { "type": "string", "minLength": 1 }
+          }
+        },
+        "abTest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "confidence"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1000 },
+            "confidence": { "type": "number", "minimum": 0.5, "maximum": 0.999 }
           }
         }
       }

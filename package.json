@@ -15,7 +15,8 @@
     "build": "pnpm -r --filter ./packages/** run build",
     "lint": "pnpm -r --filter ./packages/** run lint",
     "test:unit": "pnpm -r --filter ./packages/** run test",
-    "test": "node tools/summarize.cjs"
+    "test": "node tools/summarize.cjs",
+    "eval:smoke": "pnpm --filter \"@poker-bot/evaluator\" exec tsx src/cli/eval.ts smoke --hands 1000"
   },
   "devDependencies": {
     "@types/node": "20.14.11",

@@ -1,4 +1,5 @@
 import type { JSONSchemaType } from "ajv";
+import type { OpponentProfile } from "../evaluation";
 
 export interface ValidationResult {
   valid: boolean;
@@ -113,7 +114,9 @@ export interface BotConfig {
   };
   monitoring: {
     health: HealthMonitoringConfig;
+    observability: ObservabilityConfig;
   };
+  evaluation: EvaluationConfig;
 }
 
 export interface HealthMonitoringConfig {
@@ -136,5 +139,25 @@ export interface HealthMonitoringConfig {
     enabled: boolean;
     port: number;
     authToken?: string;
+  };
+}
+
+export interface EvaluationConfig {
+  opponents: Record<string, OpponentProfile>;
+  smoke: {
+    maxHands: number;
+    opponents: string[];
+    seed?: number;
+  };
+  offline: {
+    maxHands: number;
+    checkpointHands: number;
+  };
+  shadow: {
+    defaultResultsDir: string;
+  };
+  abTest: {
+    maxHands: number;
+    confidence: number;
   };
 }

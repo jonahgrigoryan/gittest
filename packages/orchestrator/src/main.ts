@@ -15,7 +15,9 @@ import type {
   GTOSolution,
   Action,
   HandRecord,
-  ModelVersions
+  ModelVersions,
+  EvaluationRunMetadata,
+  EvaluationMode
 } from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
@@ -40,6 +42,8 @@ import { PanicStopController } from "./health/panicStopController";
 import { HealthDashboardServer } from "./health/dashboard";
 import { HealthMetricsStore } from "./health/metricsStore";
 import { ModelVersionCollector } from "./version/collector";
+import { ObservabilityService } from "./observability/service";
+import { AlertManager } from "./observability/alertManager";
 
 // TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
 
@@ -205,6 +209,7 @@ export async function run() {
   const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
   const healthConfig = configManager.get<config.BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
+  const evaluationMetadata = resolveEvaluationMetadataFromEnv();
   const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
   await mkdir(logOutputDir, { recursive: true });
   const handLogger = loggingConfig.enabled
@@ -218,12 +223,35 @@ export async function run() {
         formats: loggingConfig.exportFormats,
         redaction: loggingConfig.redaction,
         metrics: loggingConfig.metrics,
-        logger: console
+        logger: console,
+        evaluation: evaluationMetadata
       })
     : undefined;
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
   await mkdir(resultsDir, { recursive: true });
   const healthLogPath = path.resolve(resultsDir, `health-${sessionId}.jsonl`);
+  const observabilityConfig = configManager.get<config.ObservabilityConfig>(
+    "monitoring.observability"
+  );
+  const sessionDir = path.join(resultsDir, sessionId);
+  await mkdir(sessionDir, { recursive: true });
+  const observabilityService = new ObservabilityService({
+    sessionId,
+    sessionDir,
+    config: observabilityConfig,
+    logger: console
+  });
+  await observabilityService.init();
+  const alertManager = new AlertManager(observabilityConfig.alerts, observabilityService);
+  observabilityService.registerAlertConsumer(alertManager);
+  process.on("beforeExit", () => {
+    void observabilityService.flush();
+  });
+  configManager.subscribe("monitoring.observability", value => {
+    const next = value as config.ObservabilityConfig;
+    alertManager.updateConfig(next.alerts);
+    void observabilityService.applyConfig(next);
+  });
   const configHash = computeConfigHash(strategyConfig);
 
   // Create execution infrastructure
@@ -271,6 +299,7 @@ export async function run() {
       void appendFile(healthLogPath, `${JSON.stringify(snapshot)}\n`).catch(error =>
         console.warn("Failed to write health snapshot", error)
       );
+      observabilityService.recordHealthSnapshot(snapshot);
       dashboard?.handleSnapshot(snapshot);
     }
   });
@@ -331,6 +360,18 @@ export async function run() {
     const finalize = async () => {
       healthMetrics.recordSolverSample(decision.timing.gtoTime, solverTimedOut, Date.now());
       healthMetrics.recordStrategySample(decision, Date.now());
+      const record = buildHandRecord({
+        state,
+        decision,
+        execution: executionResult,
+        gto: gtoResult,
+        agents,
+        sessionId,
+        configHash,
+        healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
+        modelVersions
+      });
+      observabilityService.recordDecision(record);
       if (handLogger) {
         const record = buildHandRecord({
           state,
@@ -341,7 +382,8 @@ export async function run() {
           sessionId,
           configHash,
           healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
-          modelVersions
+          modelVersions,
+          evaluation: evaluationMetadata
         });
         await handLogger.append(record);
       }
@@ -359,6 +401,12 @@ export async function run() {
     gtoResult = pipelineResult.gtoSolution;
     agents = pipelineResult.agentOutput;
     solverTimedOut = pipelineResult.solverTimedOut;
+    if (agents?.costSummary) {
+      observabilityService.recordAgentTelemetry({
+        totalTokens: agents.costSummary.totalTokens,
+        totalCostUsd: agents.costSummary.totalCostUsd
+      });
+    }
 
     // 4) Execute the decision if execution is enabled and we have an executor
     if (actionExecutor && executionConfig.enabled && !panicStopController.isActive() && !safeModeController.isActive()) {
@@ -382,6 +430,9 @@ export async function run() {
         `Skipping automatic execution due to ${panicStopController.isActive() ? "panic_stop" : "safe_mode"}`
       );
       healthMetrics.recordExecutorSample(false, Date.now());
+    }
+    if (executionResult) {
+      observabilityService.recordExecutionResult(executionResult.success);
     }
 
     return finalize();
@@ -458,6 +509,7 @@ function buildHandRecord(params: {
   configHash: string;
   healthSnapshotId?: string;
   modelVersions?: ModelVersions;
+  evaluation?: EvaluationRunMetadata;
 }): HandRecord {
   const {
     state,
@@ -468,7 +520,8 @@ function buildHandRecord(params: {
     sessionId,
     configHash,
     healthSnapshotId,
-    modelVersions
+    modelVersions,
+    evaluation
   } = params;
   return {
     handId: state.handId,
@@ -485,7 +538,22 @@ function buildHandRecord(params: {
       rngSeed: decision.metadata.rngSeed,
       redactionApplied: false,
       healthSnapshotId,
-      modelVersions
+      modelVersions,
+      evaluation
     }
+  };
+}
+
+function resolveEvaluationMetadataFromEnv(): EvaluationRunMetadata | undefined {
+  const runId = process.env.EVALUATION_RUN_ID;
+  const mode = process.env.EVALUATION_MODE as EvaluationMode | undefined;
+  if (!runId || !mode) {
+    return undefined;
+  }
+  const opponentId = process.env.EVALUATION_OPPONENT_ID;
+  return {
+    runId,
+    mode,
+    opponentId: opponentId && opponentId.length > 0 ? opponentId : undefined
   };
 }
