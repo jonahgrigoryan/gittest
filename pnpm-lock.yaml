@@ -62,6 +62,12 @@ importers:
 
   packages/evaluator:
     dependencies:
+      '@poker-bot/agents':
+        specifier: workspace:*
+        version: link:../agents
+      '@poker-bot/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
       '@poker-bot/shared':
         specifier: workspace:*
         version: link:../shared
