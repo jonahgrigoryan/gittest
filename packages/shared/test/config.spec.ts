@@ -76,6 +76,22 @@ describe("ConfigurationManager", () => {
       expect(result.errors).toBeDefined();
       expect(result.errors!.length).toBeGreaterThan(0);
     });
+
+    it("fails validation on invalid observability log level", async () => {
+      const defaultConfig = JSON.parse(
+        await fs.promises.readFile(tempConfigPath, "utf-8")
+      ) as BotConfig;
+      (defaultConfig.monitoring as any).observability.logs.level = "verbose";
+      const invalidPath = path.join(tempDir, "invalid-observability.json");
+      await fs.promises.writeFile(
+        invalidPath,
+        JSON.stringify(defaultConfig, null, 2),
+        "utf-8"
+      );
+
+      manager = new ConfigurationManager(schemaPath);
+      await expect(manager.load(invalidPath)).rejects.toThrow("Config validation failed");
+    });
   });
 
   describe("get<T> method", () => {

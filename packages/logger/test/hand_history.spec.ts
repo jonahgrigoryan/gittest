@@ -59,7 +59,7 @@ describe("HandHistoryLogger", () => {
     expect(await stat(exporterJson)).toBeTruthy();
 
     const metrics = logger.getMetrics();
-    expect(metrics?.handsLogged).toBeGreaterThan(0);
+    expect(metrics?.totals.handsLogged).toBeGreaterThan(0);
   });
 });
 

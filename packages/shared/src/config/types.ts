@@ -114,6 +114,7 @@ export interface BotConfig {
   };
   monitoring: {
     health: HealthMonitoringConfig;
+    observability: ObservabilityConfig;
   };
   evaluation: EvaluationConfig;
 }
