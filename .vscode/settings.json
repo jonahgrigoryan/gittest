@@ -43,7 +43,7 @@
   "eslint.run": "onSave",
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
+    "source.fixAll.eslint": "explicit"
   },
   "python.linting.enabled": false,
   "python.analysis.typeCheckingMode": "off",
@@ -64,5 +64,8 @@
   "git.autofetch": false,
   "git.confirmSync": false,
   "npm.autoDetect": "off",
-  "telemetry.telemetryLevel": "off"
+  "telemetry.telemetryLevel": "off",
+  "cSpell.words": [
+    "runbook"
+  ]
 }

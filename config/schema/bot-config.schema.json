@@ -11,7 +11,8 @@
     "strategy",
     "execution",
     "safety",
-    "logging"
+    "logging",
+    "evaluation"
   ],
   "properties": {
     "compliance": {
@@ -863,6 +864,100 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opponents",
+        "smoke",
+        "offline",
+        "shadow",
+        "abTest"
+      ],
+      "properties": {
+        "opponents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "style",
+              "aggressionFactor",
+              "bluffFrequency"
+            ],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "description": { "type": "string" },
+              "style": {
+                "type": "string",
+                "enum": [
+                  "tight_aggressive",
+                  "loose_passive",
+                  "mixed_gto",
+                  "baseline_proxy"
+                ]
+              },
+              "aggressionFactor": { "type": "number", "minimum": 0 },
+              "bluffFrequency": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        },
+        "smoke": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "opponents"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1 },
+            "opponents": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "seed": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "offline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "checkpointHands"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1000 },
+            "checkpointHands": { "type": "integer", "minimum": 1000 }
+          }
+        },
+        "shadow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "defaultResultsDir"
+          ],
+          "properties": {
+            "defaultResultsDir": { "type": "string", "minLength": 1 }
+          }
+        },
+        "abTest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "maxHands",
+            "confidence"
+          ],
+          "properties": {
+            "maxHands": { "type": "integer", "minimum": 1000 },
+            "confidence": { "type": "number", "minimum": 0.5, "maximum": 0.999 }
           }
         }
       }

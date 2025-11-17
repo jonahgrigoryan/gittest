@@ -38,7 +38,10 @@
 - **Task 13 – Replay Harness & Evaluation Prep**
   Added shared replay/report types, a JSONL HandRecord reader, and extracted the decision pipeline for reuse. Built a `ModelVersionValidator`, `ReplayEngine`, and CLI (`pnpm --filter "@poker-bot/orchestrator" replay …`) that batch-replays logged hands, validates RNG seeds/model versions, computes divergence/timing deltas, and emits JSON reports—meeting Req. 9.x / 10.3 and Checkpoint 17.
 - **Task 14 – Monitoring & Observability**
-  Delivered shared observability contracts/config plus defaults, production structured logging sinks (console/file/webhook), a `StructuredLogger`, improved metrics collector, and the `ObservabilityReporter`. Orchestrator now instantiates an `ObservabilityService` + `AlertManager`, records every decision/health snapshot, honors hot-reloaded sinks/alerts, and feeds alert channels + dashboard metrics. Verified via shared/logger/orchestrator lint/test/build and documented in `docs/observability.md`.
+  Added shared observability contracts/config, structured logging sinks (console/file/webhook), the `StructuredLogger`, upgraded metrics collector, and an `ObservabilityService` + `AlertManager` in the orchestrator. Every decision/health snapshot now yields structured logs, metrics JSON, and alert fan-out; docs/observability.md and task14_check.md capture the rollout and verification.
+
+- **Task 15 – Evaluation Framework**
+  Delivered the @poker-bot/evaluator workspace with the orchestration-backed evaluation harness, deterministic simulator, opponent registry, and CLI modes (`smoke`, `offline`, `shadow`, `ab-test`). Shared evaluation types/config schema were added, HandRecord metadata/loggers now stamp `EvaluationRunMetadata`, and shadow mode reuses the replay reader for recorded sessions. Docs (`docs/evaluation.md`) explain the runbook, and task15_check.md’s suite (shared tests, evaluator lint/test/build, CLI smoke run) passes end-to-end.
 
 ## Workflow
 
@@ -60,5 +63,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 15 – Evaluation Framework**
-  Build the offline evaluation harness and shadow-mode runner (Req. 9.x): add simulator smoke tests, opponent pools with win-rate/CI tracking, integrate replayed decisions into an A/B harness, and prepare the instrumentation needed for shadow mode before live deployment.
+- **Task 16 – Deployment & Environment Integration**
+  Package every service into reproducible Docker images, assemble a Compose stack (solver/vision/orchestrator/evaluator), and formalize environment management + documentation per task16_final.md.

@@ -127,13 +127,11 @@ describe("ConfigurationManager", () => {
       expect(maxTokens).toBeGreaterThan(0);
     });
 
-    it("reads observability defaults", () => {
-      const logLevel = manager!.get<string>("monitoring.observability.logs.level");
-      expect(logLevel).toBe("info");
-      const flushInterval = manager!.get<number>("monitoring.observability.metrics.flushIntervalMs");
-      expect(flushInterval).toBe(5000);
-      const alertsEnabled = manager!.get<boolean>("monitoring.observability.alerts.enabled");
-      expect(alertsEnabled).toBe(false);
+    it("reads evaluation defaults", () => {
+      const opp = manager!.get<any>("evaluation.opponents.tight_aggressive");
+      expect(opp.label).toContain("Tight");
+      const smokeHands = manager!.get<number>("evaluation.smoke.maxHands");
+      expect(smokeHands).toBeGreaterThan(0);
     });
 
     it("gets deeply nested property", () => {

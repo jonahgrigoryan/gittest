@@ -1,4 +1,4 @@
-import type { HandOutcome, HandRecord, SessionMetrics } from "@poker-bot/shared";
+import type { EvaluationRunMetadata, HandOutcome, HandRecord, SessionMetrics } from "@poker-bot/shared";
 
 export type LoggingFormat = "json" | "acpc";
 
@@ -29,6 +29,7 @@ export interface HandHistoryLoggerOptions {
   redaction: RedactionConfig;
   metrics: MetricsConfig;
   logger?: Pick<Console, "debug" | "info" | "warn" | "error">;
+  evaluation?: EvaluationRunMetadata;
 }
 
 export interface IHandHistoryLogger {

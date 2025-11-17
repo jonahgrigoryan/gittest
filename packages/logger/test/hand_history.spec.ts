@@ -27,7 +27,8 @@ describe("HandHistoryLogger", () => {
       formats: ["json", "acpc"],
       redaction: { enabled: true, fields: ["reasoning"] },
       metrics: { enabled: true, windowHands: 50 },
-      logger: console
+      logger: console,
+      evaluation: { runId: "test-run", mode: "offline_smoke" }
     });
 
     const record = createHandRecord();
@@ -50,6 +51,9 @@ describe("HandHistoryLogger", () => {
     const contents = await readFile(join(sessionDir, logFile!), "utf-8");
     expect(contents).toContain(record.handId);
     expect(contents).toContain('"reasoning":"[REDACTED]"');
+    const [firstLine] = contents.trim().split("\n");
+    const parsed = JSON.parse(firstLine);
+    expect(parsed.metadata.evaluation).toEqual({ runId: "test-run", mode: "offline_smoke" });
 
     const exporterJson = join(sessionDir, "json", `hand_${record.handId}.json`);
     expect(await stat(exporterJson)).toBeTruthy();

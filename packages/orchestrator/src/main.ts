@@ -15,7 +15,9 @@ import type {
   GTOSolution,
   Action,
   HandRecord,
-  ModelVersions
+  ModelVersions,
+  EvaluationRunMetadata,
+  EvaluationMode
 } from "@poker-bot/shared";
 import type { config } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
@@ -207,6 +209,7 @@ export async function run() {
   const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
   const healthConfig = configManager.get<config.BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
+  const evaluationMetadata = resolveEvaluationMetadataFromEnv();
   const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
   await mkdir(logOutputDir, { recursive: true });
   const handLogger = loggingConfig.enabled
@@ -220,7 +223,8 @@ export async function run() {
         formats: loggingConfig.exportFormats,
         redaction: loggingConfig.redaction,
         metrics: loggingConfig.metrics,
-        logger: console
+        logger: console,
+        evaluation: evaluationMetadata
       })
     : undefined;
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
@@ -369,6 +373,18 @@ export async function run() {
       });
       observabilityService.recordDecision(record);
       if (handLogger) {
+        const record = buildHandRecord({
+          state,
+          decision,
+          execution: executionResult,
+          gto: gtoResult,
+          agents,
+          sessionId,
+          configHash,
+          healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
+          modelVersions,
+          evaluation: evaluationMetadata
+        });
         await handLogger.append(record);
       }
       return { decision, execution: executionResult };
@@ -493,6 +509,7 @@ function buildHandRecord(params: {
   configHash: string;
   healthSnapshotId?: string;
   modelVersions?: ModelVersions;
+  evaluation?: EvaluationRunMetadata;
 }): HandRecord {
   const {
     state,
@@ -503,7 +520,8 @@ function buildHandRecord(params: {
     sessionId,
     configHash,
     healthSnapshotId,
-    modelVersions
+    modelVersions,
+    evaluation
   } = params;
   return {
     handId: state.handId,
@@ -520,7 +538,22 @@ function buildHandRecord(params: {
       rngSeed: decision.metadata.rngSeed,
       redactionApplied: false,
       healthSnapshotId,
-      modelVersions
+      modelVersions,
+      evaluation
     }
+  };
+}
+
+function resolveEvaluationMetadataFromEnv(): EvaluationRunMetadata | undefined {
+  const runId = process.env.EVALUATION_RUN_ID;
+  const mode = process.env.EVALUATION_MODE as EvaluationMode | undefined;
+  if (!runId || !mode) {
+    return undefined;
+  }
+  const opponentId = process.env.EVALUATION_OPPONENT_ID;
+  return {
+    runId,
+    mode,
+    opponentId: opponentId && opponentId.length > 0 ? opponentId : undefined
   };
 }
