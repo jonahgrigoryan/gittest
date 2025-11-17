@@ -182,5 +182,42 @@
         "port": 7777
       }
     }
+  },
+  "evaluation": {
+    "opponents": {
+      "tight_aggressive": {
+        "id": "tight_aggressive",
+        "label": "Tight Aggressive Bot",
+        "description": "Baseline TAG opponent used for smoke tests",
+        "style": "tight_aggressive",
+        "aggressionFactor": 1.2,
+        "bluffFrequency": 0.1
+      },
+      "loose_passive": {
+        "id": "loose_passive",
+        "label": "Loose Passive Bot",
+        "style": "loose_passive",
+        "aggressionFactor": 0.6,
+        "bluffFrequency": 0.05
+      }
+    },
+    "smoke": {
+      "maxHands": 2000,
+      "opponents": [
+        "tight_aggressive"
+      ],
+      "seed": 1337
+    },
+    "offline": {
+      "maxHands": 1000000,
+      "checkpointHands": 10000
+    },
+    "shadow": {
+      "defaultResultsDir": "../../results/hands"
+    },
+    "abTest": {
+      "maxHands": 500000,
+      "confidence": 0.95
+    }
   }
 }

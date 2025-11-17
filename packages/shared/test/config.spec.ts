@@ -111,6 +111,13 @@ describe("ConfigurationManager", () => {
       expect(maxTokens).toBeGreaterThan(0);
     });
 
+    it("reads evaluation defaults", () => {
+      const opp = manager!.get<any>("evaluation.opponents.tight_aggressive");
+      expect(opp.label).toContain("Tight");
+      const smokeHands = manager!.get<number>("evaluation.smoke.maxHands");
+      expect(smokeHands).toBeGreaterThan(0);
+    });
+
     it("gets deeply nested property", () => {
       const small = manager!.get<number>("compliance.blinds.small");
       expect(typeof small).toBe("number");

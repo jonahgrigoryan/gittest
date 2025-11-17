@@ -8,6 +8,7 @@ import type {
   GTOSolution,
   Position
 } from "./types";
+import type { EvaluationRunMetadata } from "./evaluation";
 
 export interface StrategyConfig {
   alphaGTO: number;  // [0.3, 0.9] - GTO weight in blend
@@ -275,6 +276,7 @@ export interface HandRecord {
     redactedFields?: string[];
     healthSnapshotId?: string;
     modelVersions?: ModelVersions;
+    evaluation?: EvaluationRunMetadata;
   };
 }
 

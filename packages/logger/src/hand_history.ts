@@ -69,6 +69,9 @@ export class HandHistoryLogger implements IHandHistoryLogger {
 
   async append(record: HandRecord): Promise<void> {
     const { record: redacted } = redactHandRecord(record, this.options.redaction);
+    if (this.options.evaluation && !redacted.metadata.evaluation) {
+      redacted.metadata.evaluation = this.options.evaluation;
+    }
     const pendingOutcome = this.pendingOutcomes.get(redacted.handId);
     if (pendingOutcome) {
       redacted.outcome = pendingOutcome;

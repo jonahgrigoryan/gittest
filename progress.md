@@ -40,6 +40,9 @@
 - **Task 14 – Monitoring & Observability**
   Added shared observability contracts/config, structured logging sinks (console/file/webhook), the `StructuredLogger`, upgraded metrics collector, and an `ObservabilityService` + `AlertManager` in the orchestrator. Every decision/health snapshot now yields structured logs, metrics JSON, and alert fan-out; docs/observability.md and task14_check.md capture the rollout and verification.
 
+- **Task 15 – Evaluation Framework**
+  Delivered the @poker-bot/evaluator workspace with the orchestration-backed evaluation harness, deterministic simulator, opponent registry, and CLI modes (`smoke`, `offline`, `shadow`, `ab-test`). Shared evaluation types/config schema were added, HandRecord metadata/loggers now stamp `EvaluationRunMetadata`, and shadow mode reuses the replay reader for recorded sessions. Docs (`docs/evaluation.md`) explain the runbook, and task15_check.md’s suite (shared tests, evaluator lint/test/build, CLI smoke run) passes end-to-end.
+
 ## Workflow
 
 1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
@@ -60,5 +63,5 @@ All commands must pass before declaring a task complete.
 
 ## Upcoming Work
 
-- **Task 15 – Evaluation Framework**
-  Build the offline evaluation harness and shadow-mode runner (Req. 9.x): add simulator smoke tests, opponent pools with win-rate/CI tracking, integrate replayed decisions into an A/B harness, and prepare the instrumentation needed for shadow mode before live deployment.
+- **Task 16 – Deployment & Environment Integration**
+  Package every service into reproducible Docker images, assemble a Compose stack (solver/vision/orchestrator/evaluator), and formalize environment management + documentation per task16_final.md.
