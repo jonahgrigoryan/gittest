@@ -122,6 +122,9 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --prod
 
+      - name: Prepare SBOM directory
+        run: mkdir -p sbom
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 

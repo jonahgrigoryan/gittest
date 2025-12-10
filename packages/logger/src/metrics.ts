@@ -1,5 +1,5 @@
-import { createActionKey, type MetricsSnapshot } from "@poker-bot/shared";
-import type { HandRecord } from "@poker-bot/shared";
+import { createActionKey } from "@poker-bot/shared/src/types";
+import type { MetricsSnapshot, HandRecord } from "@poker-bot/shared/src/strategy";
 import type { MetricsConfig } from "./types";
 
 class RingBuffer {
