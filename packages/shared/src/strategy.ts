@@ -302,6 +302,7 @@ export interface HandRecord {
 }
 
 export type SessionMetrics = MetricsSnapshot;
+export type { MetricsSnapshot } from "./observability";
 
 export function serializeGameState(state: GameState): SerializedGameState {
   return {
