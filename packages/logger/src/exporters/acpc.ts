@@ -1,5 +1,8 @@
 import type { HandRecord } from "@poker-bot/shared";
 
+type RawAction = HandRecord["rawGameState"]["actionHistory"][number];
+type RawCard = HandRecord["rawGameState"]["communityCards"][number];
+
 export function renderAcpc(record: HandRecord): string {
   const header = [
     `#${record.handId}`,
@@ -12,14 +15,14 @@ export function renderAcpc(record: HandRecord): string {
     .join(" ");
 
   const actions = record.rawGameState.actionHistory
-    .map(action => {
+    .map((action: RawAction) => {
       const amount = action.amount !== undefined ? `:${action.amount}` : "";
       return `${action.position}:${action.type}${amount}`;
     })
     .join(" ");
 
   const board = record.rawGameState.communityCards
-    .map(card => `${card.rank}${card.suit}`)
+    .map((card: RawCard) => `${card.rank}${card.suit}`)
     .join("");
 
   const outcome = record.outcome

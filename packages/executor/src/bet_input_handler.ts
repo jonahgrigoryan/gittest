@@ -1,4 +1,4 @@
-import type { Action } from '@poker-bot/shared';
+import type { Action } from '@poker-bot/shared/src/types';
 import type { WindowHandle, InputField } from './types';
 import { deterministicRandom } from './rng';
 

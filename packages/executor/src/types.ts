@@ -1,4 +1,5 @@
-import type { Action, StrategyDecision } from "@poker-bot/shared";
+import type { Action } from "@poker-bot/shared/src/types";
+import type { StrategyDecision } from "@poker-bot/shared";
 
 export interface ExecutionResult {
   success: boolean;

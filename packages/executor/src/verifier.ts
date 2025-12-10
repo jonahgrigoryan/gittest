@@ -1,4 +1,4 @@
-import type { GameState, Action, Position } from '@poker-bot/shared';
+import type { GameState, Action, Position } from '@poker-bot/shared/src/types';
 import type { VerificationResult, StateChange, ExecutionResult } from './types';
 
 // Local interface to match VisionOutput from vision types
