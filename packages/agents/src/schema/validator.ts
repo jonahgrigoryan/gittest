@@ -24,7 +24,12 @@ export class AgentSchemaValidator {
 
   constructor(schema: JsonSchema, options: AgentSchemaValidatorOptions = {}) {
     const ajv = new Ajv({ allErrors: true, strict: true, removeAdditional: false, useDefaults: false });
-    this.validateFn = ajv.compile(schema);
+    // Strip $schema property if it references an unsupported draft - Ajv handles validation fine without it
+    const compilableSchema = { ...schema };
+    if (compilableSchema.$schema) {
+      delete compilableSchema.$schema;
+    }
+    this.validateFn = ajv.compile(compilableSchema);
     this.verbose = options.verbose ?? process.env.LOG_VERBOSE_AGENTS === "1";
     this.logger = options.logger;
   }

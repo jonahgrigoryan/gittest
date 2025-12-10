@@ -1,15 +1,16 @@
 import path from "node:path";
-import type { AgentCoordinator } from "@poker-bot/agents";
+import type { AgentCoordinator, AgentTransport } from "@poker-bot/agents";
+import { AgentCoordinatorService, MockTransport } from "@poker-bot/agents";
 import type { StrategyDecision } from "@poker-bot/shared";
-import type { ConfigurationManager } from "@poker-bot/shared";
-import { CacheLoader } from "@poker-bot/orchestrator/src/solver";
-import { GTOSolver } from "@poker-bot/orchestrator/src/solver/solver";
-import { createSolverClient } from "@poker-bot/orchestrator/src/solver_client/client";
-import { StrategyEngine } from "@poker-bot/orchestrator/src/strategy/engine";
-import type { StrategyConfig } from "@poker-bot/orchestrator/src/strategy/types";
-import { makeDecision as runDecisionPipeline } from "@poker-bot/orchestrator/src/decision/pipeline";
-import { TimeBudgetTracker } from "@poker-bot/orchestrator/src/budget/timeBudgetTracker";
-import type { RiskGuardAPI, RiskSnapshot } from "@poker-bot/orchestrator/src/safety/types";
+import type { ConfigurationManager, AgentModelConfig } from "@poker-bot/shared/src/config";
+import { CacheLoader } from "@poker-bot/orchestrator/solver";
+import { GTOSolver } from "@poker-bot/orchestrator/solver/solver";
+import { createSolverClient } from "@poker-bot/orchestrator/solver_client/client";
+import { StrategyEngine } from "@poker-bot/orchestrator/strategy/engine";
+import type { StrategyConfig } from "@poker-bot/orchestrator/strategy/types";
+import { makeDecision as runDecisionPipeline } from "@poker-bot/orchestrator/decision/pipeline";
+import { TimeBudgetTracker } from "@poker-bot/orchestrator/budget/timeBudgetTracker";
+import type { RiskGuardAPI, RiskSnapshot } from "@poker-bot/orchestrator/safety/types";
 import type { DecisionProvider, DecisionRequestContext } from "../runner/harness";
 import { createSimulatedGameState } from "../simulator/state";
 
@@ -29,7 +30,7 @@ export interface PipelineDecisionProviderOptions {
 }
 
 export class PipelineDecisionProvider implements DecisionProvider {
-  constructor(private readonly deps: ProviderDeps) {}
+  constructor(private readonly deps: ProviderDeps) { }
 
   async nextDecision(handId: string, context: DecisionRequestContext): Promise<StrategyDecision> {
     const state = createSimulatedGameState(handId, context, { bigBlind: context.bigBlind });
@@ -53,7 +54,7 @@ export async function createPipelineDecisionProvider(
   const cachePathConfig = options.configManager.get<string>("gto.cachePath");
   const resolvedCachePath = path.isAbsolute(cachePathConfig)
     ? cachePathConfig
-    : path.resolve(process.cwd(), "../../config", cachePathConfig);
+    : path.resolve(process.cwd(), "config", cachePathConfig);
   const cacheLoader = new CacheLoader(resolvedCachePath, { logger });
   try {
     await cacheLoader.loadCache();
@@ -64,19 +65,112 @@ export async function createPipelineDecisionProvider(
   }
 
   const solverClient = createSolverClient();
-  const gtoSolver = new GTOSolver(options.configManager, { cacheLoader, solverClient }, { logger });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const gtoSolver = new GTOSolver(options.configManager as any, { cacheLoader, solverClient }, { logger });
+  const sharedTracker = new TimeBudgetTracker();
   const strategyConfig = options.configManager.get<StrategyConfig>("strategy");
   const strategyEngine = new StrategyEngine(strategyConfig, createRiskStub(), {
-    logger
+    logger,
+    timeBudgetTracker: sharedTracker
   });
+
+  // Create agent coordinator - use provided one or create mock for evaluation
+  let agentCoordinator = options.agentCoordinator;
+  if (!agentCoordinator) {
+    const useMockAgents = process.env.AGENTS_USE_MOCK === "1";
+    let agentModels = safeGetConfig<AgentModelConfig[]>(options.configManager, "agents.models") ?? [];
+
+    // Inject synthetic mock model when using mock mode with no real models
+    if (useMockAgents && agentModels.length === 0) {
+      agentModels = [createSyntheticMockModel()];
+    }
+
+    if (agentModels.length > 0) {
+      const transports = createEvaluatorTransports(agentModels);
+      if (transports.size > 0) {
+        agentCoordinator = new AgentCoordinatorService({
+          // Use config proxy to inject synthetic models
+          configManager: useMockAgents
+            ? createMockConfigProxy(options.configManager, agentModels)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (options.configManager as any),
+          transports,
+          timeBudgetTracker: sharedTracker,
+          logger
+        });
+      }
+    }
+  }
 
   return new PipelineDecisionProvider({
     strategyEngine,
     gtoSolver,
-    agentCoordinator: options.agentCoordinator,
+    agentCoordinator,
     sessionId: options.sessionId ?? `eval-${Date.now()}`,
     logger
   });
+}
+
+function safeGetConfig<T>(configManager: { get: <R>(key: string) => R }, key: string): T | undefined {
+  try {
+    return configManager.get<T>(key);
+  } catch {
+    return undefined;
+  }
+}
+
+const MOCK_MODEL_ID = "mock-default";
+
+function createSyntheticMockModel(): AgentModelConfig {
+  return {
+    name: "mock-agent",
+    provider: "local",
+    modelId: MOCK_MODEL_ID,
+    persona: "gto_purist",
+    promptTemplate: "Mock agent for evaluation testing"
+  };
+}
+
+function createMockConfigProxy(
+  configManager: { get: <T>(key: string) => T },
+  injectedModels: AgentModelConfig[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+  return {
+    get: <T>(key: string): T => {
+      if (key === "agents.models") {
+        return injectedModels as T;
+      }
+      return configManager.get<T>(key);
+    }
+  };
+}
+
+function createEvaluatorTransports(models: AgentModelConfig[]): Map<string, AgentTransport> {
+  const transports = new Map<string, AgentTransport>();
+
+  for (const model of models) {
+    const transportId = model.modelId;
+    if (transports.has(transportId)) continue;
+
+    // For evaluation, always use mock transport (evaluation doesn't call real LLMs)
+    const mock = new MockTransport({
+      id: transportId,
+      modelId: transportId,
+      provider: "local"
+    });
+    mock.enqueueResponse({
+      raw: JSON.stringify({
+        action: "call",
+        confidence: 0.6,
+        reasoning: "Evaluator mock response"
+      }),
+      latencyMs: 15
+    });
+    transports.set(transportId, mock);
+  }
+
+  return transports;
 }
 
 function createRiskStub(): RiskGuardAPI {
@@ -91,12 +185,12 @@ function createRiskStub(): RiskGuardAPI {
     updatedAt: Date.now()
   };
   return {
-    startHand: () => {},
+    startHand: () => { },
     incrementHandCount: () => 0,
     recordOutcome: () => snapshot,
     updateLimits: () => snapshot,
     checkLimits: () => ({ allowed: true, snapshot }),
     getSnapshot: () => snapshot,
-    resetSession: () => {}
+    resetSession: () => { }
   };
 }

@@ -149,7 +149,7 @@ export class MetricsCollector {
     this.agentCostUsd += summary.totalCostUsd ?? 0;
   }
 
-  recordSolverTimeout(_durationMs?: number) {
+  recordSolverTimeout() {
     this.solverTimeouts += 1;
   }
 

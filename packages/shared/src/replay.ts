@@ -1,4 +1,4 @@
-import type { Action, ActionKey } from "./types";
+import type { Action } from "./types";
 import type {
   SerializedProbabilityEntry,
   SerializedStrategyDecision,
@@ -75,6 +75,12 @@ export interface BatchReplayReport {
       agents: { mean: number; p95: number };
       total: { mean: number; p95: number };
     };
+    decisionTiming: {
+      gto: { mean: number; p95: number };
+      agents: { mean: number; p95: number };
+      total: { mean: number; p95: number };
+    };
+    replayDurationMs: { mean: number; p95: number };
   };
   modelVersionWarnings: string[];
 }

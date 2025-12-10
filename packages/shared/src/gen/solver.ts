@@ -125,7 +125,9 @@ export const SubgameRequest = {
       gameStateJson: isSet(object.gameStateJson) ? globalThis.String(object.gameStateJson) : "",
       budgetMs: isSet(object.budgetMs) ? globalThis.Number(object.budgetMs) : 0,
       effectiveStackBb: isSet(object.effectiveStackBb) ? globalThis.Number(object.effectiveStackBb) : 0,
-      actionSet: globalThis.Array.isArray(object?.actionSet) ? object.actionSet.map((e: any) => globalThis.String(e)) : [],
+      actionSet: globalThis.Array.isArray(object?.actionSet)
+        ? object.actionSet.map((e: any) => globalThis.String(e))
+        : [],
     };
   },
 
@@ -138,10 +140,10 @@ export const SubgameRequest = {
       obj.gameStateJson = message.gameStateJson;
     }
     if (message.budgetMs !== 0) {
-      obj.budgetMs = Math.trunc(message.budgetMs);
+      obj.budgetMs = Math.round(message.budgetMs);
     }
     if (message.effectiveStackBb !== 0) {
-      obj.effectiveStackBb = Math.trunc(message.effectiveStackBb);
+      obj.effectiveStackBb = Math.round(message.effectiveStackBb);
     }
     if (message.actionSet?.length) {
       obj.actionSet = message.actionSet;
@@ -365,7 +367,7 @@ export const SubgameResponse = {
       obj.exploitability = message.exploitability;
     }
     if (message.computeTimeMs !== 0) {
-      obj.computeTimeMs = Math.trunc(message.computeTimeMs);
+      obj.computeTimeMs = Math.round(message.computeTimeMs);
     }
     if (message.source !== "") {
       obj.source = message.source;

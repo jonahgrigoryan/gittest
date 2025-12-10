@@ -9,6 +9,7 @@ import type {
   Position
 } from "./types";
 import type { EvaluationRunMetadata } from "./evaluation";
+import type { MetricsSnapshot } from "./observability";
 
 export interface StrategyConfig {
   alphaGTO: number;  // [0.3, 0.9] - GTO weight in blend
@@ -52,10 +53,30 @@ export interface StrategyTimingBreakdown {
   totalTime: number;
 }
 
+export interface StrategyRiskViolation {
+  type: "bankroll" | "session";
+  threshold: number;
+  observed: number;
+  handId?: string;
+  pendingExposure?: number;
+}
+
+export interface StrategyRiskSnapshot {
+  netProfit: number;
+  drawdown: number;
+  handsPlayed: number;
+  remainingHands: number;
+  remainingBankroll: number;
+  liveExposure: number;
+  panicStop: boolean;
+  panicReason?: StrategyRiskViolation;
+  updatedAt: number;
+}
+
 export interface StrategyMetadata {
   rngSeed: number;
   configSnapshot: StrategyConfig;
-  riskSnapshot?: any;  // From risk controller
+  riskSnapshot?: StrategyRiskSnapshot;
   modelHashes?: Record<string, string>;
   preempted?: boolean;
   usedGtoOnlyFallback?: boolean;

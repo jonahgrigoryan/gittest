@@ -1,7 +1,6 @@
 import type { ActionExecutor, ExecutionResult, ExecutionOptions, SimulatorCommand, APIResponse, StateChange, VerificationResult } from '../types';
 import type { StrategyDecision } from '@poker-bot/shared';
 import type { ActionVerifier } from '../verifier';
-import { createActionKey } from '@poker-bot/shared';
 import { deterministicRandom } from '../rng';
 
 /**
@@ -112,7 +111,7 @@ export class SimulatorExecutor implements ActionExecutor {
    * Translates an Action into a simulator-specific command format
    */
   private translateToSimulatorCommand(action: StrategyDecision['action']): SimulatorCommand {
-    const { type, amount, position, street } = action;
+    const { type, amount, position } = action;
 
     // Validate action type
     if (!['fold', 'check', 'call', 'raise'].includes(type)) {
@@ -197,7 +196,7 @@ export class SimulatorExecutor implements ActionExecutor {
    */
   private predictStateChanges(decision: StrategyDecision): StateChange[] {
     const changes: StateChange[] = [];
-    const { action, metadata } = decision;
+    const { action } = decision;
     const { type, amount, position } = action;
 
     // Action taken change

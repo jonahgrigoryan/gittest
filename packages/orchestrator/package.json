@@ -4,12 +4,54 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./solver": {
+      "import": "./dist/solver/index.js",
+      "require": "./dist/solver/index.js",
+      "types": "./dist/solver/index.d.ts"
+    },
+    "./solver/*": {
+      "import": "./dist/solver/*.js",
+      "require": "./dist/solver/*.js",
+      "types": "./dist/solver/*.d.ts"
+    },
+    "./solver_client/*": {
+      "import": "./dist/solver_client/*.js",
+      "require": "./dist/solver_client/*.js",
+      "types": "./dist/solver_client/*.d.ts"
+    },
+    "./strategy/*": {
+      "import": "./dist/strategy/*.js",
+      "require": "./dist/strategy/*.js",
+      "types": "./dist/strategy/*.d.ts"
+    },
+    "./decision/*": {
+      "import": "./dist/decision/*.js",
+      "require": "./dist/decision/*.js",
+      "types": "./dist/decision/*.d.ts"
+    },
+    "./budget/*": {
+      "import": "./dist/budget/*.js",
+      "require": "./dist/budget/*.js",
+      "types": "./dist/budget/*.d.ts"
+    },
+    "./safety/*": {
+      "import": "./dist/safety/*.js",
+      "require": "./dist/safety/*.js",
+      "types": "./dist/safety/*.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc -p .",
     "lint": "eslint .",
     "test": "vitest run",
     "clean": "rimraf dist",
-    "replay": "node dist/cli/replay.js",
+    "replay": "tsx src/cli/replay.ts",
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
@@ -17,6 +59,7 @@
     "@poker-bot/shared": "workspace:*",
     "@poker-bot/agents": "workspace:*",
     "@poker-bot/executor": "workspace:*",
-    "@poker-bot/logger": "workspace:*"
+    "@poker-bot/logger": "workspace:*",
+    "undici": "6.19.8"
   }
 }

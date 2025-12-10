@@ -11,7 +11,7 @@ import numpy as np
 
 from .fallback import match_template, recognize_card_template, recognize_digits_ocr
 from .models import ModelManager
-from .types import (
+from .vision_types import (
   AmountRecognition,
   CardRecognition,
   DealerButtonDetection,

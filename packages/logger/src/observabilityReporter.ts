@@ -77,8 +77,8 @@ export class ObservabilityReporter {
     this.metrics.recordPanicStop();
   }
 
-  recordSolverTimeout(durationMs?: number) {
-    this.metrics.recordSolverTimeout(durationMs);
+  recordSolverTimeout() {
+    this.metrics.recordSolverTimeout();
   }
 
   recordExecutionResult(success: boolean) {

@@ -110,24 +110,22 @@ export class StructuredLogger {
       ...this.defaultContext,
       ...(defaultContext ?? {})
     };
-    const parent = this;
-    const handle: Pick<StructuredLogger, "log" | "child"> = {
-      log(level, event, payload, options) {
-        parent.log(
+    return {
+      log: (level, event, payload, options) => {
+        this.log(
           level,
           event,
           { ...mergedContext, ...payload },
           { ...options, component }
         );
       },
-      child(nextComponent: string, childContext?: Record<string, unknown>) {
-        return parent.child(nextComponent, {
+      child: (nextComponent: string, childContext?: Record<string, unknown>) => {
+        return this.child(nextComponent, {
           ...mergedContext,
           ...(childContext ?? {})
         });
       }
     };
-    return handle;
   }
 
   private async drainQueue() {

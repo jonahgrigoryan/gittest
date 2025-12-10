@@ -19,7 +19,9 @@ import type {
   EvaluationRunMetadata,
   EvaluationMode
 } from "@poker-bot/shared";
+import type { AgentModelConfig } from "@poker-bot/shared/src/config/types";
 import type { config } from "@poker-bot/shared";
+import { assertEnvVars } from "@poker-bot/shared";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
 import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
@@ -31,7 +33,8 @@ import { StrategyEngine } from "./strategy/engine";
 import {
   makeDecision as makeDecisionPipeline
 } from "./decision/pipeline";
-import type { AggregatedAgentOutput } from "@poker-bot/agents";
+import type { AggregatedAgentOutput, AgentCoordinator, AgentTransport } from "@poker-bot/agents";
+import { AgentCoordinatorService, OpenAITransport, MockTransport } from "@poker-bot/agents";
 
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
 import type { ExecutionResult, ExecutorConfig, VisionClientInterface } from "@poker-bot/executor";
@@ -44,8 +47,7 @@ import { HealthMetricsStore } from "./health/metricsStore";
 import { ModelVersionCollector } from "./version/collector";
 import { ObservabilityService } from "./observability/service";
 import { AlertManager } from "./observability/alertManager";
-
-// TODO: inject AgentCoordinator with TimeBudgetTracker once coordinator is implemented.
+import { validateStartupConnectivity } from "./startup/validateConnectivity";
 
 interface DecisionOptions {
   tracker?: TimeBudgetTracker;
@@ -54,6 +56,7 @@ interface DecisionOptions {
 type RiskController = RiskGuardAPI;
 
 export async function run() {
+  assertEnvVars("orchestrator");
   const path = await import("path");
   const shared = await import("@poker-bot/shared");
   const { createConfigManager, vision } = shared;
@@ -134,11 +137,6 @@ export async function run() {
     resetSession: () => riskGuard.resetSession()
   };
 
-  if (process.env.ORCH_PING_SOLVER === "1") {
-    const pingClient = createSolverClient();
-    pingClient.close();
-  }
-
   const layoutPackConfigPath = configManager.get<string>("vision.layoutPack");
   const baseLayoutDir = path.resolve(process.cwd(), "../../config/layout-packs");
   const layoutFileName = layoutPackConfigPath.endsWith(".json")
@@ -166,19 +164,24 @@ export async function run() {
   void parser;
 
   const visionServiceUrl = process.env.VISION_SERVICE_URL ?? "0.0.0.0:50052";
-  const visionClient = new VisionClient(visionServiceUrl, layoutPack);
+  const useMockAgents = process.env.AGENTS_USE_MOCK === "1";
+  let agentModelsConfig = (configManager.get<AgentModelConfig[]>("agents.models") ?? []).filter(m => m && m.modelId);
 
-  if (process.env.ORCH_PING_VISION === "1") {
-    try {
-      await visionClient.healthCheck();
-    } catch (error) {
-      console.warn("Vision service health check failed:", error);
-    } finally {
-      visionClient.close();
-    }
-  } else {
-    visionClient.close();
+  // Inject synthetic mock model when AGENTS_USE_MOCK=1 and no real models configured
+  if (useMockAgents && agentModelsConfig.length === 0) {
+    agentModelsConfig = [createSyntheticMockModel()];
   }
+
+  const requireAgentConnectivity = agentModelsConfig.length > 0;
+
+  await validateStartupConnectivity({
+    solverAddr: process.env.SOLVER_ADDR ?? "127.0.0.1:50051",
+    visionServiceUrl,
+    layoutPack,
+    requireAgentConnectivity,
+    useMockAgents: useMockAgents && requireAgentConnectivity,
+    logger: console
+  });
 
   const cachePathConfig = configManager.get<string>("gto.cachePath");
   const resolvedCachePath = path.isAbsolute(cachePathConfig)
@@ -201,11 +204,30 @@ export async function run() {
   const solverClient = createSolverClient();
   const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
 
+  // Create shared TimeBudgetTracker for strategy engine and agents
+  const sharedBudgetTracker = new TimeBudgetTracker();
+
   const strategyConfig = configManager.get<StrategyConfig>("strategy");
   const strategyEngine = new StrategyEngine(strategyConfig, riskController, {
     logger: console,
-    timeBudgetTracker: new TimeBudgetTracker()
+    timeBudgetTracker: sharedBudgetTracker
   });
+
+  // Create AgentCoordinator if agent models are configured (real or synthetic mock)
+  let agentCoordinator: AgentCoordinator | undefined;
+  if (agentModelsConfig.length > 0) {
+    const transports = createAgentTransports(agentModelsConfig, useMockAgents);
+    agentCoordinator = new AgentCoordinatorService({
+      // Use a config proxy that injects the synthetic model when mock mode is active
+      configManager: (useMockAgents
+        ? createMockConfigProxy(configManager, agentModelsConfig)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : configManager) as any,
+      transports,
+      timeBudgetTracker: sharedBudgetTracker,
+      logger: console
+    });
+  }
   const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
   const healthConfig = configManager.get<config.BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
@@ -214,18 +236,18 @@ export async function run() {
   await mkdir(logOutputDir, { recursive: true });
   const handLogger = loggingConfig.enabled
     ? await createHandHistoryLogger({
-        sessionId,
-        outputDir: logOutputDir,
-        sessionPrefix: loggingConfig.sessionPrefix,
-        flushIntervalMs: loggingConfig.flushIntervalMs,
-        maxFileSizeMb: loggingConfig.maxFileSizeMb,
-        retentionDays: loggingConfig.retentionDays,
-        formats: loggingConfig.exportFormats,
-        redaction: loggingConfig.redaction,
-        metrics: loggingConfig.metrics,
-        logger: console,
-        evaluation: evaluationMetadata
-      })
+      sessionId,
+      outputDir: logOutputDir,
+      sessionPrefix: loggingConfig.sessionPrefix,
+      flushIntervalMs: loggingConfig.flushIntervalMs,
+      maxFileSizeMb: loggingConfig.maxFileSizeMb,
+      retentionDays: loggingConfig.retentionDays,
+      formats: loggingConfig.exportFormats,
+      redaction: loggingConfig.redaction,
+      metrics: loggingConfig.metrics,
+      logger: console,
+      evaluation: evaluationMetadata
+    })
     : undefined;
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
   await mkdir(resultsDir, { recursive: true });
@@ -260,15 +282,28 @@ export async function run() {
   // Create verifier if execution is enabled
   let verifier: ActionVerifier | undefined;
   if (executionConfig.enabled) {
+    const executionVisionClient = new VisionClient(visionServiceUrl, layoutPack);
+    process.on("beforeExit", () => {
+      executionVisionClient.close();
+    });
     const verifierVisionClient: VisionClientInterface = {
       captureAndParse: async () => {
-        const snapshot = await visionClient.captureAndParse();
+        const snapshot = await executionVisionClient.captureAndParse();
+        const players =
+          snapshot?.stacks instanceof Map
+            ? new Map(
+              Array.from(snapshot.stacks.entries()).map(([position, entry]) => [
+                position,
+                { stack: entry.amount }
+              ])
+            )
+            : new Map();
         return {
-          confidence: { overall: snapshot.positions?.confidence ?? 1 },
-          pot: { amount: snapshot.pot?.amount ?? 0 },
-          cards: { communityCards: snapshot.cards?.communityCards ?? [] },
+          confidence: { overall: snapshot?.positions?.confidence ?? 1 },
+          pot: { amount: snapshot?.pot?.amount ?? 0 },
+          cards: { communityCards: snapshot?.cards?.communityCards ?? [] },
           actionHistory: [],
-          players: snapshot.stacks
+          players
         };
       }
     };
@@ -393,6 +428,7 @@ export async function run() {
     const pipelineResult = await makeDecisionPipeline(state, sessionId, {
       strategyEngine,
       gtoSolver,
+      agentCoordinator,
       tracker,
       gtoBudgetMs: configManager.get<number>("gto.subgameBudgetMs"),
       logger: console
@@ -459,7 +495,12 @@ export async function run() {
       executor: actionExecutor
     },
     budget: {
-      createTracker: () => new TimeBudgetTracker()
+      createTracker: () => new TimeBudgetTracker(),
+      sharedTracker: sharedBudgetTracker
+    },
+    agents: {
+      coordinator: agentCoordinator,
+      modelsConfigured: agentModelsConfig.length
     },
     risk: {
       statePath: riskStatePath,
@@ -555,5 +596,88 @@ function resolveEvaluationMetadataFromEnv(): EvaluationRunMetadata | undefined {
     runId,
     mode,
     opponentId: opponentId && opponentId.length > 0 ? opponentId : undefined
+  };
+}
+
+function createAgentTransports(models: AgentModelConfig[], useMock: boolean): Map<string, AgentTransport> {
+  const transports = new Map<string, AgentTransport>();
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  for (const model of models) {
+    const transportId = model.modelId;
+    if (transports.has(transportId)) {
+      continue;
+    }
+
+    // Use mock transport when AGENTS_USE_MOCK=1
+    if (useMock) {
+      const mock = new MockTransport({
+        id: transportId,
+        modelId: transportId,
+        provider: "local"
+      });
+      // Enqueue a default response so the mock actually returns data
+      mock.enqueueResponse({
+        raw: JSON.stringify({
+          action: "call",
+          confidence: 0.65,
+          reasoning: "Mock agent response for testing"
+        }),
+        latencyMs: 25
+      });
+      transports.set(transportId, mock);
+      continue;
+    }
+
+    // Determine provider from modelId prefix or explicit config
+    const isOpenAi = transportId.startsWith("gpt-") || transportId.startsWith("o1-") || transportId.includes("openai");
+    const isAnthropic = transportId.startsWith("claude-") || transportId.includes("anthropic");
+
+    if (isOpenAi && openAiKey) {
+      transports.set(transportId, new OpenAITransport({
+        id: transportId,
+        modelId: transportId,
+        apiKey: openAiKey,
+        baseUrl: process.env.OPENAI_BASE_URL,
+        provider: "openai"
+      }));
+    } else if (isAnthropic && anthropicKey) {
+      transports.set(transportId, new OpenAITransport({
+        id: transportId,
+        modelId: transportId,
+        apiKey: anthropicKey,
+        baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1",
+        provider: "anthropic"
+      }));
+    }
+  }
+
+  return transports;
+}
+
+const MOCK_MODEL_ID = "mock-default";
+
+function createSyntheticMockModel(): AgentModelConfig {
+  return {
+    name: "mock-agent",
+    provider: "local",
+    modelId: MOCK_MODEL_ID,
+    persona: "gto_purist",
+    promptTemplate: "Mock agent for testing - respond with action and confidence"
+  };
+}
+
+function createMockConfigProxy(
+  configManager: { get: <T>(key: string) => T },
+  injectedModels: AgentModelConfig[]
+): { get: <T>(key: string) => T } {
+  return {
+    get: <T>(key: string): T => {
+      if (key === "agents.models") {
+        return injectedModels as T;
+      }
+      return configManager.get<T>(key);
+    }
   };
 }

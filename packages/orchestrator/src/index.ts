@@ -19,3 +19,5 @@ export * from "./strategy/risk";
 export * from "./strategy/fallbacks";
 export * from "./strategy/engine";
 export * from "./strategy/modeling";
+export * from "./decision/pipeline";
+export * from "./solver_client/client";

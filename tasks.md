@@ -427,23 +427,30 @@
     - Fail build if latency P95 exceeds budget allocations
     - _Requirements: 1.2, 4.6, 10.4, 10.6, 8.6, 3.7_
 
-- [ ] 17. Create documentation and examples (optional)
-  - [ ] 17.1 Write configuration guide (optional)
-    - Document all config parameters
-    - Provide example configs for different game types
-    - Explain tuning strategies (α adjustment, bet sizing, agent personas)
-    - _Requirements: 8.1, 8.3, 8.4_
+- [ ] 17. Production hardening & operational readiness
+  - [ ] 17.1 Security & dependency hardening
+    - Integrate container scanners (Trivy/Grype) into CI and fail on critical CVEs
+    - Add `pnpm audit --prod`, `cargo audit`, and `pip-audit` to the pipeline; generate SBOMs and sign Docker images (Cosign) with verification in deployment manifests
+    - Run `gitleaks` (or equivalent) for secret leakage, enforce `.env` schema validation, document credential rotation policy, and enable runtime/container security monitoring
+    - _Requirements: 0.5, 8.1, 8.6_
   
-  - [ ] 17.2 Create operator manual (optional)
-    - Document startup procedures
-    - Explain monitoring dashboard
-    - Provide troubleshooting guide
-    - Document safe mode and panic stop recovery
-    - _Requirements: 7.2, 7.5_
+  - [ ] 17.2 Chaos engineering & safety rehearsals
+    - Script panic-stop drills (low-confidence vision) and executor misfire tests
+    - Simulate network partitions, LLM failures, component restarts, resource exhaustion, and cache/data wipes to verify SafeAction/GTO fallbacks within TimeBudgetTracker limits
+    - Document recovery runs that prove the system replays/validates before re-entering production
+    - _Requirements: 7.2, 7.4, 10.3, 10.5_
   
-  - [ ] 17.3 Write developer guide (optional)
-    - Document architecture and component interfaces
-    - Explain how to add new LLM agents
-    - Explain how to create new layout packs
-    - Document evaluation procedures
-    - _Requirements: 9.1, 9.2, 9.3_
+  - [ ] 17.3 Operational documentation
+    - Author `docs/operator_manual.md` with startup/shutdown, dashboards, kill-switch procedures, and recovery drills
+    - Create `docs/config_guide.md` detailing `bot-config.json`, α tuning, and risk limit governance; add troubleshooting + backup/recovery guides
+    - _Requirements: 7.2, 7.5, 8.1_
+  
+  - [ ] 17.4 CI/CD finalization
+    - Add automated release tagging that builds/tests/scans/pushes Docker artifacts with staged promotion (dev → staging → prod) and rollback automation
+    - Implement orchestrator startup validation for env vars and service reachability; enforce signature checks during deploy
+    - _Requirements: 4.1, 4.6, 10.2_
+  
+  - [ ] 17.5 Verification suite & release gates
+    - Require `pnpm -r --filter "./packages/**" run lint|build|test`, `poetry run pytest`, `cargo fmt|clippy|test`, orchestrator replay smoke tests, chaos suites, and performance regressions before promoting artifacts
+    - Publish promotion summary (hashes, container digests, verification logs, SBOMs) and block release until security compliance validation, environment parity, and audit trail capture succeed
+    - _Requirements: 4.1, 4.6, 6.8, 10.1, 10.2_

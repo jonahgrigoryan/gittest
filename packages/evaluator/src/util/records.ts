@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { stat, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
 import type { HandRecord } from "@poker-bot/shared";

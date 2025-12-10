@@ -12,6 +12,8 @@
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
+    "@poker-bot/agents": "workspace:*",
+    "@poker-bot/orchestrator": "workspace:*",
     "@poker-bot/shared": "workspace:*",
     "yargs": "17.7.2",
     "nanoid": "5.0.7"

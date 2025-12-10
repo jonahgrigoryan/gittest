@@ -73,6 +73,18 @@ async function runTask<T>(
     const value = await task.run(controller.signal, allottedMs);
     const completedAt = performance.now();
     clearTimeout(timeoutId);
+    if (controller.signal.aborted) {
+      return {
+        agentId: task.agentId,
+        status: "rejected",
+        reason: controller.signal.reason ?? new AgentTimeoutError(task.agentId, allottedMs),
+        startedAt,
+        completedAt,
+        durationMs: completedAt - startedAt,
+        aborted: true,
+        allottedMs
+      };
+    }
     return {
       agentId: task.agentId,
       status: "fulfilled",
@@ -80,7 +92,7 @@ async function runTask<T>(
       startedAt,
       completedAt,
       durationMs: completedAt - startedAt,
-      aborted: controller.signal.aborted,
+      aborted: false,
       allottedMs
     };
   } catch (error) {

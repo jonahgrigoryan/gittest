@@ -2,7 +2,6 @@ import { SimulatorExecutor } from './simulators/simulator';
 import { ResearchUIExecutor } from './research_bridge';
 import { WindowManager } from './window_manager';
 import { ComplianceChecker } from './compliance';
-import { BetInputHandler } from './bet_input_handler';
 import { ActionVerifier } from './verifier';
 import type {
   ActionExecutor,
@@ -77,6 +76,6 @@ export { SimulatorExecutor } from './simulators/simulator';
 export { ResearchUIExecutor } from './research_bridge';
 export { WindowManager } from './window_manager';
 export { ComplianceChecker } from './compliance';
-export { BetInputHandler } from './bet_input_handler';
 export { ActionVerifier } from './verifier';
 export type { VisionClientInterface } from './verifier';
+export { BetInputHandler } from './bet_input_handler';

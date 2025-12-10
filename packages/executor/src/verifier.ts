@@ -1,13 +1,13 @@
-import type { GameState, Action } from '@poker-bot/shared';
+import type { GameState, Action, Position } from '@poker-bot/shared';
 import type { VerificationResult, StateChange, ExecutionResult } from './types';
 
 // Local interface to match VisionOutput from vision types
 interface VisionOutput {
   confidence: { overall: number };
   pot?: { amount: number };
-  cards?: { communityCards: any[] };
-  actionHistory?: any[];
-  players?: Map<any, any>;
+  cards?: { communityCards: GameState["communityCards"] };
+  actionHistory?: GameState["actionHistory"];
+  players?: GameState["players"];
 }
 
 /**
@@ -252,8 +252,7 @@ export class ActionVerifier {
     // This would need access to pre-action stack sizes
     // For now, return 0 as we don't have enough context
     if (!position || !actual.players) return 0;
-    
-    const player = actual.players.get(position as any);
+    const player = actual.players.get(position as Position);
     return player ? 0 : 0; // Would calculate actual decrease with pre-action data
   }
 

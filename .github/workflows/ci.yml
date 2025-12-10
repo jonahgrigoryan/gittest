@@ -1,7 +1,108 @@
 name: ci
-on: [push, pull_request]
+on:
+  push:
+    branches: ["main", "feat/**", "m3/**"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+
 jobs:
   build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.17.0
+          cache: "pnpm"
+
+      - run: pnpm -v
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run verify:env
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+      - run: python -m pip install --upgrade pip poetry
+      - run: python -V
+
+      - run: pnpm run ci:verify
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: |
+            results/session
+            results/hands
+            results/replay
+            results/verification.json
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to registry
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Build orchestrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/workspace.Dockerfile
+          build-arg: |
+            WORKSPACE=@poker-bot/orchestrator
+            START_COMMAND=node dist/main.js
+            GIT_SHA=${{ github.sha }}
+            BUILD_TS=${{ github.event.head_commit.timestamp || github.run_started_at }}
+          tags: |
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:sha-${{ github.sha }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:${{ github.ref_name }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build solver image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/solver/Dockerfile
+          tags: |
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-solver:sha-${{ github.sha }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-solver:${{ github.ref_name }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Build vision image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/vision/Dockerfile
+          tags: |
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-vision:sha-${{ github.sha }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-vision:${{ github.ref_name }}
+          push: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+  security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,21 +115,141 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20.17.0
-          cache: 'pnpm'
+          cache: "pnpm"
 
-      - run: pnpm -v
-      - run: pnpm install
-      - run: pnpm run verify:env
+      - run: pnpm install --frozen-lockfile
 
-      - uses: actions/setup-python@v5
+      - name: pnpm audit
+        run: pnpm audit --prod
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit
+
+      - name: cargo audit (solver)
+        working-directory: services/solver
+        run: cargo audit
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11.9'
-      - run: python -V
+          python-version: "3.11"
 
-      - name: Aggregate results
-        run: node tools/summarize.cjs
+      - name: Install pip-audit tooling
+        run: python -m pip install --upgrade pip pip-audit poetry
 
-      - uses: actions/upload-artifact@v4
+      - name: pip-audit (vision)
+        working-directory: services/vision
+        run: |
+          poetry export -f requirements.txt --without-hashes -o requirements-audit.txt
+          pip-audit -r requirements-audit.txt
+
+      - name: Secrets scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
         with:
-          name: results
-          path: results/status.json
+          args: detect --no-banner --redact
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: 1
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          output-file: sbom/sbom.spdx.json
+          format: spdx-json
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign SBOM
+        if: ${{ secrets.COSIGN_PRIVATE_KEY != '' }}
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign-blob \
+            --yes \
+            --key env://COSIGN_PRIVATE_KEY \
+            --output-signature sbom/sbom.spdx.json.sig \
+            sbom/sbom.spdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom
+
+  smoke_compose:
+    needs: [docker]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create CI env file
+        run: cp .env.example .env.ci
+
+      - name: Bring up stack
+        run: |
+          cd infra/compose
+          docker compose --env-file ../../.env.ci up --build orchestrator -d
+
+      - name: Wait for orchestrator healthy
+        run: |
+          cd infra/compose
+          timeout 180 bash -c 'until docker compose --env-file ../../.env.ci ps orchestrator | grep "healthy"; do sleep 5; done'
+
+      - name: Tear down stack
+        if: always()
+        run: |
+          cd infra/compose
+          docker compose --env-file ../../.env.ci down -v
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, security, docker, smoke_compose]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sbom
+          path: sbom
+
+      - name: Ensure SBOM signature placeholder
+        run: |
+          if [ ! -f sbom/sbom.spdx.json.sig ]; then
+            echo "Cosign signature not generated for this release." > sbom/sbom.spdx.json.sig
+          fi
+
+      - name: Generate changelog
+        run: |
+          git log -1 --pretty=medium > release-notes.txt
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            sbom/sbom.spdx.json
+            sbom/sbom.spdx.json.sig
+            release-notes.txt
+          body_path: release-notes.txt
+
+      - name: Notify observability
+        if: ${{ secrets.RELEASE_WEBHOOK_URL != '' }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d '{"event":"release","tag":"${GITHUB_REF_NAME}","commit":"${GITHUB_SHA}"}' \
+            "${{ secrets.RELEASE_WEBHOOK_URL }}"

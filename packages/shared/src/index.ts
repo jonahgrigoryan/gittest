@@ -5,6 +5,8 @@ export * from "./rng";
 export * from "./replay";
 export * from "./observability";
 export * from "./evaluation";
+export * from "./env/validator";
+export * from "./env/schema";
 export * as config from "./config";
 export { ConfigurationManager, createConfigManager } from "./config/manager";
 export * as solverGen from "./gen/solver";

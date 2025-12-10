@@ -22,18 +22,24 @@ export async function runShadowEvaluation(options: ShadowEvaluationOptions): Pro
 
   for await (const record of readHandRecords(sourceFile)) {
     aggregates.totalHands += 1;
-    if (record.decision.fallbackReason) {
+    const fallbackKey =
+      record.decision?.reasoning?.fallbackReason ??
+      (record.decision as { fallbackReason?: string } | undefined)?.fallbackReason;
+    if (fallbackKey) {
       aggregates.fallbackCount += 1;
-      fallbackReasons[record.decision.fallbackReason] = (fallbackReasons[record.decision.fallbackReason] ?? 0) + 1;
-      if (record.decision.fallbackReason.includes("safe_action")) {
+      fallbackReasons[fallbackKey] = (fallbackReasons[fallbackKey] ?? 0) + 1;
+      if (fallbackKey.includes("safe_action")) {
         aggregates.safeActionCount += 1;
       }
     }
-    if (typeof record.decision.confidence === "number") {
-      aggregates.confidenceTotal += record.decision.confidence;
+    const confidence = (record.decision as { confidence?: number } | undefined)?.confidence;
+    if (typeof confidence === "number") {
+      aggregates.confidenceTotal += confidence;
     }
-    if (record.outcome?.net !== undefined) {
-      aggregates.netChips += record.outcome.net;
+    const net =
+      record.outcome?.netChips ?? (record.outcome as { net?: number } | undefined)?.net;
+    if (net !== undefined) {
+      aggregates.netChips += net;
     }
     perHand.push(record);
     if (aggregates.totalHands >= limit) {

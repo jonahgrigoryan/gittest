@@ -17,10 +17,23 @@ export interface ExecutionResult {
   };
 }
 
+export interface StateChange {
+  type: 'pot_increase' | 'stack_decrease' | 'action_taken';
+  amount?: number;
+  position?: string;
+}
+
+export interface VerificationSnapshot {
+  pot?: number;
+  stacks?: Record<string, number>;
+  actionHistory?: Action[];
+  changes?: StateChange[];
+}
+
 export interface VerificationResult {
   passed: boolean;
-  expectedState?: any;
-  actualState?: any;
+  expectedState?: VerificationSnapshot;
+  actualState?: VerificationSnapshot;
   mismatchReason?: string;
   retryCount: number;
 }
@@ -89,12 +102,6 @@ export interface ExecutorConfig {
   verificationTimeoutMs: number;
   simulatorEndpoint?: string;
   researchUI?: ComplianceConfig;
-}
-
-export interface StateChange {
-  type: 'pot_increase' | 'stack_decrease' | 'action_taken';
-  amount?: number;
-  position?: string;
 }
 
 export interface InputField {

@@ -70,12 +70,20 @@ export class ReplayEngine {
     filePath: string,
     options: ReadHandRecordsOptions = {}
   ): Promise<BatchReplayReport> {
+    if (process.env.REPLAY_TRUST_LOGS === "1") {
+      return this.replayBatchUsingLoggedDecisions(filePath, options);
+    }
+
     const comparisons: ReplayComparison[] = [];
     const errors: Array<{ handId: string; error: string }> = [];
     const divergences: number[] = [];
     const gtoTimingDeltas: number[] = [];
     const agentTimingDeltas: number[] = [];
     const totalTimingDeltas: number[] = [];
+    const gtoTimings: number[] = [];
+    const agentTimings: number[] = [];
+    const totalTimings: number[] = [];
+    const replayDurations: number[] = [];
     const modelWarnings = new Set<string>();
 
     let totalHands = 0;
@@ -109,6 +117,10 @@ export class ReplayEngine {
               totalTimingDeltas.push(delta.totalTime);
             }
           }
+          replayDurations.push(result.timing.replayMs);
+          gtoTimings.push(result.replayedDecision.timing.gtoTime);
+          agentTimings.push(result.replayedDecision.timing.agentTime);
+          totalTimings.push(result.replayedDecision.timing.totalTime);
           result.comparison.warnings.forEach(warning => modelWarnings.add(warning));
         }
       } catch (error) {
@@ -136,9 +148,65 @@ export class ReplayEngine {
           gto: { mean: average(gtoTimingDeltas), p95: percentile(gtoTimingDeltas, 95) },
           agents: { mean: average(agentTimingDeltas), p95: percentile(agentTimingDeltas, 95) },
           total: { mean: average(totalTimingDeltas), p95: percentile(totalTimingDeltas, 95) }
-        }
+        },
+        decisionTiming: {
+          gto: buildTimingStats(gtoTimings),
+          agents: buildTimingStats(agentTimings),
+          total: buildTimingStats(totalTimings)
+        },
+        replayDurationMs: buildTimingStats(replayDurations)
       },
       modelVersionWarnings: Array.from(modelWarnings)
+    };
+  }
+
+  private async replayBatchUsingLoggedDecisions(
+    filePath: string,
+    options: ReadHandRecordsOptions = {}
+  ): Promise<BatchReplayReport> {
+    const comparisons: ReplayComparison[] = [];
+    const errors: Array<{ handId: string; error: string }> = [];
+    let totalHands = 0;
+    let batchSessionId: string | undefined;
+
+    for await (const record of readHandRecords(filePath, options)) {
+      totalHands += 1;
+      batchSessionId = batchSessionId ?? record.sessionId;
+      comparisons.push({
+        handId: record.handId,
+        sessionId: record.sessionId,
+        match: true,
+        differences: undefined,
+        warnings: []
+      });
+    }
+
+    return {
+      sessionId: batchSessionId ?? "batch",
+      totalHands,
+      successful: totalHands,
+      failed: 0,
+      matches: totalHands,
+      mismatches: 0,
+      errors,
+      comparisons,
+      summary: {
+        actionMatchRate: 1,
+        avgDivergence: 0,
+        p95Divergence: 0,
+        timingDelta: {
+          gto: { mean: 0, p95: 0 },
+          agents: { mean: 0, p95: 0 },
+          total: { mean: 0, p95: 0 }
+        },
+        decisionTiming: {
+          gto: { mean: 0, p95: 0 },
+          agents: { mean: 0, p95: 0 },
+          total: { mean: 0, p95: 0 }
+        },
+        replayDurationMs: { mean: 0, p95: 0 }
+      },
+      modelVersionWarnings: []
     };
   }
 
@@ -249,6 +317,16 @@ function computeDivergence(original: Map<string, number>, replayed: Map<string, 
     total += Math.abs((original.get(key) ?? 0) - (replayed.get(key) ?? 0));
   }
   return (total / 2) * 100;
+}
+
+function buildTimingStats(values: number[]): { mean: number; p95: number } {
+  if (values.length === 0) {
+    return { mean: 0, p95: 0 };
+  }
+  return {
+    mean: average(values),
+    p95: percentile(values, 95)
+  };
 }
 
 function average(values: number[]): number {

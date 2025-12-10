@@ -110,7 +110,10 @@ export class BetInputHandler {
    * Clears existing text from input field
    */
   private async clearInputField(inputField: InputField): Promise<void> {
-    this.logger.debug('BetInputHandler: Clearing input field');
+    this.logger.debug('BetInputHandler: Clearing input field', {
+      position: { x: inputField.x, y: inputField.y },
+      dimensions: { width: inputField.width, height: inputField.height }
+    });
 
     // In production, this would:
     // 1. Click into the input field
@@ -139,7 +142,10 @@ export class BetInputHandler {
    * Verifies the typed amount matches expected value
    */
   private async verifyTypedAmount(inputField: InputField, expectedAmount: number): Promise<void> {
-    this.logger.debug('BetInputHandler: Verifying typed amount', { expectedAmount });
+    this.logger.debug('BetInputHandler: Verifying typed amount', {
+      expectedAmount,
+      position: { x: inputField.x, y: inputField.y }
+    });
 
     // In production, this would:
     // 1. Read the current value from the input field

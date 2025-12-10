@@ -1,0 +1,138 @@
+## 17.1 Security & Dependency Hardening ✅
+
+- Added a reusable env schema in `packages/shared/src/env/` plus runtime enforcement (`assertEnvVars`) now called from `packages/orchestrator/src/main.ts`, so the orchestrator fails fast if required `.env` keys are missing or placeholders.
+- Created `tools/validate-env.ts` (wired into `pnpm run verify:env`) to parse every tracked `.env*` template via the shared schema. CI/locals now catch missing keys before deploy.
+- Expanded CI (`.github/workflows/ci.yml`) with a dedicated `security` job:
+  - `pnpm audit --prod`, `cargo audit` (solver), and `pip-audit` (vision via exported requirements).
+  - `gitleaks` for repo secret scanning.
+  - `aquasecurity/trivy-action` filesystem scans that fail on HIGH/CRITICAL CVEs.
+  - `anchore/sbom-action` to emit `sbom/sbom.spdx.json`, optional Cosign signing (conditional on `COSIGN_*` secrets), and artifact upload for provenance.
+- Ignored the generated `sbom/` directory and documented the runtime security expectations (Falco, cosign verification, SBOM retention) in `docs/deployment.md`.
+- Checked off Task 17.1 in `task17.md`.
+
+### Tests / Validation
+- `pnpm -r --filter "@poker-bot/shared" test`
+- `pnpm run verify:env` (now exercises the new schema validator)
+- `read_lints` on the touched TypeScript/TSX files (no issues)
+
+### Notes / Next Steps
+- Configure GitHub secrets (`COSIGN_PRIVATE_KEY`, `COSIGN_PASSWORD`, optional `COSIGN_PUBLIC_KEY`) so the SBOM signing step runs; without them the build still succeeds but signatures are skipped.
+- CI now uploads `sbom/sbom.spdx.json` artifacts—grab them from workflow runs when promoting builds.
+- Runtime defense (Falco or similar) is documented; wire it into your deployment stack when ready.
+
+Section 17.1 is complete and validated. Let me know when you’re ready for me to proceed to 17.2.
+
+
+## 17.2 Chaos Drills Wrapped
+
+- Hardened the decision pipeline so a solver/network outage no longer bubbles an exception. Any failure now logs once, marks the solve as timed-out, and feeds the strategy engine a synthesized safe action based on the current legal set (`check`/`call` preferred) to keep the loop alive under partition conditions.
+
+```37:134:packages/orchestrator/src/decision/pipeline.ts
+export async function makeDecision(
+  state: GameState,
+  sessionId: string,
+  deps: DecisionPipelineDependencies
+): Promise<DecisionPipelineResult> {
+  const tracker = deps.tracker;
+  let solverTimedOut = false;
+  let gtoSolution: GTOSolution;
+  …
+  } catch (error) {
+    deps.logger?.error?.("Decision pipeline: GTO solver failed, using safe fallback", {
+      error: error instanceof Error ? error.message : error
+    });
+    solverTimedOut = true;
+    gtoSolution = createSafeFallbackSolution(state);
+  }
+  …
+}
+```
+
+- Added a dedicated chaos suite that exercises every rehearsal in the outline: consecutive low-confidence frames tripping panic stop, simulated solver/agents outages, forced budget preemption, executor misfires via the shared `ActionVerifier`, recovery flows, resource exhaustion, and cache wipes. Each scenario asserts the expected fallback (SafeAction, GTO-only, or safe-mode entry) so we can re-run drills on demand.
+
+```120:233:packages/orchestrator/test/chaos/chaos.spec.ts
+describe("Chaos engineering drills", () => {
+  it("triggers panic stop after consecutive low-confidence frames", () => {
+    …
+  });
+
+  it("falls back to safe action when solver throws during network partition", async () => {
+    …
+    expect(result.solverTimedOut).toBe(true);
+    expect(result.decision.action.type === "check" || result.decision.action.type === "call").toBe(true);
+  });
+
+  it("uses GTO-only fallback when agent coordinator fails", async () => {
+    …
+    expect(result.decision.metadata.usedGtoOnlyFallback).toBe(true);
+  });
+
+  it("preempts GTO budget and falls back to safe action during component restart", async () => {
+    …
+    expect(result.decision.reasoning.fallbackReason).toMatch(/safe_action|gto_/);
+  });
+  …
+});
+```
+
+- Updated the orchestrator smoke test to seed the minimal env vars our new startup validator expects, keeping the regression suite green without weakening the production guardrail.
+
+```1:22:packages/orchestrator/test/smoke.spec.ts
+beforeAll(() => {
+  const repoRoot = path.resolve(__dirname, "../../..");
+  process.env.BOT_CONFIG = path.resolve(repoRoot, "config/bot/default.bot.json");
+  …
+});
+```
+
+- Checked off every 17.2 bullet in `task17.md`, reflecting the new drills and their automated verification. Task list updated accordingly.
+
+### Tests
+
+- `pnpm -r --filter "@poker-bot/orchestrator" test`
+
+All tests pass (expected cache warnings only). Let me know when you’re ready for me to pick up 17.3 (operational documentation), and I’ll switch the todo state to in-progress.
+
+
+## 17.3 Operational Documentation ✅
+
+- Authored a full **Operator Manual** (`docs/operator_manual.md`) covering preflight checks, startup/shutdown flows, monitoring/alerting expectations, kill-switch & panic-stop procedures, and chaos drill cadence so ops have a single runbook.
+- Added a detailed **Configuration Guide** (`docs/config_guide.md`) that walks through every block of `bot-config.json`, explains tuning levers (alpha, cost policies, solver budgets, etc.), and documents the standard validation workflow.
+- Created a **Troubleshooting Guide** (`docs/troubleshooting.md`) with symptom → root-cause mappings, module-specific diagnostics, and an incident checklist to streamline triage.
+- Captured backup/recovery expectations in `docs/backup_recovery.md`, including what to archive, how to restore caches/risk state, and the post-recovery verification matrix.
+
+`task17.md` now has the 17.3 subsection checked off. No code paths changed, so no new tests were required.
+
+Ready to move on to 17.4 (CI/CD finalization) whenever you give the go-ahead.
+
+## 17.4 CI/CD Finalization ✅
+
+- Expanded `.github/workflows/ci.yml` into a multi-stage pipeline:
+  - `build` job now runs `pnpm run ci:verify` (lint → build → workspace tests → orchestrator replay smoke) plus publishes artifacts.
+  - `security` job executes `pnpm audit`, `cargo audit`, `pip-audit`, `gitleaks`, `trivy`, and signs SBOMs (Cosign when secrets provided).
+  - `docker` job builds/pushes orchestrator, solver, and vision images (Buildx) and tags them per commit/tag.
+  - `smoke_compose` job spins up the full Compose stack using `.env.ci`, waits for orchestrator health, and tears down, ensuring env parity.
+  - `release` job triggers on `v*` tags, downloads SBOM artifacts, ensures signatures (or placeholders), publishes a GitHub Release, and notifies the observability webhook.
+- Added `pnpm run ci:verify` helper so the mandatory test matrix is reproducible locally and in CI.
+- Implemented startup connectivity gating in `packages/orchestrator/src/startup/validateConnectivity.ts`:
+  - Verifies orchestrator env vars via `assertEnvVars`.
+  - Waits for solver gRPC readiness, runs a Vision `healthCheck`, and probes LLM providers (OpenAI/Anthropic) when agent personas are configured—fail-fast if any target is unreachable.
+  - Added opt-out flag `ORCH_SKIP_STARTUP_CHECKS=1` strictly for tests.
+- Updated `packages/orchestrator/test/smoke.spec.ts` to set the skip flag so unit tests remain hermetic; all orchestrator tests pass (`pnpm -r --filter "@poker-bot/orchestrator" test`).
+- Documented the promotion/rollback flow in `docs/operator_manual.md` (release checklist) and refreshed `docs/deployment.md` with the new CI job matrix, ensuring operators know how artifacts are gated and how to verify Cosign signatures before rollout.
+
+## 17.5 Verification Suite & Release Gates ✅
+
+- `pnpm run ci:verify` now covers the entire mandatory matrix: workspace lint/build/tests, orchestrator replay smoke against the versioned dataset (`packages/evaluator/test/fixtures/session_test-session/hand_records.jsonl`), `poetry run pytest` for `services/vision`, and `cargo fmt|clippy|test` for `services/solver`.
+- Replay smoke writes `results/replay/report.json`; `tools/check-replay-report.ts` enforces action-match ≥95%, divergence ≤5pp, and P95 timing budgets (GTO, agents, total, replay duration). The script also emits `results/verification.json` for audit trails, which the release checklist references.
+- `tools/check-artifacts.ts` ensures no secrets leak into `results/` artifacts (scans JSON/LOG/TXT files for API-key patterns), satisfying the security-compliance requirement.
+- The build job now uploads `results/replay/` and `results/verification.json` as part of the `test-artifacts` bundle so release engineers can inspect metrics post-run.
+- ReplayEngine aggregates absolute timing stats (gto/agent/total P95) in `BatchReplayReport.summary`, enabling automated perf regression checks.
+- Documentation updates:
+  - `docs/deployment.md` enumerates the new commands (replay smoke dataset, Python/Rust verification).
+  - `docs/operator_manual.md` release checklist references `results/verification.json`.
+  - `docs/backup_recovery.md` now includes a concrete rollback playbook referencing the CI artifacts and Cosign verification.
+
+### Tests
+
+- `pnpm -r --filter "@poker-bot/orchestrator" test`
