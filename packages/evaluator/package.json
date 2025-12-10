@@ -15,8 +15,8 @@
     "@poker-bot/agents": "workspace:*",
     "@poker-bot/orchestrator": "workspace:*",
     "@poker-bot/shared": "workspace:*",
-    "yargs": "17.7.2",
-    "nanoid": "5.0.7"
+    "nanoid": "5.0.9",
+    "yargs": "17.7.2"
   },
   "devDependencies": {
     "@types/yargs": "17.0.32"
