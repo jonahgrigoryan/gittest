@@ -3,7 +3,6 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "moduleResolution": "Node16",
     "outDir": "dist",
     "rootDir": "src",
     "tsBuildInfoFile": "tsconfig.tsbuildinfo"

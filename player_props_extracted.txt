@@ -1,0 +1,21 @@
+GAME: Atlanta Hawks @ Detroit Pistons
+GAME_DATE: 2025-12-12
+
+AWAY_TEAM: Atlanta Hawks
+HOME_TEAM: Detroit Pistons
+
+AWAY_ABBR: ATL
+HOME_ABBR: DET
+
+AWAY_PG: Dyson Daniels - [PTS] 11.5 Points, [REB] 5.5 Rebounds, [AST] 5.5 Assists
+AWAY_SG: N. Alexander-Walker - [PTS] N/A Points, [REB] N/A Rebounds, [AST] N/A Assists
+AWAY_SF: Z. Risacher - [PTS] 9.5 Points, [REB] 2.5 Rebounds, [AST] 1.5 Assists
+AWAY_PF: Jalen Johnson - [PTS] 24.5 Points, [REB] 10 Rebounds, [AST] 8 Assists
+AWAY_C:  O. Okongwu - [PTS] 17 Points, [REB] 7.5 Rebounds, [AST] 3.5 Assists
+
+HOME_PG: C. Cunningham - [PTS] 26.5 Points, [REB] 6 Rebounds, [AST] 9 Assists
+HOME_SG: D. Robinson - [PTS] 11.5 Points, [REB] 2.5 Rebounds, [AST] 2.5 Assists
+HOME_SF: A. Thompson - [PTS] 11.5 Points, [REB] 5.5 Rebounds, [AST] 3.5 Assists
+HOME_PF: Tobias Harris - [PTS] 12.5 Points, [REB] 3.5 Rebounds, [AST] 2.5 Assists
+HOME_C:  Jalen Duren - [PTS] 17.5 Points, [REB] 11.5 Rebounds, [AST] 2.5 Assists
+
