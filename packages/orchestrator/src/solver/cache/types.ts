@@ -1,4 +1,4 @@
-import type { ActionSolutionEntry, GTOSolution, Street } from "@poker-bot/shared";
+import type { ActionSolutionEntry, GTOSolution, Street } from "@poker-bot/shared/src/types";
 
 export const CACHE_VERSION = "1.0.0";
 export const FINGERPRINT_ALGORITHM = "sha256-v1";

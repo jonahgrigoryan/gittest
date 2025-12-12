@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import type { HandRecord } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared/src/strategy";
 
 export interface ReadHandRecordsOptions {
   sessionDir?: string;

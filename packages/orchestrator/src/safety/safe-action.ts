@@ -1,8 +1,6 @@
-import type { Action, Position } from "@poker-bot/shared";
-import type { config, vision } from "@poker-bot/shared";
-
-type BotConfig = config.BotConfig;
-type ParsedGameState = vision.ParsedGameState;
+import type { BotConfig } from "@poker-bot/shared/src/config/types";
+import type { Action, Position } from "@poker-bot/shared/src/types";
+import type { ParsedGameState } from "@poker-bot/shared/src/vision";
 
 const DEFAULT_CONFIDENCE_THRESHOLD = 0.9;
 const DEFAULT_OCCLUSION_THRESHOLD = 0.05;

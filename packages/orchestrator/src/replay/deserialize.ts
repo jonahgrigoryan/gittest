@@ -1,10 +1,5 @@
-import type {
-  GameState,
-  Position,
-  SerializedGameState,
-  Card,
-  Action
-} from "@poker-bot/shared";
+import type { Action, Card, GameState, Position } from "@poker-bot/shared/src/types";
+import type { SerializedGameState } from "@poker-bot/shared/src/strategy";
 
 export function deserializeGameState(serialized: SerializedGameState): GameState {
   const players = new Map<Position, { stack: number; holeCards?: Card[] }>();
@@ -28,17 +23,26 @@ export function deserializeGameState(serialized: SerializedGameState): GameState
     handId: serialized.handId,
     gameType: serialized.gameType ?? "NLHE_6max",
     blinds: serialized.blinds ?? { small: 1, big: 2 },
-    positions: serialized.positions ?? { hero: "BTN", dealer: "BTN" },
+    positions: serialized.positions ?? {
+      hero: "BTN",
+      button: "BTN",
+      smallBlind: "SB",
+      bigBlind: "BB"
+    },
     players,
     communityCards: serialized.communityCards ?? [],
-    pot: serialized.pot ?? { amount: 0 },
-    street: serialized.street,
-    actionHistory: (serialized.actionHistory ?? []) as Action[],
-    legalActions: (serialized.legalActions ?? [{ type: "check", position: "BTN", street: serialized.street }]) as Action[],
+    pot: typeof serialized.pot === "number" ? serialized.pot : 0,
+    street: serialized.street ?? "preflop",
+    actionHistory: serialized.actionHistory ?? [],
+    legalActions:
+      serialized.legalActions ??
+      [
+        { type: "check", position: (serialized.positions?.hero ?? "BTN") as Position, street: serialized.street ?? "preflop" }
+      ],
     confidence: {
       overall: serialized.confidence?.overall ?? 1,
       perElement
     },
-    latency: serialized.latency ?? { captureMs: 0, parseMs: 0, totalMs: 0 }
+    latency: typeof serialized.latency === "number" ? serialized.latency : 0
   };
 }

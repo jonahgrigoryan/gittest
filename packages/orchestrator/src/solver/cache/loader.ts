@@ -1,6 +1,5 @@
 import path from "node:path";
-import type { GameState, GTOSolution } from "@poker-bot/shared";
-import { createActionKey } from "@poker-bot/shared";
+import { createActionKey, type GameState, type GTOSolution } from "@poker-bot/shared/src/types";
 import type { CacheLoaderOptions, CacheManifest, CacheIndexEntry, CacheQuery } from "./types";
 import { SUPPORTED_CACHE_STREETS } from "./types";
 import { computeFingerprint } from "./fingerprint";

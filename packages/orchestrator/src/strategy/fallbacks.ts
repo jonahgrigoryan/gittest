@@ -1,4 +1,4 @@
-import type { Action, ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
+import type { Action, ActionKey, GameState, GTOSolution } from "@poker-bot/shared/src/types";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import { ActionSelector, SeededRNG } from "./selection";
 import { BetSizer } from "./sizing";
@@ -8,7 +8,7 @@ import type {
   StrategyMetadata,
   StrategyReasoningTrace,
   StrategyTimingBreakdown
-} from "@poker-bot/shared";
+} from "@poker-bot/shared/src/strategy";
 
 /**
  * Centralized fallback and decision helpers.

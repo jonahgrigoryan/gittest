@@ -1,6 +1,6 @@
-import type { Action, ActionKey, GameState } from "@poker-bot/shared";
-import type { RNG, StrategyConfig } from "@poker-bot/shared";
-import { generateRngSeed, validateSeed } from "@poker-bot/shared";
+import type { Action, ActionKey, GameState, RNG } from "@poker-bot/shared/src/types";
+import type { StrategyConfig } from "@poker-bot/shared/src/strategy";
+import { generateRngSeed, validateSeed } from "@poker-bot/shared/src/rng";
 import { decodeAndValidateActionKey, type ParsedActionKeyResult } from "./util";
 
 /**

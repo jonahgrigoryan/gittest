@@ -1,6 +1,6 @@
 import { credentials, type ChannelCredentials } from "@grpc/grpc-js";
-import type { ActionType } from "@poker-bot/shared";
-import { solverGen } from "@poker-bot/shared";
+import type { ActionType } from "@poker-bot/shared/src/types";
+import * as solverGen from "@poker-bot/shared/src/gen/solver";
 
 type SolverClient = solverGen.SolverClient;
 type SubgameRequest = solverGen.SubgameRequest;

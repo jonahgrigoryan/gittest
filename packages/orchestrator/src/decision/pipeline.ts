@@ -1,11 +1,11 @@
 import type {
   Action,
+  ActionType,
   GameState,
-  GTOSolution,
-  StrategyDecision,
-  ActionType
-} from "@poker-bot/shared";
-import { createActionKey } from "@poker-bot/shared";
+  GTOSolution
+} from "@poker-bot/shared/src/types";
+import type { StrategyDecision } from "@poker-bot/shared/src/strategy";
+import { createActionKey } from "@poker-bot/shared/src/types";
 import type {
   AggregatedAgentOutput,
   AgentCoordinator,

@@ -1,4 +1,4 @@
-import type { StrategyDecision } from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared/src/strategy";
 
 interface VisionMetrics {
   lastConfidence: number;

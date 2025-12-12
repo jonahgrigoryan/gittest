@@ -1,7 +1,9 @@
 import { appendFile, mkdir } from "node:fs/promises";
-import { GameStateParser } from "./vision/parser";
-import { VisionClient } from "./vision/client";
-import type { ParserConfig } from "@poker-bot/shared/vision";
+import { createConfigManager } from "@poker-bot/shared/src/config/manager";
+import type { AgentModelConfig, BotConfig, ObservabilityConfig } from "@poker-bot/shared/src/config/types";
+import { assertEnvVars } from "@poker-bot/shared/src/env/validator";
+import type { EvaluationMode, EvaluationRunMetadata } from "@poker-bot/shared/src/evaluation";
+import type { HandRecord, ModelVersions } from "@poker-bot/shared/src/strategy";
 import {
   computeConfigHash,
   serializeAgentOutput,
@@ -9,19 +11,12 @@ import {
   serializeGameState,
   serializeStrategyDecision,
   summarizeGTOSolution
-} from "@poker-bot/shared";
-import type {
-  GameState,
-  GTOSolution,
-  Action,
-  HandRecord,
-  ModelVersions,
-  EvaluationRunMetadata,
-  EvaluationMode
-} from "@poker-bot/shared";
-import type { AgentModelConfig } from "@poker-bot/shared/src/config/types";
-import type { config } from "@poker-bot/shared";
-import { assertEnvVars } from "@poker-bot/shared";
+} from "@poker-bot/shared/src/strategy";
+import type { Action, GameState, GTOSolution } from "@poker-bot/shared/src/types";
+import type { ParserConfig } from "@poker-bot/shared/src/vision";
+import * as vision from "@poker-bot/shared/src/vision";
+import { GameStateParser } from "./vision/parser";
+import { VisionClient } from "./vision/client";
 import { CacheLoader, GTOSolver } from "./solver";
 import { createSolverClient } from "./solver_client/client";
 import { TimeBudgetTracker } from "./budget/timeBudgetTracker";
@@ -58,8 +53,6 @@ type RiskController = RiskGuardAPI;
 export async function run() {
   assertEnvVars("orchestrator");
   const path = await import("path");
-  const shared = await import("@poker-bot/shared");
-  const { createConfigManager, vision } = shared;
 
   const cfgPath = process.env.BOT_CONFIG || path.resolve(process.cwd(), "../../config/bot/default.bot.json");
   const configManager = await createConfigManager(cfgPath);
@@ -68,7 +61,7 @@ export async function run() {
     await configManager.startWatching();
   }
 
-  const safetyConfig = configManager.get<config.BotConfig["safety"]>("safety");
+  const safetyConfig = configManager.get<BotConfig["safety"]>("safety");
   const riskStatePath = process.env.RISK_STATE_PATH
     ? path.resolve(process.env.RISK_STATE_PATH)
     : path.resolve(process.cwd(), "../../results/session/risk-state.json");
@@ -92,7 +85,7 @@ export async function run() {
   );
 
   configManager.subscribe("safety", value => {
-    const next = value as config.BotConfig["safety"];
+    const next = value as BotConfig["safety"];
     riskGuard.updateLimits({ bankrollLimit: next.bankrollLimit, sessionLimit: next.sessionLimit });
   });
 
@@ -228,8 +221,8 @@ export async function run() {
       logger: console
     });
   }
-  const loggingConfig = configManager.get<config.BotConfig["logging"]>("logging");
-  const healthConfig = configManager.get<config.BotConfig["monitoring"]["health"]>("monitoring.health");
+  const loggingConfig = configManager.get<BotConfig["logging"]>("logging");
+  const healthConfig = configManager.get<BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
   const evaluationMetadata = resolveEvaluationMetadataFromEnv();
   const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
@@ -252,7 +245,7 @@ export async function run() {
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
   await mkdir(resultsDir, { recursive: true });
   const healthLogPath = path.resolve(resultsDir, `health-${sessionId}.jsonl`);
-  const observabilityConfig = configManager.get<config.ObservabilityConfig>(
+  const observabilityConfig = configManager.get<ObservabilityConfig>(
     "monitoring.observability"
   );
   const sessionDir = path.join(resultsDir, sessionId);
@@ -270,7 +263,7 @@ export async function run() {
     void observabilityService.flush();
   });
   configManager.subscribe("monitoring.observability", value => {
-    const next = value as config.ObservabilityConfig;
+    const next = value as ObservabilityConfig;
     alertManager.updateConfig(next.alerts);
     void observabilityService.applyConfig(next);
   });

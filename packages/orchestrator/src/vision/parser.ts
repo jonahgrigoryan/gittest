@@ -1,15 +1,11 @@
-import type { Card, GameState, Position, Street } from "@poker-bot/shared";
-import type { config, vision } from "@poker-bot/shared";
+import type { BotConfig } from "@poker-bot/shared/src/config/types";
+import type { Card, GameState, Position, Street } from "@poker-bot/shared/src/types";
+import type { ParserConfig, ParsedGameState, VisionOutput } from "@poker-bot/shared/src/vision";
 
 import { computeLegalActions } from "./legal-actions";
 import { StateSyncTracker } from "./state-sync";
 import { detectForcedAction } from "../safety/forced-actions";
 import { selectSafeAction, shouldTriggerSafeAction } from "../safety/safe-action";
-
-type BotConfig = config.BotConfig;
-type ParserConfig = vision.ParserConfig;
-type ParsedGameState = vision.ParsedGameState;
-type VisionOutput = vision.VisionOutput;
 
 const STREET_BY_COMMUNITY_COUNT: Record<number, Street> = {
   0: "preflop",

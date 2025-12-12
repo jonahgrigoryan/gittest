@@ -1,5 +1,5 @@
-import type { Action, Position, Street } from "@poker-bot/shared";
-import type { StrategyConfig } from "@poker-bot/shared";
+import type { Action, Position, Street } from "@poker-bot/shared/src/types";
+import type { StrategyConfig } from "@poker-bot/shared/src/strategy";
 
 /**
  * Opponent modeling scaffold (Task 8.6).

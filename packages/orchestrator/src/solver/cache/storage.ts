@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { gunzip } from "node:zlib";
-import type { Action, ActionSolutionEntry, Street } from "@poker-bot/shared";
+import type { Action, ActionSolutionEntry, Street } from "@poker-bot/shared/src/types";
 import { CACHE_COMPRESSION, CACHE_VERSION, FINGERPRINT_ALGORITHM, SUPPORTED_CACHE_STREETS, type CacheLoaderOptions, type CacheManifest, type CacheStrategyRecord, type CacheIndexEntry } from "./types";
 
 const gunzipAsync = promisify(gunzip);

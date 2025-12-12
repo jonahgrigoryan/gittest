@@ -1,5 +1,5 @@
 import http from "node:http";
-import type { HealthSnapshot } from "@poker-bot/shared";
+import type { HealthSnapshot } from "@poker-bot/shared/src/health";
 import type { HealthMonitor } from "./monitor";
 
 interface DashboardConfig {

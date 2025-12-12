@@ -1,4 +1,4 @@
-import type { GameState } from "@poker-bot/shared";
+import type { GameState } from "@poker-bot/shared/src/types";
 
 export type ActionSizing = number | "all-in";
 

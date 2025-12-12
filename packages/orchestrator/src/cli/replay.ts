@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createConfigManager } from "@poker-bot/shared";
-import type { config as sharedConfig } from "@poker-bot/shared";
+import { createConfigManager } from "@poker-bot/shared/src/config/manager";
+import type { BotConfig } from "@poker-bot/shared/src/config/types";
 import type { AgentModelConfig } from "@poker-bot/shared/src/config/types";
 import { CacheLoader } from "../solver";
 import { GTOSolver } from "../solver/solver";
@@ -38,7 +38,7 @@ async function main() {
   const repoRoot = process.cwd();
   const cfgPath = process.env.BOT_CONFIG || path.resolve(repoRoot, "config/bot/default.bot.json");
   const configManager = await createConfigManager(cfgPath);
-  const loggingConfig = configManager.get<sharedConfig.BotConfig["logging"]>("logging");
+  const loggingConfig = configManager.get<BotConfig["logging"]>("logging");
 
   const resultsDir = path.resolve(
     process.cwd(),
@@ -71,7 +71,7 @@ async function main() {
   const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
 
   const riskController = createRiskStub();
-  const strategyConfig = configManager.get<sharedConfig.BotConfig["strategy"]>("strategy");
+  const strategyConfig = configManager.get<BotConfig["strategy"]>("strategy");
   const sharedTracker = new TimeBudgetTracker({
     totalBudgetMs: 4000,
     allocation: {

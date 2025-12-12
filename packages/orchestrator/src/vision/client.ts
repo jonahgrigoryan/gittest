@@ -1,6 +1,7 @@
 import { credentials, Metadata } from "@grpc/grpc-js";
-import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
-import { vision, visionGen } from "@poker-bot/shared";
+import type { Position, Card, Rank, Suit } from "@poker-bot/shared/src/types";
+import * as vision from "@poker-bot/shared/src/vision";
+import * as visionGen from "@poker-bot/shared/src/gen/vision";
 
 const VisionServiceClient = visionGen.VisionServiceClient;
 type VisionServiceClientInstance = InstanceType<typeof visionGen.VisionServiceClient>;

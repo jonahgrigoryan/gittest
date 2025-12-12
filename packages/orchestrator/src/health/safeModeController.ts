@@ -1,4 +1,4 @@
-import type { SafeModeState } from "@poker-bot/shared";
+import type { SafeModeState } from "@poker-bot/shared/src/health";
 
 interface EnterOptions {
   manual?: boolean;

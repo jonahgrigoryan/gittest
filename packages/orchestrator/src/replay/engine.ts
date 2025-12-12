@@ -1,11 +1,11 @@
 import { performance } from "node:perf_hooks";
 import type {
   HandRecord,
-  StrategyDecision,
-  SerializedStrategyDecision,
   ModelVersions,
-  ActionKey
-} from "@poker-bot/shared";
+  StrategyDecision,
+  SerializedStrategyDecision
+} from "@poker-bot/shared/src/strategy";
+import type { ActionKey } from "@poker-bot/shared/src/types";
 import { deserializeGameState } from "./deserialize";
 import type { ReplayResult, ReplayComparison, BatchReplayReport } from "@poker-bot/shared/src/replay";
 import type { TimeBudgetTracker } from "../budget/timeBudgetTracker";

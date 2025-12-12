@@ -1,5 +1,5 @@
-import type { vision } from "@poker-bot/shared";
-import { assertEnvVars } from "@poker-bot/shared";
+import type { LayoutPack } from "@poker-bot/shared/src/vision";
+import { assertEnvVars } from "@poker-bot/shared/src/env/validator";
 import { fetch } from "undici";
 import { createSolverClient } from "../solver_client/client";
 import { VisionClient } from "../vision/client";
@@ -9,7 +9,7 @@ const DEFAULT_TIMEOUT_MS = 5000;
 interface ValidateConnectivityOptions {
   solverAddr: string;
   visionServiceUrl: string;
-  layoutPack: vision.LayoutPack;
+  layoutPack: LayoutPack;
   requireAgentConnectivity: boolean;
   useMockAgents?: boolean;
   logger?: Pick<Console, "info" | "warn" | "error">;
@@ -66,7 +66,7 @@ async function ensureSolverReady(
 
 async function ensureVisionReady(
   serviceUrl: string,
-  layoutPack: vision.LayoutPack,
+  layoutPack: LayoutPack,
   timeoutMs: number,
   logger?: Pick<Console, "info" | "warn" | "error">
 ): Promise<void> {
