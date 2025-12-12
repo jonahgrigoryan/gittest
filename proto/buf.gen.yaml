@@ -3,7 +3,7 @@ plugins:
   - name: ts_proto
     out: packages/shared/src/gen
     opt:
-      - esModuleInterop=false
+      - esModuleInterop=true
       - outputServices=grpc-js
       - env=node
       - stringEnums=true
