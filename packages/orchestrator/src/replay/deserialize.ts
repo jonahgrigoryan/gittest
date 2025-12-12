@@ -1,4 +1,4 @@
-import type { Action, Card, GameState, Position } from "@poker-bot/shared/src/types";
+import type { Card, GameState, Position } from "@poker-bot/shared/src/types";
 import type { SerializedGameState } from "@poker-bot/shared/src/strategy";
 
 export function deserializeGameState(serialized: SerializedGameState): GameState {
