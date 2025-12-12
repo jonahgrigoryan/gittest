@@ -1,5 +1,7 @@
-import type { GameState, Action, Card } from "@poker-bot/shared";
+import type { GameState, Action, Card } from "@poker-bot/shared/src/types";
 import type { PersonaTemplate, PromptContext, SolverSummary } from "../types";
+
+type PlayerEntry = GameState["players"] extends Map<infer K, infer V> ? [K, V] : never;
 
 const BASE_GUIDELINES: string[] = [
   "Respond with strictly valid minified JSON (no trailing text).",
@@ -75,7 +77,7 @@ function formatGameState(state: GameState): string {
   lines.push(`Positions: hero=${state.positions.hero}, button=${state.positions.button}`);
 
   const playerLines = Array.from(state.players.entries())
-    .map(([position, info]) => {
+    .map(([position, info]: PlayerEntry) => {
       const cards = info.holeCards ? ` | cards=${formatCards(info.holeCards)}` : "";
       return `${position}: stack=${info.stack}${cards}`;
     })
