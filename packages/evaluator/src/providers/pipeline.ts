@@ -80,9 +80,8 @@ export async function createPipelineDecisionProvider(
   }
 
   const solverClient = createSolverClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const gtoSolver = new GTOSolver(
-    options.configManager as any,
+    options.configManager,
     { cacheLoader, solverClient },
     { logger },
   );
@@ -115,8 +114,7 @@ export async function createPipelineDecisionProvider(
           // Use config proxy to inject synthetic models
           configManager: useMockAgents
             ? createMockConfigProxy(options.configManager, agentModels)
-            : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (options.configManager as any),
+            : options.configManager,
           transports,
           timeBudgetTracker: sharedTracker,
           logger,
@@ -158,10 +156,9 @@ function createSyntheticMockModel(): AgentModelConfig {
 }
 
 function createMockConfigProxy(
-  configManager: { get: <T>(key: string) => T },
+  configManager: ConfigurationManager,
   injectedModels: AgentModelConfig[],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any {
+): ConfigurationManager {
   return {
     get: <T>(key: string): T => {
       if (key === "agents.models") {
