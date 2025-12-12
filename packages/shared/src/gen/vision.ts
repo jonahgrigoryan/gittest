@@ -17,7 +17,7 @@ import {
   type ServiceError,
   type UntypedServiceImplementation,
 } from "@grpc/grpc-js";
-import Long from "long";
+import Long = require("long");
 import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "vision";
