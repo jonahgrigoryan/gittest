@@ -1,9 +1,5 @@
-import type {
-  EvaluationAggregateReport,
-  EvaluationRunConfig,
-  HandMetric,
-  HandRecord
-} from "@poker-bot/shared";
+import type { EvaluationAggregateReport, EvaluationRunConfig, HandMetric } from "@poker-bot/shared/src/evaluation";
+import type { HandRecord } from "@poker-bot/shared/src/strategy";
 
 export interface EvaluationContext {
   runId: string;

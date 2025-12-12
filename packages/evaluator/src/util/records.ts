@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
-import type { HandRecord } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared/src/strategy";
 
 export async function *readHandRecords(filePath: string): AsyncGenerator<HandRecord> {
   const stream = createReadStream(filePath, { encoding: "utf8" });

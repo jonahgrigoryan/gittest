@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { HandRecord } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared/src/strategy";
 import { nanoid } from "nanoid";
 import { readHandRecords, resolveSessionFile, ensureOutputDir } from "../util/records";
 import type { EvaluationSummary, ShadowEvaluationOptions } from "../types";

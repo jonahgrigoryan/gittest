@@ -34,6 +34,11 @@ jobs:
       - run: python -m pip install --upgrade pip poetry
       - run: python -V
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@1.82.0
+        with:
+          components: rustfmt, clippy
+
       - run: pnpm run ci:verify
 
       - name: Upload test artifacts
@@ -151,9 +156,12 @@ jobs:
           pip-audit -r requirements-audit.txt
 
       - name: Secrets scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --no-banner --redact
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION="8.18.4"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tar.gz
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks detect --no-banner --redact
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.24.0

@@ -1,7 +1,8 @@
 import { mkdir, appendFile } from "node:fs/promises";
 import path from "node:path";
-import type { StrategyDecision, HandMetric, EvaluationAggregateReport } from "@poker-bot/shared";
-import { createEvaluationReport } from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared/src/strategy";
+import type { HandMetric, EvaluationAggregateReport } from "@poker-bot/shared/src/evaluation";
+import { createEvaluationReport } from "@poker-bot/shared/src/evaluation";
 import { MinimalSimulator } from "../simulator/minimal";
 import { getOpponentDefinition } from "../opponents/registry";
 import type { OpponentDefinition } from "../opponents/types";

@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { AgentCoordinator, AgentTransport } from "@poker-bot/agents";
 import { AgentCoordinatorService, MockTransport } from "@poker-bot/agents";
-import type { StrategyDecision } from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared/src/strategy";
 import type { ConfigurationManager, AgentModelConfig } from "@poker-bot/shared/src/config";
 import { CacheLoader } from "@poker-bot/orchestrator/solver";
 import { GTOSolver } from "@poker-bot/orchestrator/solver/solver";

@@ -1,4 +1,4 @@
-import type { EvaluationAggregateReport } from "@poker-bot/shared";
+import type { EvaluationAggregateReport } from "@poker-bot/shared/src/evaluation";
 import type { EvaluationRunner, EvaluationContext } from "../types";
 import { EvaluationHarness, type HarnessOptions } from "./harness";
 
