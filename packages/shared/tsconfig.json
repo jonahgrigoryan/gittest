@@ -3,11 +3,9 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
+    "moduleResolution": "Node16",
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": [
-    "src/**/*",
-    "../../config/**/*.json"
-  ]
+  "include": ["src/**/*", "../../config/**/*.json"]
 }

@@ -1,4 +1,4 @@
-import type { StrategyDecision } from "@poker-bot/shared/src/strategy";
+import type { StrategyDecision } from "@poker-bot/shared";
 
 export interface MinimalSimState {
   handId: string;
@@ -21,7 +21,10 @@ export class MinimalSimulator {
     return this.bigBlind;
   }
 
-  playHand(decision: StrategyDecision, opponentAction: { action: "fold" | "call" | "raise"; amount?: number }): SimulationResult {
+  playHand(
+    decision: StrategyDecision,
+    opponentAction: { action: "fold" | "call" | "raise"; amount?: number },
+  ): SimulationResult {
     const heroAggression = decision.action.amount ?? this.bigBlind;
     let net = 0;
     if (decision.action.type === "fold") {
