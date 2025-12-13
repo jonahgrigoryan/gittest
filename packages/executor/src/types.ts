@@ -1,4 +1,4 @@
-import type { Action } from "@poker-bot/shared/src/types";
+import type { Action } from "@poker-bot/shared";
 import type { StrategyDecision } from "@poker-bot/shared";
 
 export interface ExecutionResult {
@@ -19,7 +19,7 @@ export interface ExecutionResult {
 }
 
 export interface StateChange {
-  type: 'pot_increase' | 'stack_decrease' | 'action_taken';
+  type: "pot_increase" | "stack_decrease" | "action_taken";
   amount?: number;
   position?: string;
 }
@@ -39,10 +39,13 @@ export interface VerificationResult {
   retryCount: number;
 }
 
-export type ExecutionMode = 'simulator' | 'api' | 'research-ui';
+export type ExecutionMode = "simulator" | "api" | "research-ui";
 
 export interface ActionExecutor {
-  execute(decision: StrategyDecision, options?: ExecutionOptions): Promise<ExecutionResult>;
+  execute(
+    decision: StrategyDecision,
+    options?: ExecutionOptions,
+  ): Promise<ExecutionResult>;
   verify?(result: ExecutionResult): Promise<VerificationResult>;
 }
 

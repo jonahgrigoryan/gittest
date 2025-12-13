@@ -1,5 +1,5 @@
-import type { GameState, Action, Position } from '@poker-bot/shared/src/types';
-import type { VerificationResult, StateChange, ExecutionResult } from './types';
+import type { GameState, Action, Position } from "@poker-bot/shared";
+import type { VerificationResult, StateChange, ExecutionResult } from "./types";
 
 // Local interface to match VisionOutput from vision types
 interface VisionOutput {
@@ -23,11 +23,11 @@ export interface VisionClientInterface {
  */
 export class ActionVerifier {
   private readonly visionClient: VisionClientInterface;
-  private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
+  private readonly logger: Pick<Console, "debug" | "info" | "warn" | "error">;
 
   constructor(
     visionClient: VisionClientInterface,
-    logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console
+    logger: Pick<Console, "debug" | "info" | "warn" | "error"> = console,
   ) {
     this.visionClient = visionClient;
     this.logger = logger;
@@ -39,57 +39,64 @@ export class ActionVerifier {
   async verifyAction(
     executedAction: Action,
     expectedStateChanges: StateChange[],
-    timeoutMs: number = 2000
+    timeoutMs: number = 2000,
   ): Promise<VerificationResult> {
     const startTime = Date.now();
-    
+
     try {
-      this.logger.debug('ActionVerifier: Starting verification', {
+      this.logger.debug("ActionVerifier: Starting verification", {
         action: executedAction,
         expectedChanges: expectedStateChanges,
-        timeoutMs
+        timeoutMs,
       });
 
       // Capture post-action frame with timeout
       const visionOutput = await this.captureWithTimeout(timeoutMs);
-      
+
       if (!visionOutput) {
         return {
           passed: false,
-          mismatchReason: 'Failed to capture post-action vision output',
-          retryCount: 0
+          mismatchReason: "Failed to capture post-action vision output",
+          retryCount: 0,
         };
       }
 
       // Parse to GameState
       const actualState = await this.parseVisionOutput(visionOutput);
-      
+
       if (!actualState) {
         return {
           passed: false,
-          mismatchReason: 'Failed to parse vision output to game state',
-          retryCount: 0
+          mismatchReason: "Failed to parse vision output to game state",
+          retryCount: 0,
         };
       }
 
       // Compare with expected state changes
-      const result = this.compareStates(expectedStateChanges, actualState, executedAction);
-      
-      this.logger.debug('ActionVerifier: Verification complete', {
+      const result = this.compareStates(
+        expectedStateChanges,
+        actualState,
+        executedAction,
+      );
+
+      this.logger.debug("ActionVerifier: Verification complete", {
         passed: result.passed,
         durationMs: Date.now() - startTime,
-        mismatchReason: result.mismatchReason
+        mismatchReason: result.mismatchReason,
       });
 
       return result;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown verification error';
-      this.logger.error('ActionVerifier: Verification failed', { error: errorMessage });
-      
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown verification error";
+      this.logger.error("ActionVerifier: Verification failed", {
+        error: errorMessage,
+      });
+
       return {
         passed: false,
         mismatchReason: `Verification error: ${errorMessage}`,
-        retryCount: 0
+        retryCount: 0,
       };
     }
   }
@@ -97,14 +104,17 @@ export class ActionVerifier {
   /**
    * Captures vision output with timeout
    */
-  private async captureWithTimeout(timeoutMs: number): Promise<VisionOutput | null> {
+  private async captureWithTimeout(
+    timeoutMs: number,
+  ): Promise<VisionOutput | null> {
     const timeoutPromise = new Promise<null>((resolve) => {
       setTimeout(() => resolve(null), timeoutMs);
     });
 
-    const capturePromise = this.visionClient.captureAndParse()
+    const capturePromise = this.visionClient
+      .captureAndParse()
       .catch((error) => {
-        this.logger.error('Vision client capture failed', { error });
+        this.logger.error("Vision client capture failed", { error });
         return null;
       });
 
@@ -114,14 +124,16 @@ export class ActionVerifier {
   /**
    * Parses VisionOutput to GameState
    */
-  private async parseVisionOutput(visionOutput: VisionOutput): Promise<GameState | null> {
+  private async parseVisionOutput(
+    visionOutput: VisionOutput,
+  ): Promise<GameState | null> {
     try {
       // This is a simplified parser - in production, this would use the full GameStateParser
       // For now, we'll extract basic information needed for verification
-      
+
       if (!visionOutput || visionOutput.confidence.overall < 0.99) {
-        this.logger.warn('Vision output confidence too low for verification', {
-          confidence: visionOutput?.confidence?.overall
+        this.logger.warn("Vision output confidence too low for verification", {
+          confidence: visionOutput?.confidence?.overall,
         });
         return null;
       }
@@ -135,7 +147,7 @@ export class ActionVerifier {
 
       return gameState as GameState;
     } catch (error) {
-      this.logger.error('Failed to parse vision output', { error });
+      this.logger.error("Failed to parse vision output", { error });
       return null;
     }
   }
@@ -146,45 +158,50 @@ export class ActionVerifier {
   private compareStates(
     expected: StateChange[],
     actual: GameState,
-    executedAction: Action
+    executedAction: Action,
   ): VerificationResult {
     const mismatches: string[] = [];
 
     for (const expectedChange of expected) {
       switch (expectedChange.type) {
-        case 'action_taken':
+        case "action_taken":
           // Verify the action was taken by checking if it's now the next player's turn
           // or if the street has advanced
           if (!this.verifyActionTaken(actual, executedAction)) {
-            mismatches.push(`Expected action ${executedAction.type} was not recorded`);
+            mismatches.push(
+              `Expected action ${executedAction.type} was not recorded`,
+            );
           }
           break;
 
-        case 'pot_increase':
+        case "pot_increase":
           if (expectedChange.amount !== undefined) {
             // For exact amount verification
             const actualPotIncrease = this.calculatePotIncrease(actual);
             if (Math.abs(actualPotIncrease - expectedChange.amount) > 0.01) {
               mismatches.push(
-                `Pot increase mismatch: expected ${expectedChange.amount}, got ${actualPotIncrease}`
+                `Pot increase mismatch: expected ${expectedChange.amount}, got ${actualPotIncrease}`,
               );
             }
           } else {
             // Just verify pot increased for call actions
             if (actual.pot <= 0) {
-              mismatches.push('Expected pot to increase');
+              mismatches.push("Expected pot to increase");
             }
           }
           break;
 
-        case 'stack_decrease':
+        case "stack_decrease":
           if (expectedChange.amount !== undefined) {
             // Verify stack decreased by expected amount
-            const actualStackDecrease = this.calculateStackDecrease(actual, expectedChange.position);
+            const actualStackDecrease = this.calculateStackDecrease(
+              actual,
+              expectedChange.position,
+            );
             if (Math.abs(actualStackDecrease - expectedChange.amount) > 0.01) {
               mismatches.push(
                 `Stack decrease mismatch for ${expectedChange.position}: ` +
-                `expected ${expectedChange.amount}, got ${actualStackDecrease}`
+                  `expected ${expectedChange.amount}, got ${actualStackDecrease}`,
               );
             }
           }
@@ -197,38 +214,43 @@ export class ActionVerifier {
         passed: false,
         expectedState: { changes: expected },
         actualState: { pot: actual.pot },
-        mismatchReason: mismatches.join('; '),
-        retryCount: 0
+        mismatchReason: mismatches.join("; "),
+        retryCount: 0,
       };
     }
 
     return {
       passed: true,
-      retryCount: 0
+      retryCount: 0,
     };
   }
 
   /**
    * Verifies that the executed action was recorded in the game state
    */
-  private verifyActionTaken(actual: GameState, executedAction: Action): boolean {
+  private verifyActionTaken(
+    actual: GameState,
+    executedAction: Action,
+  ): boolean {
     // In a full implementation, this would check the action history
     // For now, we'll use a heuristic based on game state changes
-    
+
     // If we have action history, verify the last action matches
     if (actual.actionHistory && actual.actionHistory.length > 0) {
       const lastAction = actual.actionHistory[actual.actionHistory.length - 1];
-      return lastAction.type === executedAction.type &&
-             lastAction.position === executedAction.position;
+      return (
+        lastAction.type === executedAction.type &&
+        lastAction.position === executedAction.position
+      );
     }
 
     // Fallback: check if game state changed in a way consistent with the action
-    if (executedAction.type === 'fold') {
+    if (executedAction.type === "fold") {
       // Player should no longer be active (simplified check)
       return true; // Assume fold was processed
     }
 
-    if (executedAction.type === 'raise' && executedAction.amount) {
+    if (executedAction.type === "raise" && executedAction.amount) {
       // Pot should have increased
       return actual.pot > 0;
     }
@@ -261,27 +283,27 @@ export class ActionVerifier {
    */
   async retryOnMismatch(
     result: ExecutionResult,
-    maxRetries: number = 1
+    maxRetries: number = 1,
   ): Promise<ExecutionResult> {
     if (!result.verificationResult || result.verificationResult.passed) {
       return result; // No retry needed
     }
 
     if (maxRetries <= 0) {
-      this.logger.warn('Max retries exceeded, halting execution');
+      this.logger.warn("Max retries exceeded, halting execution");
       return {
         ...result,
-        error: 'Verification failed after maximum retries',
+        error: "Verification failed after maximum retries",
         verificationResult: {
           ...result.verificationResult,
-          retryCount: result.verificationResult.retryCount || 0
-        }
+          retryCount: result.verificationResult.retryCount || 0,
+        },
       };
     }
 
-    this.logger.info('Retrying execution after verification failure', {
+    this.logger.info("Retrying execution after verification failure", {
       retryCount: maxRetries,
-      reason: result.verificationResult.mismatchReason
+      reason: result.verificationResult.mismatchReason,
     });
 
     // Note: The actual retry logic would need to re-execute the action
@@ -290,8 +312,8 @@ export class ActionVerifier {
       ...result,
       verificationResult: {
         ...result.verificationResult,
-        retryCount: (result.verificationResult.retryCount || 0) + 1
-      }
+        retryCount: (result.verificationResult.retryCount || 0) + 1,
+      },
     };
   }
 }
