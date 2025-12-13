@@ -3,18 +3,17 @@ import type { AgentCoordinator, AgentTransport } from "@poker-bot/agents";
 import { AgentCoordinatorService, MockTransport } from "@poker-bot/agents";
 import type { StrategyDecision } from "@poker-bot/shared";
 import type { ConfigurationManager, AgentModelConfig } from "@poker-bot/shared";
-import { CacheLoader, GTOSolver } from "@poker-bot/orchestrator/solver";
-import { createSolverClient } from "@poker-bot/orchestrator/solver_client/client";
 import {
+  CacheLoader,
+  GTOSolver,
   StrategyEngine,
-  type StrategyConfig,
-} from "@poker-bot/orchestrator/strategy";
-import { makeDecision as runDecisionPipeline } from "@poker-bot/orchestrator/decision/pipeline";
-import {
+  makeDecision as runDecisionPipeline,
+  createSolverClient,
   TimeBudgetTracker,
+  type StrategyConfig,
   type RiskGuardAPI,
   type RiskSnapshot,
-} from "@poker-bot/orchestrator/safety";
+} from "@poker-bot/orchestrator";
 import type {
   DecisionProvider,
   DecisionRequestContext,
@@ -110,11 +109,16 @@ export async function createPipelineDecisionProvider(
     if (agentModels.length > 0) {
       const transports = createEvaluatorTransports(agentModels);
       if (transports.size > 0) {
+        const agentConfigManager = useMockAgents
+          ? (createMockConfigProxy(
+              options.configManager,
+              agentModels,
+            ) as unknown as ConfigurationManager)
+          : options.configManager;
+
         agentCoordinator = new AgentCoordinatorService({
           // Use config proxy to inject synthetic models
-          configManager: useMockAgents
-            ? createMockConfigProxy(options.configManager, agentModels)
-            : options.configManager,
+          configManager: agentConfigManager,
           transports,
           timeBudgetTracker: sharedTracker,
           logger,
@@ -155,10 +159,12 @@ function createSyntheticMockModel(): AgentModelConfig {
   };
 }
 
+type ConfigManagerGet = Pick<ConfigurationManager, "get">;
+
 function createMockConfigProxy(
   configManager: ConfigurationManager,
   injectedModels: AgentModelConfig[],
-): ConfigurationManager {
+): ConfigManagerGet {
   return {
     get: <T>(key: string): T => {
       if (key === "agents.models") {

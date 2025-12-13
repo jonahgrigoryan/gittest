@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type { HandRecord } from "@poker-bot/shared";
-import { nanoid } from "nanoid";
 import {
   readHandRecords,
   resolveSessionFile,
@@ -12,7 +12,7 @@ import type { EvaluationSummary, ShadowEvaluationOptions } from "../types";
 export async function runShadowEvaluation(
   options: ShadowEvaluationOptions,
 ): Promise<EvaluationSummary> {
-  const runId = options.runId ?? `shadow-${nanoid(8)}`;
+  const runId = options.runId ?? `shadow-${randomUUID().slice(0, 8)}`;
   const sourceFile = await resolveSessionFile(
     options.handsDir,
     options.sessionId,

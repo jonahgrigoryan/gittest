@@ -9,6 +9,7 @@ export * from "./env/validator";
 export * from "./env/schema";
 export * as config from "./config";
 export { ConfigurationManager, createConfigManager } from "./config/manager";
+export type { AgentModelConfig } from "./config/types";
 export * as solverGen from "./gen/solver";
 export * as visionGen from "./gen/vision";
 export * as vision from "./vision";
