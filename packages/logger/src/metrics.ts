@@ -1,6 +1,6 @@
-import { createActionKey } from "@poker-bot/shared/src/types";
-import type { MetricsSnapshot } from "@poker-bot/shared/src/observability";
-import type { HandRecord } from "@poker-bot/shared/src/strategy";
+import { createActionKey } from "@poker-bot/shared";
+import type { MetricsSnapshot } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared";
 import type { MetricsConfig } from "./types";
 
 class RingBuffer {
@@ -37,7 +37,7 @@ class RingBuffer {
     const clamped = Math.min(Math.max(percentile, 0), 1);
     const index = Math.min(
       sorted.length - 1,
-      Math.round(clamped * (sorted.length - 1))
+      Math.round(clamped * (sorted.length - 1)),
     );
     return sorted[index];
   }
@@ -75,7 +75,7 @@ export class MetricsCollector {
       gto: new RingBuffer(capacity),
       agents: new RingBuffer(capacity),
       execution: new RingBuffer(capacity),
-      total: new RingBuffer(capacity)
+      total: new RingBuffer(capacity),
     };
   }
 
@@ -100,9 +100,11 @@ export class MetricsCollector {
     if (hand.solver?.actions?.length) {
       const chosenKey = createActionKey(hand.decision.action);
       const chosenAction = hand.solver.actions.find(
-        entry => entry.actionKey === chosenKey
+        (entry) => entry.actionKey === chosenKey,
       );
-      const bestEv = Math.max(...hand.solver.actions.map(entry => entry.ev ?? 0));
+      const bestEv = Math.max(
+        ...hand.solver.actions.map((entry) => entry.ev ?? 0),
+      );
       const chosenEv = chosenAction?.ev ?? bestEv;
       this.evAccuracy.push(chosenEv - bestEv);
     }
@@ -170,7 +172,8 @@ export class MetricsCollector {
       computedAt: Date.now(),
       totals: {
         handsLogged: this.totalHands,
-        handsPerHour: runtimeHours > 0 ? this.totalHands / runtimeHours : this.totalHands,
+        handsPerHour:
+          runtimeHours > 0 ? this.totalHands / runtimeHours : this.totalHands,
         solverTimeouts: this.solverTimeouts,
         safeModeEntries: this.safeModeEntries,
         panicStops: this.panicStops,
@@ -179,29 +182,31 @@ export class MetricsCollector {
         agentTokens: this.agentTokens,
         agentCostUsd: Number(this.agentCostUsd.toFixed(4)),
         executionSuccessRate:
-          executionTotal === 0 ? 1 : this.executionSuccess / executionTotal
+          executionTotal === 0 ? 1 : this.executionSuccess / executionTotal,
       },
       latency: {
         gto: quantiles(this.latency.gto),
         agents: quantiles(this.latency.agents),
         execution: quantiles(this.latency.execution),
-        total: quantiles(this.latency.total)
+        total: quantiles(this.latency.total),
       },
       evAccuracy: {
         meanDelta: this.evAccuracy.mean(),
         p50Delta: this.evAccuracy.quantile(0.5),
         p95Delta: this.evAccuracy.quantile(0.95),
-        p99Delta: this.evAccuracy.quantile(0.99)
+        p99Delta: this.evAccuracy.quantile(0.99),
       },
       decisionQuality: {
         divergenceMean: this.divergence.mean(),
-        solverTimeoutRate: this.totalHands ? this.solverTimeouts / this.totalHands : 0,
+        solverTimeoutRate: this.totalHands
+          ? this.solverTimeouts / this.totalHands
+          : 0,
         fallbackCounts: {
           risk: this.riskFallbacks,
-          gtoOnly: this.gtoFallbacks
-        }
+          gtoOnly: this.gtoFallbacks,
+        },
       },
-      safeMode: this.safeModeState
+      safeMode: this.safeModeState,
     };
   }
 }
@@ -210,6 +215,6 @@ function quantiles(buffer: RingBuffer) {
   return {
     p50: buffer.quantile(0.5),
     p95: buffer.quantile(0.95),
-    p99: buffer.quantile(0.99)
+    p99: buffer.quantile(0.99),
   };
 }

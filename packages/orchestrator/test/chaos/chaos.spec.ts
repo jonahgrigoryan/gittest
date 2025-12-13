@@ -16,7 +16,7 @@ import { SafeModeController } from "../../src/health/safeModeController";
 import { PanicStopController } from "../../src/health/panicStopController";
 import { HealthMetricsStore } from "../../src/health/metricsStore";
 import { HealthMonitor } from "../../src/health/monitor";
-import type { HealthMonitoringConfig } from "@poker-bot/shared/src/config/types";
+import type { HealthMonitoringConfig } from "@poker-bot/shared";
 import { ActionVerifier } from "@poker-bot/executor";
 import type { ExecutionResult, VisionClientInterface } from "@poker-bot/executor";
 import { GTOSolver } from "../../src/solver/solver";

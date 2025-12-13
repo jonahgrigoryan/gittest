@@ -1,6 +1,6 @@
-import type { ActionKey, GTOSolution } from "@poker-bot/shared/src/types";
+import type { ActionKey, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
-import type { BlendedDistribution, StrategyConfig } from "@poker-bot/shared/src/strategy";
+import type { BlendedDistribution, StrategyConfig } from "@poker-bot/shared";
 
 const MIN_ALPHA = 0.3;
 const MAX_ALPHA = 0.9;

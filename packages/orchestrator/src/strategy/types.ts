@@ -1,4 +1,4 @@
-import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared/src/types";
+import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import type { TimeBudgetTracker } from "../budget/timeBudgetTracker";
 
@@ -10,7 +10,7 @@ export type {
   StrategyTimingBreakdown,
   StrategyMetadata,
   StrategyDecision
-} from "@poker-bot/shared/src/strategy";
+} from "@poker-bot/shared";
 
 export interface StrategyEngineDeps {
   logger?: Pick<Console, "debug" | "info" | "warn" | "error">;

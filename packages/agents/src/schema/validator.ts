@@ -1,6 +1,6 @@
 import Ajv from "ajv";
 import type { ValidateFunction } from "ajv";
-import type { JsonSchema } from "@poker-bot/shared/src/config/types";
+import type { JsonSchema } from "@poker-bot/shared";
 import type { AgentOutput, ValidationError, ValidationResult, TokenUsage } from "../types";
 
 export interface AgentSchemaValidatorOptions {

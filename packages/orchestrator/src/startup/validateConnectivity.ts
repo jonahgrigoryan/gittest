@@ -1,5 +1,5 @@
-import type { LayoutPack } from "@poker-bot/shared/src/vision";
-import { assertEnvVars } from "@poker-bot/shared/src/env/validator";
+import type { LayoutPack } from "@poker-bot/shared";
+import { assertEnvVars } from "@poker-bot/shared";
 import { fetch } from "undici";
 import { createSolverClient } from "../solver_client/client";
 import { VisionClient } from "../vision/client";

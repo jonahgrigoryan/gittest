@@ -5,7 +5,7 @@ import type {
   CircuitBreakerState
 } from "../types";
 import type { CostGuardState } from "../policy/costGuard";
-import type { ActionType } from "@poker-bot/shared/src/types";
+import type { ActionType } from "@poker-bot/shared";
 
 export interface TelemetryEvent {
   requestId: string;

@@ -1,5 +1,5 @@
-import type { Position } from "@poker-bot/shared/src/types";
-import type { ParsedGameState } from "@poker-bot/shared/src/vision";
+import type { Position } from "@poker-bot/shared";
+import type { ParsedGameState } from "@poker-bot/shared";
 
 export class StateSyncTracker {
   private history: ParsedGameState[] = [];

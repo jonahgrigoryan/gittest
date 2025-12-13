@@ -1,6 +1,6 @@
-import type { ActionKey } from "@poker-bot/shared/src/types";
+import type { ActionKey } from "@poker-bot/shared";
 import type { DivergenceLogEntry } from "./types";
-import type { StrategyConfig } from "@poker-bot/shared/src/strategy";
+import type { StrategyConfig } from "@poker-bot/shared";
 
 export class DivergenceDetector {
   private readonly thresholdPP: number;

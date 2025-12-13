@@ -1,4 +1,4 @@
-import type { Action, GameState, Position } from "@poker-bot/shared/src/types";
+import type { Action, GameState, Position } from "@poker-bot/shared";
 
 import { getCallAmount } from "../vision/legal-actions";
 

@@ -1,4 +1,4 @@
-import type { PanicStopReason } from "@poker-bot/shared/src/health";
+import type { PanicStopReason } from "@poker-bot/shared";
 import { SafeModeController } from "./safeModeController";
 
 export class PanicStopController {

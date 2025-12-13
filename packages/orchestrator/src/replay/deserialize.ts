@@ -1,5 +1,5 @@
-import type { Card, GameState, Position } from "@poker-bot/shared/src/types";
-import type { SerializedGameState } from "@poker-bot/shared/src/strategy";
+import type { Card, GameState, Position } from "@poker-bot/shared";
+import type { SerializedGameState } from "@poker-bot/shared";
 
 export function deserializeGameState(serialized: SerializedGameState): GameState {
   const players = new Map<Position, { stack: number; holeCards?: Card[] }>();

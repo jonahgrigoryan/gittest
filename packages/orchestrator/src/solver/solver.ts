@@ -1,5 +1,5 @@
-import type { ConfigurationManager } from "@poker-bot/shared/src/config/manager";
-import { createActionKey, type Action, type ActionSolutionEntry, type GameState, type GTOSolution } from "@poker-bot/shared/src/types";
+import type { ConfigurationManager } from "@poker-bot/shared";
+import { createActionKey, type Action, type ActionSolutionEntry, type GameState, type GTOSolution } from "@poker-bot/shared";
 import { CacheLoader, solutionToGtO } from "./cache/loader";
 import { computeFingerprint } from "./cache/fingerprint";
 import { actionSetToStrings, calculateEffectiveStack, selectActionSet } from "./deep_stack";

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createConfigManager } from "@poker-bot/shared/src/config/manager";
-import type { BotConfig } from "@poker-bot/shared/src/config/types";
-import type { AgentModelConfig } from "@poker-bot/shared/src/config/types";
+import { createConfigManager } from "@poker-bot/shared";
+import type { BotConfig } from "@poker-bot/shared";
+import type { AgentModelConfig } from "@poker-bot/shared";
 import { CacheLoader } from "../solver";
 import { GTOSolver } from "../solver/solver";
 import { createSolverClient } from "../solver_client/client";

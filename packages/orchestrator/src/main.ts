@@ -1,20 +1,24 @@
 import { appendFile, mkdir } from "node:fs/promises";
-import { createConfigManager } from "@poker-bot/shared/src/config/manager";
-import type { AgentModelConfig, BotConfig, ObservabilityConfig } from "@poker-bot/shared/src/config/types";
-import { assertEnvVars } from "@poker-bot/shared/src/env/validator";
-import type { EvaluationMode, EvaluationRunMetadata } from "@poker-bot/shared/src/evaluation";
-import type { HandRecord, ModelVersions } from "@poker-bot/shared/src/strategy";
+import { createConfigManager } from "@poker-bot/shared";
+import type {
+  AgentModelConfig,
+  BotConfig,
+  ObservabilityConfig,
+} from "@poker-bot/shared";
+import { assertEnvVars } from "@poker-bot/shared";
+import type { EvaluationMode, EvaluationRunMetadata } from "@poker-bot/shared";
+import type { HandRecord, ModelVersions } from "@poker-bot/shared";
 import {
   computeConfigHash,
   serializeAgentOutput,
   serializeExecutionResult,
   serializeGameState,
   serializeStrategyDecision,
-  summarizeGTOSolution
-} from "@poker-bot/shared/src/strategy";
-import type { Action, GameState, GTOSolution } from "@poker-bot/shared/src/types";
-import type { ParserConfig } from "@poker-bot/shared/src/vision";
-import * as vision from "@poker-bot/shared/src/vision";
+  summarizeGTOSolution,
+} from "@poker-bot/shared";
+import type { Action, GameState, GTOSolution } from "@poker-bot/shared";
+import type { ParserConfig } from "@poker-bot/shared";
+import { vision } from "@poker-bot/shared";
 import { GameStateParser } from "./vision/parser";
 import { VisionClient } from "./vision/client";
 import { CacheLoader, GTOSolver } from "./solver";
@@ -25,14 +29,24 @@ import { RiskStateStore } from "./safety/riskStateStore";
 import type { RiskCheckOptions, RiskGuardAPI } from "./safety/types";
 import type { StrategyConfig, StrategyDecision } from "./strategy/types";
 import { StrategyEngine } from "./strategy/engine";
+import { makeDecision as makeDecisionPipeline } from "./decision/pipeline";
+import type {
+  AggregatedAgentOutput,
+  AgentCoordinator,
+  AgentTransport,
+} from "@poker-bot/agents";
 import {
-  makeDecision as makeDecisionPipeline
-} from "./decision/pipeline";
-import type { AggregatedAgentOutput, AgentCoordinator, AgentTransport } from "@poker-bot/agents";
-import { AgentCoordinatorService, OpenAITransport, MockTransport } from "@poker-bot/agents";
+  AgentCoordinatorService,
+  OpenAITransport,
+  MockTransport,
+} from "@poker-bot/agents";
 
 import { createActionExecutor, ActionVerifier } from "@poker-bot/executor";
-import type { ExecutionResult, ExecutorConfig, VisionClientInterface } from "@poker-bot/executor";
+import type {
+  ExecutionResult,
+  ExecutorConfig,
+  VisionClientInterface,
+} from "@poker-bot/executor";
 import { createHandHistoryLogger } from "@poker-bot/logger";
 import { HealthMonitor } from "./health/monitor";
 import { SafeModeController } from "./health/safeModeController";
@@ -54,7 +68,9 @@ export async function run() {
   assertEnvVars("orchestrator");
   const path = await import("path");
 
-  const cfgPath = process.env.BOT_CONFIG || path.resolve(process.cwd(), "../../config/bot/default.bot.json");
+  const cfgPath =
+    process.env.BOT_CONFIG ||
+    path.resolve(process.cwd(), "../../config/bot/default.bot.json");
   const configManager = await createConfigManager(cfgPath);
 
   if (process.env.CONFIG_WATCH === "1") {
@@ -76,17 +92,23 @@ export async function run() {
     },
     {
       logger: console,
-      onPanicStop: event => {
-        riskStateStore.save(event.snapshot).catch(error => {
-          console.error("Failed to persist risk snapshot after panic stop", error);
+      onPanicStop: (event) => {
+        riskStateStore.save(event.snapshot).catch((error) => {
+          console.error(
+            "Failed to persist risk snapshot after panic stop",
+            error,
+          );
         });
       },
-    }
+    },
   );
 
-  configManager.subscribe("safety", value => {
+  configManager.subscribe("safety", (value) => {
     const next = value as BotConfig["safety"];
-    riskGuard.updateLimits({ bankrollLimit: next.bankrollLimit, sessionLimit: next.sessionLimit });
+    riskGuard.updateLimits({
+      bankrollLimit: next.bankrollLimit,
+      sessionLimit: next.sessionLimit,
+    });
   });
 
   let panicStopControllerRef: PanicStopController | undefined;
@@ -99,7 +121,7 @@ export async function run() {
       riskGuard.startHand(handId, options);
     },
     incrementHandCount: () => riskGuard.incrementHandCount(),
-    recordOutcome: update => {
+    recordOutcome: (update) => {
       const snapshot = riskGuard.recordOutcome(update);
       void riskStateStore.save(snapshot);
       if (handLogger) {
@@ -108,30 +130,37 @@ export async function run() {
           void handLogger.recordOutcome(targetHandId, {
             handId: targetHandId,
             netChips: update.net,
-            recordedAt: Date.now()
+            recordedAt: Date.now(),
           });
         }
       }
       return snapshot;
     },
-    updateLimits: limits => riskGuard.updateLimits(limits),
+    updateLimits: (limits) => riskGuard.updateLimits(limits),
     checkLimits: (action, state, options) => {
       const result = riskGuard.checkLimits(action, state, options);
-      if (!result.allowed && healthConfig.panicStop.riskGuardAutoTrip && panicStopControllerRef) {
+      if (
+        !result.allowed &&
+        healthConfig.panicStop.riskGuardAutoTrip &&
+        panicStopControllerRef
+      ) {
         panicStopControllerRef.trigger({
           type: "risk_limit",
           detail: result.reason ? result.reason.type : "risk_limit",
-          triggeredAt: Date.now()
+          triggeredAt: Date.now(),
         });
       }
       return result;
     },
     getSnapshot: () => riskGuard.getSnapshot(),
-    resetSession: () => riskGuard.resetSession()
+    resetSession: () => riskGuard.resetSession(),
   };
 
   const layoutPackConfigPath = configManager.get<string>("vision.layoutPack");
-  const baseLayoutDir = path.resolve(process.cwd(), "../../config/layout-packs");
+  const baseLayoutDir = path.resolve(
+    process.cwd(),
+    "../../config/layout-packs",
+  );
   const layoutFileName = layoutPackConfigPath.endsWith(".json")
     ? layoutPackConfigPath
     : `${layoutPackConfigPath}.layout.json`;
@@ -144,13 +173,17 @@ export async function run() {
     layoutPack = vision.loadLayoutPack(resolvedLayoutPath);
   } catch (error) {
     console.warn(`Failed to load layout pack at ${resolvedLayoutPath}:`, error);
-    layoutPack = vision.loadLayoutPack(path.resolve(baseLayoutDir, "simulator/default.layout.json"));
+    layoutPack = vision.loadLayoutPack(
+      path.resolve(baseLayoutDir, "simulator/default.layout.json"),
+    );
   }
 
   const parserConfig: ParserConfig = {
-    confidenceThreshold: configManager.get<number>("vision.confidenceThreshold"),
+    confidenceThreshold: configManager.get<number>(
+      "vision.confidenceThreshold",
+    ),
     occlusionThreshold: configManager.get<number>("vision.occlusionThreshold"),
-    enableInference: true
+    enableInference: true,
   };
 
   const parser = new GameStateParser(parserConfig);
@@ -158,7 +191,9 @@ export async function run() {
 
   const visionServiceUrl = process.env.VISION_SERVICE_URL ?? "0.0.0.0:50052";
   const useMockAgents = process.env.AGENTS_USE_MOCK === "1";
-  let agentModelsConfig = (configManager.get<AgentModelConfig[]>("agents.models") ?? []).filter(m => m && m.modelId);
+  let agentModelsConfig = (
+    configManager.get<AgentModelConfig[]>("agents.models") ?? []
+  ).filter((m) => m && m.modelId);
 
   // Inject synthetic mock model when AGENTS_USE_MOCK=1 and no real models configured
   if (useMockAgents && agentModelsConfig.length === 0) {
@@ -173,7 +208,7 @@ export async function run() {
     layoutPack,
     requireAgentConnectivity,
     useMockAgents: useMockAgents && requireAgentConnectivity,
-    logger: console
+    logger: console,
   });
 
   const cachePathConfig = configManager.get<string>("gto.cachePath");
@@ -184,18 +219,25 @@ export async function run() {
     configManager,
     cachePath: resolvedCachePath,
     layoutPath: resolvedLayoutPath,
-    logger: console
+    logger: console,
   });
 
   const cacheLoader = new CacheLoader(resolvedCachePath, { logger: console });
   try {
     await cacheLoader.loadCache();
   } catch (error) {
-    console.warn("Failed to load solver cache. Subgame solves will be used for all streets.", error);
+    console.warn(
+      "Failed to load solver cache. Subgame solves will be used for all streets.",
+      error,
+    );
   }
 
   const solverClient = createSolverClient();
-  const gtoSolver = new GTOSolver(configManager, { cacheLoader, solverClient }, { logger: console });
+  const gtoSolver = new GTOSolver(
+    configManager,
+    { cacheLoader, solverClient },
+    { logger: console },
+  );
 
   // Create shared TimeBudgetTracker for strategy engine and agents
   const sharedBudgetTracker = new TimeBudgetTracker();
@@ -203,7 +245,7 @@ export async function run() {
   const strategyConfig = configManager.get<StrategyConfig>("strategy");
   const strategyEngine = new StrategyEngine(strategyConfig, riskController, {
     logger: console,
-    timeBudgetTracker: sharedBudgetTracker
+    timeBudgetTracker: sharedBudgetTracker,
   });
 
   // Create AgentCoordinator if agent models are configured (real or synthetic mock)
@@ -214,39 +256,40 @@ export async function run() {
       // Use a config proxy that injects the synthetic model when mock mode is active
       configManager: (useMockAgents
         ? createMockConfigProxy(configManager, agentModelsConfig)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        : configManager) as any,
+        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          configManager) as any,
       transports,
       timeBudgetTracker: sharedBudgetTracker,
-      logger: console
+      logger: console,
     });
   }
   const loggingConfig = configManager.get<BotConfig["logging"]>("logging");
-  const healthConfig = configManager.get<BotConfig["monitoring"]["health"]>("monitoring.health");
+  const healthConfig =
+    configManager.get<BotConfig["monitoring"]["health"]>("monitoring.health");
   const sessionId = process.env.SESSION_ID ?? Date.now().toString(36);
   const evaluationMetadata = resolveEvaluationMetadataFromEnv();
   const logOutputDir = path.resolve(process.cwd(), loggingConfig.outputDir);
   await mkdir(logOutputDir, { recursive: true });
   const handLogger = loggingConfig.enabled
     ? await createHandHistoryLogger({
-      sessionId,
-      outputDir: logOutputDir,
-      sessionPrefix: loggingConfig.sessionPrefix,
-      flushIntervalMs: loggingConfig.flushIntervalMs,
-      maxFileSizeMb: loggingConfig.maxFileSizeMb,
-      retentionDays: loggingConfig.retentionDays,
-      formats: loggingConfig.exportFormats,
-      redaction: loggingConfig.redaction,
-      metrics: loggingConfig.metrics,
-      logger: console,
-      evaluation: evaluationMetadata
-    })
+        sessionId,
+        outputDir: logOutputDir,
+        sessionPrefix: loggingConfig.sessionPrefix,
+        flushIntervalMs: loggingConfig.flushIntervalMs,
+        maxFileSizeMb: loggingConfig.maxFileSizeMb,
+        retentionDays: loggingConfig.retentionDays,
+        formats: loggingConfig.exportFormats,
+        redaction: loggingConfig.redaction,
+        metrics: loggingConfig.metrics,
+        logger: console,
+        evaluation: evaluationMetadata,
+      })
     : undefined;
   const resultsDir = path.resolve(process.cwd(), "../../results/session");
   await mkdir(resultsDir, { recursive: true });
   const healthLogPath = path.resolve(resultsDir, `health-${sessionId}.jsonl`);
   const observabilityConfig = configManager.get<ObservabilityConfig>(
-    "monitoring.observability"
+    "monitoring.observability",
   );
   const sessionDir = path.join(resultsDir, sessionId);
   await mkdir(sessionDir, { recursive: true });
@@ -254,15 +297,18 @@ export async function run() {
     sessionId,
     sessionDir,
     config: observabilityConfig,
-    logger: console
+    logger: console,
   });
   await observabilityService.init();
-  const alertManager = new AlertManager(observabilityConfig.alerts, observabilityService);
+  const alertManager = new AlertManager(
+    observabilityConfig.alerts,
+    observabilityService,
+  );
   observabilityService.registerAlertConsumer(alertManager);
   process.on("beforeExit", () => {
     void observabilityService.flush();
   });
-  configManager.subscribe("monitoring.observability", value => {
+  configManager.subscribe("monitoring.observability", (value) => {
     const next = value as ObservabilityConfig;
     alertManager.updateConfig(next.alerts);
     void observabilityService.applyConfig(next);
@@ -275,7 +321,10 @@ export async function run() {
   // Create verifier if execution is enabled
   let verifier: ActionVerifier | undefined;
   if (executionConfig.enabled) {
-    const executionVisionClient = new VisionClient(visionServiceUrl, layoutPack);
+    const executionVisionClient = new VisionClient(
+      visionServiceUrl,
+      layoutPack,
+    );
     process.on("beforeExit", () => {
       executionVisionClient.close();
     });
@@ -285,91 +334,117 @@ export async function run() {
         const players =
           snapshot?.stacks instanceof Map
             ? new Map(
-              Array.from(snapshot.stacks.entries()).map(([position, entry]) => [
-                position,
-                { stack: entry.amount }
-              ])
-            )
+                Array.from(snapshot.stacks.entries()).map(
+                  ([position, entry]) => [position, { stack: entry.amount }],
+                ),
+              )
             : new Map();
         return {
           confidence: { overall: snapshot?.positions?.confidence ?? 1 },
           pot: { amount: snapshot?.pot?.amount ?? 0 },
           cards: { communityCards: snapshot?.cards?.communityCards ?? [] },
           actionHistory: [],
-          players
+          players,
         };
-      }
+      },
     };
     verifier = new ActionVerifier(verifierVisionClient, console);
   }
 
   // Create action executor
   const actionExecutor = executionConfig.enabled
-    ? createActionExecutor(executionConfig.mode, executionConfig, verifier, console)
+    ? createActionExecutor(
+        executionConfig.mode,
+        executionConfig,
+        verifier,
+        console,
+      )
     : undefined;
 
   const safeModeController = new SafeModeController(console);
-  const panicStopController = new PanicStopController(safeModeController, console);
+  const panicStopController = new PanicStopController(
+    safeModeController,
+    console,
+  );
   panicStopControllerRef = panicStopController;
-  const healthMetrics = new HealthMetricsStore(healthConfig.panicStop, detail => {
-    panicStopController.trigger({
-      type: "vision_confidence",
-      detail,
-      triggeredAt: Date.now()
-    });
-  });
+  const healthMetrics = new HealthMetricsStore(
+    healthConfig.panicStop,
+    (detail) => {
+      panicStopController.trigger({
+        type: "vision_confidence",
+        detail,
+        triggeredAt: Date.now(),
+      });
+    },
+  );
   let dashboard: HealthDashboardServer | undefined;
   const healthMonitor = new HealthMonitor(healthConfig, {
     logger: console,
     safeMode: safeModeController,
     panicStop: panicStopController,
-    onSnapshot: snapshot => {
-      void appendFile(healthLogPath, `${JSON.stringify(snapshot)}\n`).catch(error =>
-        console.warn("Failed to write health snapshot", error)
+    onSnapshot: (snapshot) => {
+      void appendFile(healthLogPath, `${JSON.stringify(snapshot)}\n`).catch(
+        (error) => console.warn("Failed to write health snapshot", error),
       );
       observabilityService.recordHealthSnapshot(snapshot);
       dashboard?.handleSnapshot(snapshot);
-    }
+    },
   });
   healthMonitor.registerCheck({
     name: "vision",
     fn: async () => ({
-      ...healthMetrics.buildVisionStatus(healthConfig.degradedThresholds.visionConfidenceMin),
-      checkedAt: Date.now()
-    })
+      ...healthMetrics.buildVisionStatus(
+        healthConfig.degradedThresholds.visionConfidenceMin,
+      ),
+      checkedAt: Date.now(),
+    }),
   });
   healthMonitor.registerCheck({
     name: "solver",
     fn: async () => ({
-      ...healthMetrics.buildSolverStatus(healthConfig.degradedThresholds.solverLatencyMs),
-      checkedAt: Date.now()
-    })
+      ...healthMetrics.buildSolverStatus(
+        healthConfig.degradedThresholds.solverLatencyMs,
+      ),
+      checkedAt: Date.now(),
+    }),
   });
   healthMonitor.registerCheck({
     name: "executor",
     fn: async () => ({
-      ...healthMetrics.buildExecutorStatus(healthConfig.degradedThresholds.executorFailureRate),
-      checkedAt: Date.now()
-    })
+      ...healthMetrics.buildExecutorStatus(
+        healthConfig.degradedThresholds.executorFailureRate,
+      ),
+      checkedAt: Date.now(),
+    }),
   });
   healthMonitor.registerCheck({
     name: "strategy",
     fn: async () => ({
       ...healthMetrics.buildStrategyStatus(),
-      checkedAt: Date.now()
-    })
+      checkedAt: Date.now(),
+    }),
   });
   healthMonitor.start();
   if (healthConfig.dashboard.enabled) {
-    dashboard = new HealthDashboardServer(healthConfig.dashboard, healthMonitor, console);
+    dashboard = new HealthDashboardServer(
+      healthConfig.dashboard,
+      healthMonitor,
+      console,
+    );
     await dashboard.start();
   }
 
-  async function makeDecision(state: GameState, options: DecisionOptions = {}): Promise<{
+  async function makeDecision(
+    state: GameState,
+    options: DecisionOptions = {},
+  ): Promise<{
     decision: StrategyDecision;
     execution?: ExecutionResult;
   }> {
-    healthMetrics.recordVisionSample(state.confidence?.overall ?? 1, Date.now());
+    healthMetrics.recordVisionSample(
+      state.confidence?.overall ?? 1,
+      Date.now(),
+    );
     const tracker = ensureTracker(options.tracker);
     lastHandId = state.handId;
     let gtoResult: GTOSolution | undefined;
@@ -386,7 +461,11 @@ export async function run() {
     }
 
     const finalize = async () => {
-      healthMetrics.recordSolverSample(decision.timing.gtoTime, solverTimedOut, Date.now());
+      healthMetrics.recordSolverSample(
+        decision.timing.gtoTime,
+        solverTimedOut,
+        Date.now(),
+      );
       healthMetrics.recordStrategySample(decision, Date.now());
       const record = buildHandRecord({
         state,
@@ -397,7 +476,7 @@ export async function run() {
         sessionId,
         configHash,
         healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
-        modelVersions
+        modelVersions,
       });
       observabilityService.recordDecision(record);
       if (handLogger) {
@@ -411,7 +490,7 @@ export async function run() {
           configHash,
           healthSnapshotId: healthMonitor.getLatestSnapshot()?.id,
           modelVersions,
-          evaluation: evaluationMetadata
+          evaluation: evaluationMetadata,
         });
         await handLogger.append(record);
       }
@@ -424,7 +503,7 @@ export async function run() {
       agentCoordinator,
       tracker,
       gtoBudgetMs: configManager.get<number>("gto.subgameBudgetMs"),
-      logger: console
+      logger: console,
     });
     decision = pipelineResult.decision;
     gtoResult = pipelineResult.gtoSolution;
@@ -433,12 +512,17 @@ export async function run() {
     if (agents?.costSummary) {
       observabilityService.recordAgentTelemetry({
         totalTokens: agents.costSummary.totalTokens,
-        totalCostUsd: agents.costSummary.totalCostUsd
+        totalCostUsd: agents.costSummary.totalCostUsd,
       });
     }
 
     // 4) Execute the decision if execution is enabled and we have an executor
-    if (actionExecutor && executionConfig.enabled && !panicStopController.isActive() && !safeModeController.isActive()) {
+    if (
+      actionExecutor &&
+      executionConfig.enabled &&
+      !panicStopController.isActive() &&
+      !safeModeController.isActive()
+    ) {
       if (tracker.shouldPreempt("execution")) {
         console.warn("Execution preempted due to time budget");
       } else {
@@ -447,16 +531,22 @@ export async function run() {
           executionResult = await actionExecutor.execute(decision, {
             verifyAction: executionConfig.verifyActions,
             maxRetries: executionConfig.maxRetries,
-            timeoutMs: executionConfig.verificationTimeoutMs
+            timeoutMs: executionConfig.verificationTimeoutMs,
           });
-          healthMetrics.recordExecutorSample(executionResult.success, Date.now());
+          healthMetrics.recordExecutorSample(
+            executionResult.success,
+            Date.now(),
+          );
         } finally {
           tracker.endComponent("execution");
         }
       }
-    } else if (panicStopController.isActive() || safeModeController.isActive()) {
+    } else if (
+      panicStopController.isActive() ||
+      safeModeController.isActive()
+    ) {
       console.warn(
-        `Skipping automatic execution due to ${panicStopController.isActive() ? "panic_stop" : "safe_mode"}`
+        `Skipping automatic execution due to ${panicStopController.isActive() ? "panic_stop" : "safe_mode"}`,
       );
       healthMetrics.recordExecutorSample(false, Date.now());
     }
@@ -473,27 +563,27 @@ export async function run() {
     vision: {
       serviceUrl: visionServiceUrl,
       layoutPath: resolvedLayoutPath,
-      parserConfig
+      parserConfig,
     },
     solver: {
       cachePath: resolvedCachePath,
-      cacheManifest: cacheLoader.getManifest()
+      cacheManifest: cacheLoader.getManifest(),
     },
     strategy: {
-      makeDecision
+      makeDecision,
     },
     execution: {
       enabled: executionConfig.enabled,
       mode: executionConfig.mode,
-      executor: actionExecutor
+      executor: actionExecutor,
     },
     budget: {
       createTracker: () => new TimeBudgetTracker(),
-      sharedTracker: sharedBudgetTracker
+      sharedTracker: sharedBudgetTracker,
     },
     agents: {
       coordinator: agentCoordinator,
-      modelsConfigured: agentModelsConfig.length
+      modelsConfigured: agentModelsConfig.length,
     },
     risk: {
       statePath: riskStatePath,
@@ -502,15 +592,19 @@ export async function run() {
         riskController.incrementHandCount();
       },
       incrementHandCount: () => riskController.incrementHandCount(),
-      recordOutcome: (update: { net: number; hands?: number }) => riskGuard.recordOutcome(update),
+      recordOutcome: (update: { net: number; hands?: number }) =>
+        riskGuard.recordOutcome(update),
       snapshot: () => riskGuard.getSnapshot(),
-      checkLimits: (action: Action, state: GameState, options?: RiskCheckOptions) =>
-        riskGuard.checkLimits(action, state, options),
+      checkLimits: (
+        action: Action,
+        state: GameState,
+        options?: RiskCheckOptions,
+      ) => riskGuard.checkLimits(action, state, options),
       enforceAction: (
         action: Action,
         state: GameState,
         fallbackAction: () => Action,
-        options?: RiskCheckOptions
+        options?: RiskCheckOptions,
       ) => {
         const result = riskGuard.checkLimits(action, state, options);
         if (result.allowed) {
@@ -518,8 +612,8 @@ export async function run() {
         }
         const safe = fallbackAction();
         return { action: safe, result };
-      }
-    }
+      },
+    },
   };
 }
 
@@ -555,7 +649,7 @@ function buildHandRecord(params: {
     configHash,
     healthSnapshotId,
     modelVersions,
-    evaluation
+    evaluation,
   } = params;
   return {
     handId: state.handId,
@@ -573,8 +667,8 @@ function buildHandRecord(params: {
       redactionApplied: false,
       healthSnapshotId,
       modelVersions,
-      evaluation
-    }
+      evaluation,
+    },
   };
 }
 
@@ -588,11 +682,14 @@ function resolveEvaluationMetadataFromEnv(): EvaluationRunMetadata | undefined {
   return {
     runId,
     mode,
-    opponentId: opponentId && opponentId.length > 0 ? opponentId : undefined
+    opponentId: opponentId && opponentId.length > 0 ? opponentId : undefined,
   };
 }
 
-function createAgentTransports(models: AgentModelConfig[], useMock: boolean): Map<string, AgentTransport> {
+function createAgentTransports(
+  models: AgentModelConfig[],
+  useMock: boolean,
+): Map<string, AgentTransport> {
   const transports = new Map<string, AgentTransport>();
   const openAiKey = process.env.OPENAI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -608,41 +705,52 @@ function createAgentTransports(models: AgentModelConfig[], useMock: boolean): Ma
       const mock = new MockTransport({
         id: transportId,
         modelId: transportId,
-        provider: "local"
+        provider: "local",
       });
       // Enqueue a default response so the mock actually returns data
       mock.enqueueResponse({
         raw: JSON.stringify({
           action: "call",
           confidence: 0.65,
-          reasoning: "Mock agent response for testing"
+          reasoning: "Mock agent response for testing",
         }),
-        latencyMs: 25
+        latencyMs: 25,
       });
       transports.set(transportId, mock);
       continue;
     }
 
     // Determine provider from modelId prefix or explicit config
-    const isOpenAi = transportId.startsWith("gpt-") || transportId.startsWith("o1-") || transportId.includes("openai");
-    const isAnthropic = transportId.startsWith("claude-") || transportId.includes("anthropic");
+    const isOpenAi =
+      transportId.startsWith("gpt-") ||
+      transportId.startsWith("o1-") ||
+      transportId.includes("openai");
+    const isAnthropic =
+      transportId.startsWith("claude-") || transportId.includes("anthropic");
 
     if (isOpenAi && openAiKey) {
-      transports.set(transportId, new OpenAITransport({
-        id: transportId,
-        modelId: transportId,
-        apiKey: openAiKey,
-        baseUrl: process.env.OPENAI_BASE_URL,
-        provider: "openai"
-      }));
+      transports.set(
+        transportId,
+        new OpenAITransport({
+          id: transportId,
+          modelId: transportId,
+          apiKey: openAiKey,
+          baseUrl: process.env.OPENAI_BASE_URL,
+          provider: "openai",
+        }),
+      );
     } else if (isAnthropic && anthropicKey) {
-      transports.set(transportId, new OpenAITransport({
-        id: transportId,
-        modelId: transportId,
-        apiKey: anthropicKey,
-        baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1",
-        provider: "anthropic"
-      }));
+      transports.set(
+        transportId,
+        new OpenAITransport({
+          id: transportId,
+          modelId: transportId,
+          apiKey: anthropicKey,
+          baseUrl:
+            process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1",
+          provider: "anthropic",
+        }),
+      );
     }
   }
 
@@ -657,13 +765,14 @@ function createSyntheticMockModel(): AgentModelConfig {
     provider: "local",
     modelId: MOCK_MODEL_ID,
     persona: "gto_purist",
-    promptTemplate: "Mock agent for testing - respond with action and confidence"
+    promptTemplate:
+      "Mock agent for testing - respond with action and confidence",
   };
 }
 
 function createMockConfigProxy(
   configManager: { get: <T>(key: string) => T },
-  injectedModels: AgentModelConfig[]
+  injectedModels: AgentModelConfig[],
 ): { get: <T>(key: string) => T } {
   return {
     get: <T>(key: string): T => {
@@ -671,6 +780,6 @@ function createMockConfigProxy(
         return injectedModels as T;
       }
       return configManager.get<T>(key);
-    }
+    },
   };
 }

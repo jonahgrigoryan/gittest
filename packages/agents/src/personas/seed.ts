@@ -1,4 +1,4 @@
-import type { AgentPersonaOverrideConfig } from "@poker-bot/shared/src/config/types";
+import type { AgentPersonaOverrideConfig } from "@poker-bot/shared";
 import type { PersonaTemplate } from "../types";
 import { buildPrompt } from "./promptBuilder";
 

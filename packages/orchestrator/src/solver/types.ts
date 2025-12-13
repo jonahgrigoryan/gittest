@@ -1,4 +1,4 @@
-import type { GameState, GTOSolution } from "@poker-bot/shared/src/types";
+import type { GameState, GTOSolution } from "@poker-bot/shared";
 import type { SolverClientAdapter, SolverCallResult } from "../solver_client/client";
 import type { CacheLoader } from "./cache/loader";
 import type { ActionSizing } from "./deep_stack";

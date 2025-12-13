@@ -1,6 +1,6 @@
-import type { BotConfig } from "@poker-bot/shared/src/config/types";
-import type { Card, GameState, Position, Street } from "@poker-bot/shared/src/types";
-import type { ParserConfig, ParsedGameState, VisionOutput } from "@poker-bot/shared/src/vision";
+import type { BotConfig } from "@poker-bot/shared";
+import type { Card, GameState, Position, Street } from "@poker-bot/shared";
+import type { ParserConfig, ParsedGameState, VisionOutput } from "@poker-bot/shared";
 
 import { computeLegalActions } from "./legal-actions";
 import { StateSyncTracker } from "./state-sync";

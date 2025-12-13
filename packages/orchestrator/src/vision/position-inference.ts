@@ -1,5 +1,5 @@
-import type { Position, Card } from "@poker-bot/shared/src/types";
-import type { LayoutPack } from "@poker-bot/shared/src/vision";
+import type { Position, Card } from "@poker-bot/shared";
+import type { LayoutPack } from "@poker-bot/shared";
 
 export type PositionMap = Map<number, Position>;
 

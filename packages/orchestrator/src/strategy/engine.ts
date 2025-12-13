@@ -1,5 +1,5 @@
-import { generateRngSeed } from "@poker-bot/shared/src/rng";
-import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared/src/types";
+import { generateRngSeed } from "@poker-bot/shared";
+import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import { TimeBudgetTracker } from "../budget/timeBudgetTracker";
 import type { RiskGuardAPI as RiskController } from "../safety/types";

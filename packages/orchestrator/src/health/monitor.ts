@@ -4,8 +4,8 @@ import {
   type HealthCheckDefinition,
   type HealthSnapshot,
   type HealthStatus
-} from "@poker-bot/shared/src/health";
-import type { HealthMonitoringConfig } from "@poker-bot/shared/src/config/types";
+} from "@poker-bot/shared";
+import type { HealthMonitoringConfig } from "@poker-bot/shared";
 import { SafeModeController } from "./safeModeController";
 import { PanicStopController } from "./panicStopController";
 

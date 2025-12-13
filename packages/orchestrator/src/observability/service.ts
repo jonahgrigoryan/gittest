@@ -1,8 +1,8 @@
 import path from "node:path";
-import type { ObservabilityConfig } from "@poker-bot/shared/src/config/types";
-import type { HealthSnapshot } from "@poker-bot/shared/src/health";
-import type { HandRecord } from "@poker-bot/shared/src/strategy";
-import { LogLevel, type MetricsSnapshot, type StructuredLogEvent } from "@poker-bot/shared/src/observability";
+import type { ObservabilityConfig } from "@poker-bot/shared";
+import type { HealthSnapshot } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared";
+import { LogLevel, type MetricsSnapshot, type StructuredLogEvent } from "@poker-bot/shared";
 import {
   StructuredLogger,
   createConsoleSink,

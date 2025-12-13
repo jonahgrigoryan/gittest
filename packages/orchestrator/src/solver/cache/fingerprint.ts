@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { Action, Card, GameState, Street } from "@poker-bot/shared/src/types";
+import type { Action, Card, GameState, Street } from "@poker-bot/shared";
 import { calculateEffectiveStack } from "../deep_stack";
 import { FINGERPRINT_ALGORITHM } from "./types";
 

@@ -1,4 +1,4 @@
-import type { GameState, Action, Card } from "@poker-bot/shared/src/types";
+import type { GameState, Action, Card } from "@poker-bot/shared";
 import type { PersonaTemplate, PromptContext, SolverSummary } from "../types";
 
 type PlayerEntry = GameState["players"] extends Map<infer K, infer V> ? [K, V] : never;

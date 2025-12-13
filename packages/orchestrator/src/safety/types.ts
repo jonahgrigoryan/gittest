@@ -1,4 +1,4 @@
-import type { Action, GameState } from "@poker-bot/shared/src/types";
+import type { Action, GameState } from "@poker-bot/shared";
 
 export interface RiskLimits {
   bankrollLimit: number;

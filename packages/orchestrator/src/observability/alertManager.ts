@@ -5,8 +5,8 @@ import {
   shouldLog,
   type MetricsSnapshot,
   type StructuredLogEvent,
-} from "@poker-bot/shared/src/observability";
-import type { ObservabilityAlertsConfig } from "@poker-bot/shared/src/config/types";
+} from "@poker-bot/shared";
+import type { ObservabilityAlertsConfig } from "@poker-bot/shared";
 import type { AlertConsumer, ObservabilityService } from "./service";
 
 interface AlertState {

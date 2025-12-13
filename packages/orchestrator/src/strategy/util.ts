@@ -1,4 +1,4 @@
-import type { Action, ActionKey, GameState, Position, Street } from "@poker-bot/shared/src/types";
+import type { Action, ActionKey, GameState, Position, Street } from "@poker-bot/shared";
 
 export interface ParsedActionKey {
   ok: true;

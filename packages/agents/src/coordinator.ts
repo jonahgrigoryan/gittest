@@ -1,12 +1,12 @@
 import path from "node:path";
-import type { GameState, ActionType } from "@poker-bot/shared/src/types";
-import type { ConfigurationManager } from "@poker-bot/shared/src/config/manager";
+import type { GameState, ActionType } from "@poker-bot/shared";
+import type { ConfigurationManager } from "@poker-bot/shared";
 import type {
   AgentModelConfig,
   JsonSchema,
   AgentPersonaOverrideConfig,
   AgentCircuitBreakerConfig
-} from "@poker-bot/shared/src/config/types";
+} from "@poker-bot/shared";
 import type {
   AgentCoordinator,
   AgentOutput,

@@ -1,4 +1,4 @@
-import type { ModelVersions } from "@poker-bot/shared/src/strategy";
+import type { ModelVersions } from "@poker-bot/shared";
 import type { ModelVersionCollector } from "../version/collector";
 
 export interface ModelVersionMismatch {

@@ -1,5 +1,5 @@
 import type { AgentOutput, AggregatedCostSummary } from "../types";
-import type { ActionType } from "@poker-bot/shared/src/types";
+import type { ActionType } from "@poker-bot/shared";
 
 const MIN_CONFIDENCE = 0.05;
 

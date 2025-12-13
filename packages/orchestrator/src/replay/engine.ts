@@ -4,13 +4,13 @@ import type {
   ModelVersions,
   StrategyDecision,
   SerializedStrategyDecision
-} from "@poker-bot/shared/src/strategy";
-import type { ActionKey } from "@poker-bot/shared/src/types";
+} from "@poker-bot/shared";
+import type { ActionKey } from "@poker-bot/shared";
 import { deserializeGameState } from "./deserialize";
-import type { ReplayResult, ReplayComparison, BatchReplayReport } from "@poker-bot/shared/src/replay";
+import type { ReplayResult, ReplayComparison, BatchReplayReport } from "@poker-bot/shared";
 import type { TimeBudgetTracker } from "../budget/timeBudgetTracker";
 import type { AgentCoordinator } from "@poker-bot/agents";
-import type { ConfigurationManager } from "@poker-bot/shared/src/config/manager";
+import type { ConfigurationManager } from "@poker-bot/shared";
 import type { GTOSolver } from "../solver/solver";
 import type { StrategyEngine } from "../strategy/engine";
 import { makeDecision as runDecisionPipeline } from "../decision/pipeline";

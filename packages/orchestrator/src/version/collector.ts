@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { ModelVersions } from "@poker-bot/shared/src/strategy";
-import type { ConfigurationManager } from "@poker-bot/shared/src/config/manager";
-import type { AgentModelConfig } from "@poker-bot/shared/src/config/types";
+import type { ModelVersions } from "@poker-bot/shared";
+import type { ConfigurationManager } from "@poker-bot/shared";
+import type { AgentModelConfig } from "@poker-bot/shared";
 
 const CACHE_MANIFEST = "cache_manifest.json";
 

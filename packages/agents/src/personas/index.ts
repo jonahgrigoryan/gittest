@@ -1,4 +1,4 @@
-import type { AgentPersonaOverrideConfig } from "@poker-bot/shared/src/config/types";
+import type { AgentPersonaOverrideConfig } from "@poker-bot/shared";
 import type { PersonaTemplate } from "../types";
 import { gtoPuristSeed } from "./gtoPurist";
 import { exploitAggressorSeed } from "./exploitAggressor";

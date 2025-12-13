@@ -1,5 +1,9 @@
-import type { EvaluationRunMetadata } from "@poker-bot/shared/src/evaluation";
-import type { HandOutcome, HandRecord, SessionMetrics } from "@poker-bot/shared/src/strategy";
+import type { EvaluationRunMetadata } from "@poker-bot/shared";
+import type {
+  HandOutcome,
+  HandRecord,
+  SessionMetrics,
+} from "@poker-bot/shared";
 
 export type LoggingFormat = "json" | "acpc";
 
