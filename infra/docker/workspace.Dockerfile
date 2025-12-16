@@ -4,6 +4,7 @@ ARG PNPM_VERSION=9.0.0
 
 FROM node:${NODE_VERSION}-bullseye AS builder
 ARG WORKSPACE="@poker-bot/orchestrator"
+ARG PNPM_VERSION=9.0.0
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 # Avoid signature lookup issues by pinning pnpm explicitly.
