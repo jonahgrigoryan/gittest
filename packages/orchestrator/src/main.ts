@@ -783,3 +783,11 @@ function createMockConfigProxy(
     },
   };
 }
+
+// Allow `node dist/main.js` to boot the orchestrator in container/compose environments.
+if (require.main === module) {
+  run().catch((error) => {
+    console.error("Orchestrator failed to start", error);
+    process.exit(1);
+  });
+}
