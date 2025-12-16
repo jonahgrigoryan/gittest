@@ -19,7 +19,11 @@ COPY services ./services
 COPY tools ./tools
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter "$WORKSPACE" run build
+RUN pnpm --filter @poker-bot/shared run build \
+ && pnpm --filter @poker-bot/agents run build \
+ && pnpm --filter @poker-bot/executor run build \
+ && pnpm --filter @poker-bot/logger run build \
+ && pnpm --filter "$WORKSPACE" run build
 RUN pnpm deploy --filter "$WORKSPACE" --prod /opt/deploy
 
 FROM node:${NODE_VERSION}-slim AS runner
