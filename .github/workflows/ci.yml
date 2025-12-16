@@ -83,11 +83,12 @@ jobs:
         with:
           context: .
           file: infra/docker/workspace.Dockerfile
-          build-arg: |
+          build-args: |
             WORKSPACE=@poker-bot/orchestrator
             START_COMMAND=node dist/main.js
             GIT_SHA=${{ github.sha }}
             BUILD_TS=${{ github.event.head_commit.timestamp || github.run_started_at }}
+            PNPM_VERSION=9.0.0
           tags: |
             ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:sha-${{ github.sha }}
             ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:${{ steps.sanitize.outputs.sanitized_ref }}
