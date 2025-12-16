@@ -1,11 +1,13 @@
 # syntax=docker/dockerfile:1.7
 ARG NODE_VERSION=20.17.0
+ARG PNPM_VERSION=9.0.0
 
 FROM node:${NODE_VERSION}-bullseye AS builder
 ARG WORKSPACE="@poker-bot/orchestrator"
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Avoid signature lookup issues by pinning pnpm explicitly.
+RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
 WORKDIR /workspace
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
