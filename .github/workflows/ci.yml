@@ -72,6 +72,12 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
+      - name: Sanitize branch name for Docker tag
+        id: sanitize
+        run: |
+          SANITIZED_REF=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          echo "sanitized_ref=$SANITIZED_REF" >> $GITHUB_OUTPUT
+
       - name: Build orchestrator image
         uses: docker/build-push-action@v6
         with:
@@ -84,7 +90,7 @@ jobs:
             BUILD_TS=${{ github.event.head_commit.timestamp || github.run_started_at }}
           tags: |
             ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:sha-${{ github.sha }}
-            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:${{ github.ref_name }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-orchestrator:${{ steps.sanitize.outputs.sanitized_ref }}
           push: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Build solver image
@@ -94,7 +100,7 @@ jobs:
           file: services/solver/Dockerfile
           tags: |
             ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-solver:sha-${{ github.sha }}
-            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-solver:${{ github.ref_name }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-solver:${{ steps.sanitize.outputs.sanitized_ref }}
           push: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
       - name: Build vision image
@@ -104,7 +110,7 @@ jobs:
           file: services/vision/Dockerfile
           tags: |
             ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-vision:sha-${{ github.sha }}
-            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-vision:${{ github.ref_name }}
+            ${{ vars.CONTAINER_REGISTRY || 'ghcr.io' }}/${{ github.repository }}-vision:${{ steps.sanitize.outputs.sanitized_ref }}
           push: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
   security:
