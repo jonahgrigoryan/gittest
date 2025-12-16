@@ -13,9 +13,9 @@ describe("shadow evaluation", () => {
       sessionId: "test-session"
     });
     expect(summary.aggregates.totalHands).toBe(15);
-    expect(summary.aggregates.fallbackCount).toBe(4);
+    expect(summary.aggregates.fallbackCount).toBe(12);
     expect(summary.aggregates.safeActionCount).toBe(0);
     expect(summary.aggregates.netChips).toBe(0);
-    expect(summary.fallbackReasons["gto_only"]).toBe(4);
+    expect(summary.fallbackReasons["selection_failed:not_in_legal_actions"]).toBe(12);
   });
 });
