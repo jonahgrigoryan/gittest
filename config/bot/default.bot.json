@@ -178,7 +178,7 @@
         "riskGuardAutoTrip": true
       },
       "dashboard": {
-        "enabled": false,
+        "enabled": true,
         "port": 7777
       }
     },
@@ -216,11 +216,28 @@
         "cooldownMs": 60000,
         "channels": [],
         "triggers": {
-          "panicStop": { "enabled": true, "cooldownMs": 60000 },
-          "safeMode": { "enabled": true, "cooldownMs": 60000 },
-          "solverTimeouts": { "enabled": true, "cooldownMs": 60000, "windowHands": 5 },
-          "agentCost": { "enabled": true, "cooldownMs": 60000, "threshold": 500 },
-          "healthDegradedMs": { "enabled": true, "cooldownMs": 60000 }
+          "panicStop": {
+            "enabled": true,
+            "cooldownMs": 60000
+          },
+          "safeMode": {
+            "enabled": true,
+            "cooldownMs": 60000
+          },
+          "solverTimeouts": {
+            "enabled": true,
+            "cooldownMs": 60000,
+            "windowHands": 5
+          },
+          "agentCost": {
+            "enabled": true,
+            "cooldownMs": 60000,
+            "threshold": 500
+          },
+          "healthDegradedMs": {
+            "enabled": true,
+            "cooldownMs": 60000
+          }
         }
       }
     }
