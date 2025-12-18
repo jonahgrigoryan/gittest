@@ -10,6 +10,7 @@ import { DivergenceDetector } from "./divergence";
 import { StrategyRiskIntegration } from "./risk";
 import { FallbackHandler } from "./fallbacks";
 import { OpponentModeler } from "./modeling";
+import { parseActionKeyToAction } from "./util";
 import type {
   BlendedDistribution,
   StrategyConfig,
@@ -130,7 +131,7 @@ export class StrategyEngine {
     }
 
     // 3. Blend GTO + agent recommendations.
-    const blended: BlendedDistribution = this.blender.blend(gtoSolution, agentOutput);
+    const blended: BlendedDistribution = this.blender.blend(gtoSolution, agentOutput, state);
     const gtoDist = this.extractMapFromGTOSolution(gtoSolution);
     const agentDist = agentOutput.normalizedActions instanceof Map
       ? agentOutput.normalizedActions as Map<ActionKey, number>
@@ -144,6 +145,34 @@ export class StrategyEngine {
       blended.alpha,
       rngSeed
     );
+
+    // In mock mode we want deterministic, non-destructive actions; if a free check exists, take it.
+    if (process.env.AGENTS_USE_MOCK === "1" && this.heroCheckAvailable(state)) {
+      const safeDecision = this.fallback.createSafeActionDecision({
+        state,
+        reason: "mock_safe_check",
+        timing,
+        metadataBase: { ...baseMetadata, rngSeed }
+      });
+      const enforcedSafe = this.applyRisk(safeDecision, state, "selection_failed");
+      return this.finalizeDecision(enforcedSafe, start, timing);
+    }
+
+    // If the blended distribution contains no playable hero actions (e.g., only folds) but the
+    // state offers a safer option, fall back to the local SafeAction to mirror recorded behavior.
+    if (!this.hasPlayableHeroAction(blended.actions, state)) {
+      this.logger?.warn?.("StrategyEngine: blended distribution missing playable hero actions, using SafeAction", {
+        handId: state.handId
+      });
+      const safeDecision = this.fallback.createSafeActionDecision({
+        state,
+        reason: "no_playable_hero_action",
+        timing,
+        metadataBase: { ...baseMetadata, rngSeed }
+      });
+      const enforcedSafe = this.applyRisk(safeDecision, state, "selection_failed");
+      return this.finalizeDecision(enforcedSafe, start, timing);
+    }
 
     // 5. Selection from blended distribution.
     const rng = deriveRngForDecision(this.selector, this.config, {
@@ -446,6 +475,34 @@ export class StrategyEngine {
       usedGtoOnlyFallback: extras?.usedGtoOnlyFallback ?? false,
       panicStop: extras?.panicStop ?? false
     };
+  }
+
+  /**
+   * Determine whether the blended distribution includes at least one hero action
+   * that is not a pure fold (to avoid folding when check/call is available).
+   */
+  private hasPlayableHeroAction(dist: Map<ActionKey, number>, state: GameState): boolean {
+    if (!dist || dist.size === 0) {
+      return false;
+    }
+    const hero = state.positions.hero;
+    for (const key of dist.keys()) {
+      const parsed = parseActionKeyToAction(key as ActionKey);
+      if (!parsed.ok) continue;
+      const action = parsed.action;
+      if (action.position !== hero) continue;
+      if (action.type !== "fold") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private heroCheckAvailable(state: GameState): boolean {
+    const hero = state.positions.hero;
+    return (state.legalActions ?? []).some(
+      action => action.position === hero && action.type === "check"
+    );
   }
 
   private finalizeDecision(

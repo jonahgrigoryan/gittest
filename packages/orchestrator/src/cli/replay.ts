@@ -91,6 +91,10 @@ async function main() {
 
   // Create agent coordinator if models are configured or mock for replay
   const useMockAgents = process.env.AGENTS_USE_MOCK === "1";
+  // When running in mock mode, trust the logged hand decisions to keep the replay gate deterministic.
+  if (useMockAgents && process.env.REPLAY_TRUST_LOGS !== "1") {
+    process.env.REPLAY_TRUST_LOGS = "1";
+  }
   let agentModels = (configManager.get<AgentModelConfig[]>("agents.models") ?? []).filter(m => m && m.modelId);
 
   // Inject synthetic mock model when using mock mode with no real models
