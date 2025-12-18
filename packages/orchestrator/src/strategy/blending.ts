@@ -1,4 +1,5 @@
-import type { ActionKey, GTOSolution } from "@poker-bot/shared";
+import type { ActionKey, GameState, GTOSolution } from "@poker-bot/shared";
+import { createActionKey } from "@poker-bot/shared";
 import type { AggregatedAgentOutput } from "@poker-bot/agents";
 import type { BlendedDistribution, StrategyConfig } from "@poker-bot/shared";
 
@@ -15,9 +16,13 @@ export class StrategyBlender {
     this.logger = logger;
   }
 
-  blend(gtoSolution: GTOSolution, agentOutput: AggregatedAgentOutput): BlendedDistribution {
+  blend(
+    gtoSolution: GTOSolution,
+    agentOutput: AggregatedAgentOutput,
+    state?: GameState
+  ): BlendedDistribution {
     const gtoDist = this.extractGtoDistribution(gtoSolution);
-    const agentDist = this.extractAgentDistribution(agentOutput, gtoDist);
+    const agentDist = this.extractAgentDistribution(agentOutput, gtoDist, state);
 
     const { gto: gtoWeight, agent: agentWeight } = this.computeWeights(this.alpha);
 
@@ -108,7 +113,8 @@ export class StrategyBlender {
 
   private extractAgentDistribution(
     agentOutput: AggregatedAgentOutput,
-    gtoDist: Map<ActionKey, number>
+    gtoDist: Map<ActionKey, number>,
+    state?: GameState
   ): Map<ActionKey, number> {
     const mapped = new Map<ActionKey, number>();
 
@@ -133,9 +139,19 @@ export class StrategyBlender {
 
     for (const [actionType, prob] of agentOutput.normalizedActions.entries()) {
       if (!Number.isFinite(prob) || prob <= 0) continue;
-      const keys = byType[actionType];
+      let keys = byType[actionType];
+
+      // Fallback: if GTO distribution has no keys for this action type, try to
+      // map directly to the hero's legal actions (prevents losing mock agent outputs).
+      if ((!keys || keys.length === 0) && state?.legalActions) {
+        const hero = state.positions.hero;
+        keys = state.legalActions
+          .filter(a => a.type === actionType && a.position === hero && a.street === state.street)
+          .map(a => createActionKey(a));
+      }
+
       if (!keys || keys.length === 0) {
-        // No matching legal keys for this action type in GTO; leave handling to fallbacks.
+        // No matching legal keys for this action type; skip.
         continue;
       }
 

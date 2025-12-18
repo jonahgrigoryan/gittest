@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1.7
-FROM rust:1.78-bullseye AS builder
+FROM rust:1.82-bullseye AS builder
 ARG GIT_SHA="dev"
+# Install protobuf-compiler required for tonic-build
+RUN apt-get update && apt-get install -y --no-install-recommends protobuf-compiler && rm -rf /var/lib/apt/lists/*
+# Copy proto directory to root level (build.rs expects ../../proto from services/solver/)
+COPY proto/ /proto/
 WORKDIR /app
+# Copy solver source code
 COPY services/solver/ ./
 RUN cargo build --release
 

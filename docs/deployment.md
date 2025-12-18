@@ -83,11 +83,24 @@ After Compose is running:
 
 ## 7. CI/CD Integration
 
-Add the following jobs to your pipeline (pseudocode shown in `task16_check.md`):
+The `ci.yml` workflow now enforces the release gates described in Task 17:
 
-1. `pnpm` lint/test/build for every workspace.
-2. `docker build` for orchestrator/solver/vision images.
-3. Compose smoke test: `docker compose --env-file .env.ci -f infra/compose/docker-compose.yml up --build -d orchestrator` followed by `docker compose down -v`.
+1. **Build job**
+   - `pnpm run verify:env`
+   - `pnpm run ci:verify` (runs workspace lint/build/tests, orchestrator replay smoke on the versioned dataset `packages/evaluator/test/fixtures/session_test-session/hand_records.jsonl`, `poetry run pytest` inside `services/vision`, and `cargo fmt|clippy|test` inside `services/solver`)
+   - `tsx tools/check-replay-report.ts` writes `results/verification.json` with action-match/divergence/timing stats; `tsx tools/check-artifacts.ts` ensures no secrets leaked into artifacts
+2. **Security job**
+   - `pnpm audit --prod`, `cargo audit`, `pip-audit`
+   - `gitleaks`, `trivy`, SBOM generation + optional Cosign signing
+3. **Docker job**
+   - Builds orchestrator, solver, and vision images (Buildx) and tags them with `sha-<commit>` plus branch/tag names.
+   - Pushes images when the workflow runs on `v*` tags.
+4. **Compose smoke job**
+   - Launches the full stack via `infra/compose` using `.env.ci`, waits for healthy orchestrator, and tears down containers.
+5. **Release job (tags only)**
+   - Downloads the SBOM artifact (and ensures a placeholder signature exists), publishes a GitHub Release with SBOM/signature + changelog, and notifies the observability webhook (if configured).
+
+All jobs must pass before merges or tagged releases succeed.
 
 ## 8. Troubleshooting
 
@@ -99,3 +112,10 @@ Add the following jobs to your pipeline (pseudocode shown in `task16_check.md`):
 | Missing logs/results | Confirm host directories exist and your user has write access. |
 
 This runbook, together with `task16_check.md`, is the source of truth for reproducing production deployments locally or in CI.
+
+## 9. Runtime Security & Monitoring
+
+- **Falco/Runtime IDS**: deploy Falco (or your preferred container IDS) alongside the stack. Grant it access to the Docker socket and configure alerts for unexpected syscalls (e.g., orchestrator writing to disallowed paths or spawning shells). Shipping Falco’s events into the same observability channel keeps incident response unified.
+- **Image provenance**: CI now emits SBOMs under `sbom/sbom.spdx.json` and (optionally) signs them with Cosign. Before promoting images, run `cosign verify --key <public-key> <registry>/<image>@<digest>` to ensure only trusted builds ship.
+- **Secret hygiene**: bind mount read-only secret files, rotate keys on the cadence documented in `docs/env.md`, and re-run `pnpm run verify:env` after every change to catch typos before deploy.
+- **Audit retention**: archive Falco logs, SBOMs, and Cosign signatures alongside the session logs in `results/` so every production run has a complete provenance trail.

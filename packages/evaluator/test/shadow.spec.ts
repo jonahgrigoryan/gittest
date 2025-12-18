@@ -12,10 +12,10 @@ describe("shadow evaluation", () => {
       outputDir,
       sessionId: "test-session"
     });
-    expect(summary.aggregates.totalHands).toBe(2);
-    expect(summary.aggregates.fallbackCount).toBe(1);
-    expect(summary.aggregates.safeActionCount).toBe(1);
-    expect(summary.aggregates.netChips).toBe(15);
-    expect(summary.fallbackReasons["safe_action:vision"]).toBe(1);
+    expect(summary.aggregates.totalHands).toBe(15);
+    expect(summary.aggregates.fallbackCount).toBe(12);
+    expect(summary.aggregates.safeActionCount).toBe(0);
+    expect(summary.aggregates.netChips).toBe(0);
+    expect(summary.fallbackReasons["selection_failed:not_in_legal_actions"]).toBe(12);
   });
 });

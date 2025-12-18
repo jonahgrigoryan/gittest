@@ -172,16 +172,16 @@
         "enabled": true,
         "autoExitSeconds": 60
       },
-      "panicStop": {
-        "visionConfidenceFrames": 3,
-        "minConfidence": 0.99,
-        "riskGuardAutoTrip": true
-      },
-      "dashboard": {
-        "enabled": false,
-        "port": 7777
-      }
+    "panicStop": {
+      "visionConfidenceFrames": 3,
+      "minConfidence": 0.99,
+      "riskGuardAutoTrip": true
     },
+    "dashboard": {
+      "enabled": false,
+      "port": 7777
+    }
+  },
     "observability": {
       "logs": {
         "level": "info",
@@ -216,11 +216,28 @@
         "cooldownMs": 60000,
         "channels": [],
         "triggers": {
-          "panicStop": { "enabled": true, "cooldownMs": 60000 },
-          "safeMode": { "enabled": true, "cooldownMs": 60000 },
-          "solverTimeouts": { "enabled": true, "cooldownMs": 60000, "windowHands": 5 },
-          "agentCost": { "enabled": true, "cooldownMs": 60000, "threshold": 500 },
-          "healthDegradedMs": { "enabled": true, "cooldownMs": 60000 }
+          "panicStop": {
+            "enabled": true,
+            "cooldownMs": 60000
+          },
+          "safeMode": {
+            "enabled": true,
+            "cooldownMs": 60000
+          },
+          "solverTimeouts": {
+            "enabled": true,
+            "cooldownMs": 60000,
+            "windowHands": 5
+          },
+          "agentCost": {
+            "enabled": true,
+            "cooldownMs": 60000,
+            "threshold": 500
+          },
+          "healthDegradedMs": {
+            "enabled": true,
+            "cooldownMs": 60000
+          }
         }
       }
     }

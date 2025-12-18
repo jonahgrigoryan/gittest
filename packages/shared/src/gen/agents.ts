@@ -62,6 +62,7 @@ export const Placeholder = {
   },
 };
 
+/** TODO: define AgentCoordinator RPCs once transport contract stabilizes. */
 export type AgentsServiceService = typeof AgentsServiceService;
 export const AgentsServiceService = {} as const;
 

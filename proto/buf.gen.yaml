@@ -1,6 +1,6 @@
 version: v1
 plugins:
-  - name: ts-proto
+  - name: ts_proto
     out: packages/shared/src/gen
     opt:
       - esModuleInterop=true

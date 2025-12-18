@@ -5,7 +5,7 @@ import { createActionKey } from "@poker-bot/shared";
 import { computeFingerprint } from "../../src/solver/cache/fingerprint";
 import type { CacheLoader } from "../../src/solver/cache/loader";
 import type { SolverClientAdapter } from "../../src/solver_client/client";
-import type { ConfigurationManager } from "@poker-bot/shared/src/config/manager";
+import type { ConfigurationManager } from "@poker-bot/shared";
 
 function createState(overrides: Partial<GameState> = {}): GameState {
   const players = new Map<GameState["players"] extends Map<infer P, infer S> ? [P, S][] : never>([

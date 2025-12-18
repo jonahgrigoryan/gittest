@@ -1,10 +1,12 @@
 import { createReadStream } from "node:fs";
-import { stat, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 import readline from "node:readline";
 import type { HandRecord } from "@poker-bot/shared";
 
-export async function *readHandRecords(filePath: string): AsyncGenerator<HandRecord> {
+export async function* readHandRecords(
+  filePath: string,
+): AsyncGenerator<HandRecord> {
   const stream = createReadStream(filePath, { encoding: "utf8" });
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
   for await (const line of rl) {
@@ -21,15 +23,24 @@ export async function *readHandRecords(filePath: string): AsyncGenerator<HandRec
   }
 }
 
-export async function resolveSessionFile(handsDir: string, sessionId?: string): Promise<string> {
+export async function resolveSessionFile(
+  handsDir: string,
+  sessionId?: string,
+): Promise<string> {
   const base = path.resolve(handsDir);
   if (sessionId) {
-    const candidate = path.join(base, `session_${sessionId}`, "hand_records.jsonl");
+    const candidate = path.join(
+      base,
+      `session_${sessionId}`,
+      "hand_records.jsonl",
+    );
     return candidate;
   }
 
   const entries = await readdir(base, { withFileTypes: true });
-  const sessionDirs = entries.filter(entry => entry.isDirectory() && entry.name.startsWith("session_"));
+  const sessionDirs = entries.filter(
+    (entry) => entry.isDirectory() && entry.name.startsWith("session_"),
+  );
   if (!sessionDirs.length) {
     throw new Error(`No session directories found under ${base}`);
   }
@@ -38,8 +49,13 @@ export async function resolveSessionFile(handsDir: string, sessionId?: string): 
   return path.join(base, latest.name, "hand_records.jsonl");
 }
 
-export async function ensureOutputDir(outputDir: string, runId: string): Promise<string> {
+export async function ensureOutputDir(
+  outputDir: string,
+  runId: string,
+): Promise<string> {
   const resolved = path.resolve(outputDir, runId);
-  await import("node:fs/promises").then(fs => fs.mkdir(resolved, { recursive: true }));
+  await import("node:fs/promises").then((fs) =>
+    fs.mkdir(resolved, { recursive: true }),
+  );
   return resolved;
 }

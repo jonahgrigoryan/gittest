@@ -4,22 +4,12 @@
     "composite": true,
     "declaration": true,
     "rootDir": "src",
-    "outDir": "dist",
-    "paths": {
-      "@poker-bot/agents": ["../agents/dist"],
-      "@poker-bot/agents/*": ["../agents/dist/*"],
-      "@poker-bot/shared": ["../shared/src"],
-      "@poker-bot/shared/*": ["../shared/src/*"],
-      "@poker-bot/executor": ["../executor/src"],
-      "@poker-bot/executor/*": ["../executor/src/*"],
-      "@poker-bot/logger": ["../logger/src"],
-      "@poker-bot/logger/*": ["../logger/src/*"]
-    }
+    "outDir": "dist"
   },
   "include": ["src/**/*"],
   "references": [
-    { "path": "../agents" },
     { "path": "../shared" },
+    { "path": "../agents" },
     { "path": "../executor" },
     { "path": "../logger" }
   ]

@@ -6,8 +6,5 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": [
-    "src/**/*",
-    "../../config/**/*.json"
-  ]
+  "include": ["src/**/*", "../../config/**/*.json"]
 }

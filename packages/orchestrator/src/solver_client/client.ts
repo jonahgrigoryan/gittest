@@ -1,7 +1,6 @@
 import { credentials, type ChannelCredentials } from "@grpc/grpc-js";
 import type { ActionType } from "@poker-bot/shared";
 import { solverGen } from "@poker-bot/shared";
-
 type SolverClient = solverGen.SolverClient;
 type SubgameRequest = solverGen.SubgameRequest;
 type SubgameResponse = solverGen.SubgameResponse;
@@ -27,6 +26,7 @@ export interface ParsedActionProb {
 
 export interface SolverClientAdapter {
   solve(request: SubgameRequest): Promise<SubgameResponse>;
+  waitForReady(timeoutMs?: number): Promise<void>;
   close(): void;
 }
 
@@ -80,6 +80,19 @@ class GrpcSolverClient implements SolverClientAdapter {
           return;
         }
         resolve(response);
+      });
+    });
+  }
+
+  waitForReady(timeoutMs: number = 5000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    return new Promise((resolve, reject) => {
+      this.client.waitForReady(deadline, (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
       });
     });
   }

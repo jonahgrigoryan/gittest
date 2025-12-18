@@ -1,5 +1,5 @@
 import { performance } from "node:perf_hooks";
-import type { AgentProvider } from "@poker-bot/shared/src/config/types";
+import type { AgentProvider } from "@poker-bot/shared";
 import type {
   AgentTransport,
   TransportRequest,

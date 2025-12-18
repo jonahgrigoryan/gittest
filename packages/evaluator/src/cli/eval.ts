@@ -4,11 +4,6 @@ import { hideBin } from "yargs/helpers";
 import path from "node:path";
 import { runShadowEvaluation } from "../runner/shadow";
 
-interface CommonArgs {
-  handsDir: string;
-  outputDir: string;
-}
-
 yargs(hideBin(process.argv))
   .scriptName("eval")
   .command<{ session?: string; handsDir: string; outputDir: string; limit?: number }>(

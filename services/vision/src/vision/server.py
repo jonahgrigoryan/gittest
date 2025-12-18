@@ -16,7 +16,7 @@ from .extraction import ElementRecognizer, extract_all_rois
 from .models import ModelManager
 from .occlusion import detect_occlusion
 from .output import VisionOutputBuilder
-from .types import LayoutPack
+from .vision_types import LayoutPack
 from . import vision_pb2
 from . import vision_pb2_grpc
 

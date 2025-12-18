@@ -1,5 +1,5 @@
 import type { Position, Card } from "@poker-bot/shared";
-import type { vision } from "@poker-bot/shared";
+import type { LayoutPack } from "@poker-bot/shared";
 
 export type PositionMap = Map<number, Position>;
 
@@ -23,7 +23,7 @@ export function inferPositions(
   return mapping;
 }
 
-export function inferHeroPosition(layout: vision.LayoutPack): Position {
+export function inferHeroPosition(layout: LayoutPack): Position {
   const entries = Object.entries(layout.stackROIs || {});
   if (entries.length === 0) {
     return "SB";

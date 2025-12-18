@@ -1,4 +1,5 @@
-import type { Action, StrategyDecision } from "@poker-bot/shared";
+import type { Action } from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared";
 
 export interface ExecutionResult {
   success: boolean;
@@ -17,18 +18,34 @@ export interface ExecutionResult {
   };
 }
 
+export interface StateChange {
+  type: "pot_increase" | "stack_decrease" | "action_taken";
+  amount?: number;
+  position?: string;
+}
+
+export interface VerificationSnapshot {
+  pot?: number;
+  stacks?: Record<string, number>;
+  actionHistory?: Action[];
+  changes?: StateChange[];
+}
+
 export interface VerificationResult {
   passed: boolean;
-  expectedState?: any;
-  actualState?: any;
+  expectedState?: VerificationSnapshot;
+  actualState?: VerificationSnapshot;
   mismatchReason?: string;
   retryCount: number;
 }
 
-export type ExecutionMode = 'simulator' | 'api' | 'research-ui';
+export type ExecutionMode = "simulator" | "api" | "research-ui";
 
 export interface ActionExecutor {
-  execute(decision: StrategyDecision, options?: ExecutionOptions): Promise<ExecutionResult>;
+  execute(
+    decision: StrategyDecision,
+    options?: ExecutionOptions,
+  ): Promise<ExecutionResult>;
   verify?(result: ExecutionResult): Promise<VerificationResult>;
 }
 
@@ -89,12 +106,6 @@ export interface ExecutorConfig {
   verificationTimeoutMs: number;
   simulatorEndpoint?: string;
   researchUI?: ComplianceConfig;
-}
-
-export interface StateChange {
-  type: 'pot_increase' | 'stack_decrease' | 'action_taken';
-  amount?: number;
-  position?: string;
 }
 
 export interface InputField {

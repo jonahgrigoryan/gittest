@@ -1,6 +1,6 @@
 import type { GameState, ActionType } from "@poker-bot/shared";
-import type { AgentProvider } from "@poker-bot/shared/src/config/types";
-import type { BudgetComponent } from "@poker-bot/shared/src/budget/timeBudget";
+import type { AgentProvider } from "@poker-bot/shared";
+import type { BudgetComponent } from "@poker-bot/shared";
 
 export type AgentIdentifier = string;
 

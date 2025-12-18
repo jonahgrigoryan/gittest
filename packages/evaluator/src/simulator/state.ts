@@ -9,7 +9,7 @@ interface GameStateFactoryOptions {
 export function createSimulatedGameState(
   handId: string,
   context: DecisionRequestContext,
-  options: GameStateFactoryOptions = {}
+  options: GameStateFactoryOptions = {},
 ): GameState {
   const bigBlind = options.bigBlind ?? context.bigBlind ?? 2;
   const smallBlind = Math.max(1, Math.floor(bigBlind / 2));
@@ -26,11 +26,11 @@ export function createSimulatedGameState(
       hero,
       button: hero,
       smallBlind: hero,
-      bigBlind: villain
+      bigBlind: villain,
     },
     players: new Map<Position, { stack: number }>([
       [hero, { stack: startingStack }],
-      [villain, { stack: startingStack }]
+      [villain, { stack: startingStack }],
     ]),
     communityCards: [],
     pot: blindsPot,
@@ -41,10 +41,10 @@ export function createSimulatedGameState(
       overall: 1,
       perElement: new Map<string, number>([
         ["state", 1],
-        ["simulated", 1]
-      ])
+        ["simulated", 1],
+      ]),
     },
-    latency: 0
+    latency: 0,
   };
 }
 
@@ -52,6 +52,6 @@ function createLegalActions(position: Position, bigBlind: number): Action[] {
   return [
     { type: "fold", position, street: "preflop" },
     { type: "call", position, street: "preflop", amount: bigBlind },
-    { type: "raise", position, street: "preflop", amount: bigBlind * 3 }
+    { type: "raise", position, street: "preflop", amount: bigBlind * 3 },
   ];
 }

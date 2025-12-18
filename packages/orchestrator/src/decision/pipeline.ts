@@ -1,4 +1,11 @@
-import type { GameState, GTOSolution, StrategyDecision, ActionType } from "@poker-bot/shared";
+import type {
+  Action,
+  ActionType,
+  GameState,
+  GTOSolution
+} from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared";
+import { createActionKey } from "@poker-bot/shared";
 import type {
   AggregatedAgentOutput,
   AgentCoordinator,
@@ -37,38 +44,48 @@ export async function makeDecision(
   let gtoSolution: GTOSolution;
   let agentOutput: AggregatedAgentOutput;
 
-  const shouldPreempt = tracker?.shouldPreempt?.("gto") ?? false;
-  if (shouldPreempt) {
-    solverTimedOut = true;
-    gtoSolution = await deps.gtoSolver.solve(state, 0);
-  } else {
-    const defaultBudget = deps.gtoBudgetMs ?? DEFAULT_GTO_BUDGET_MS;
-    const remaining = tracker?.remaining?.("gto") ?? defaultBudget;
-    const requestedBudget = Math.max(0, Math.min(defaultBudget, remaining));
-    const reserved = tracker?.reserve ? tracker.reserve("gto", requestedBudget) : true;
-    if (!reserved || requestedBudget <= 0) {
+  try {
+    const shouldPreempt = tracker?.shouldPreempt?.("gto") ?? false;
+    if (shouldPreempt) {
       solverTimedOut = true;
       gtoSolution = await deps.gtoSolver.solve(state, 0);
     } else {
-      tracker?.startComponent?.("gto");
-      try {
-        gtoSolution = await deps.gtoSolver.solve(state, requestedBudget);
-      } finally {
-        const actual = tracker?.endComponent?.("gto") ?? requestedBudget;
-        if (tracker?.release && requestedBudget > actual) {
-          tracker.release("gto", requestedBudget - actual);
+      const defaultBudget = deps.gtoBudgetMs ?? DEFAULT_GTO_BUDGET_MS;
+      const remaining = tracker?.remaining?.("gto") ?? defaultBudget;
+      const requestedBudget = Math.max(0, Math.min(defaultBudget, remaining));
+      const reserved = tracker?.reserve ? tracker.reserve("gto", requestedBudget) : true;
+      if (!reserved || requestedBudget <= 0) {
+        solverTimedOut = true;
+        gtoSolution = await deps.gtoSolver.solve(state, 0);
+      } else {
+        tracker?.startComponent?.("gto");
+        try {
+          gtoSolution = await deps.gtoSolver.solve(state, requestedBudget);
+        } finally {
+          const actual = tracker?.endComponent?.("gto") ?? requestedBudget;
+          if (tracker?.release && requestedBudget > actual) {
+            tracker.release("gto", requestedBudget - actual);
+          }
         }
       }
     }
+  } catch (error) {
+    deps.logger?.error?.("Decision pipeline: GTO solver failed, using safe fallback", {
+      error: error instanceof Error ? error.message : error
+    });
+    solverTimedOut = true;
+    gtoSolution = createSafeFallbackSolution(state);
   }
 
   if (deps.agentCoordinator) {
+    const remainingAgentBudget = deps.tracker?.remaining?.("agents");
     const context: PromptContext = {
       requestId: `decision-${state.handId}-${Date.now()}`,
-      timeBudgetMs: 3000
+      // Cap agent time budget to avoid reserve failures when allocation is smaller
+      timeBudgetMs: Math.max(0, Math.min(200, remainingAgentBudget ?? 200))
     };
     const options: AgentQueryOptions = {
-      budgetOverrideMs: context.timeBudgetMs
+      budgetOverrideMs: 200
     };
     try {
       agentOutput = await deps.agentCoordinator.query(state, context, options);
@@ -89,6 +106,31 @@ export async function makeDecision(
     gtoSolution,
     agentOutput,
     solverTimedOut
+  };
+}
+
+function createSafeFallbackSolution(state: GameState): GTOSolution {
+  const hero = state.positions.hero;
+  const preferred =
+    state.legalActions.find(
+      action => action.position === hero && (action.type === "check" || action.type === "call")
+    ) ?? state.legalActions.find(action => action.position === hero);
+  const fallback: Action =
+    preferred ??
+    ({
+      type: "fold",
+      position: hero,
+      street: state.street
+    } as Action);
+  const entry = {
+    action: fallback,
+    solution: { frequency: 1, ev: 0 }
+  };
+  return {
+    actions: new Map([[createActionKey(fallback), entry]]),
+    exploitability: 1,
+    computeTime: 0,
+    source: "subgame"
   };
 }
 

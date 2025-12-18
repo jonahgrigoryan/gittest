@@ -1,5 +1,5 @@
-import type { Action, ActionKey, GameState } from "@poker-bot/shared";
-import type { RNG, StrategyConfig } from "@poker-bot/shared";
+import type { Action, ActionKey, GameState, RNG } from "@poker-bot/shared";
+import type { StrategyConfig } from "@poker-bot/shared";
 import { generateRngSeed, validateSeed } from "@poker-bot/shared";
 import { decodeAndValidateActionKey, type ParsedActionKeyResult } from "./util";
 

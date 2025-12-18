@@ -1,12 +1,8 @@
 import path from "node:path";
-import type { config } from "@poker-bot/shared";
-import {
-  LogLevel,
-  type HandRecord,
-  type HealthSnapshot,
-  type MetricsSnapshot,
-  type StructuredLogEvent
-} from "@poker-bot/shared";
+import type { ObservabilityConfig } from "@poker-bot/shared";
+import type { HealthSnapshot } from "@poker-bot/shared";
+import type { HandRecord } from "@poker-bot/shared";
+import { LogLevel, type MetricsSnapshot, type StructuredLogEvent } from "@poker-bot/shared";
 import {
   StructuredLogger,
   createConsoleSink,
@@ -19,7 +15,7 @@ import {
 export interface ObservabilityServiceOptions {
   sessionId: string;
   sessionDir: string;
-  config: config.ObservabilityConfig;
+  config: ObservabilityConfig;
   logger?: Pick<Console, "info" | "warn" | "error">;
 }
 
@@ -43,7 +39,7 @@ export class ObservabilityService {
     await this.applyConfig(this.options.config);
   }
 
-  async applyConfig(nextConfig: config.ObservabilityConfig) {
+  async applyConfig(nextConfig: ObservabilityConfig) {
     await this.dispose();
     this.options.config = nextConfig;
     this.sinks = this.buildSinks(nextConfig);
@@ -153,7 +149,7 @@ export class ObservabilityService {
     this.sinks = [];
   }
 
-  private buildSinks(config: config.ObservabilityConfig): LogSink[] {
+  private buildSinks(config: ObservabilityConfig): LogSink[] {
     const sinks: LogSink[] = [];
     if (config.logs.sinks.console?.enabled) {
       sinks.push(

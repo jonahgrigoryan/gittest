@@ -1,6 +1,8 @@
 import type { GameState, Action, Card } from "@poker-bot/shared";
 import type { PersonaTemplate, PromptContext, SolverSummary } from "../types";
 
+type PlayerEntry = GameState["players"] extends Map<infer K, infer V> ? [K, V] : never;
+
 const BASE_GUIDELINES: string[] = [
   "Respond with strictly valid minified JSON (no trailing text).",
   "Select only from the legal actions provided; never invent moves.",
@@ -66,11 +68,16 @@ function gatherGuidelines(persona: PersonaTemplate): string[] {
 function formatGameState(state: GameState): string {
   const lines: string[] = [];
   lines.push(`Hand: ${state.handId}`);
-  lines.push(`Street: ${state.street} | Pot: ${state.pot.toFixed(2)} | Blinds: ${state.blinds.small}/${state.blinds.big}`);
+  const potValue =
+    typeof state.pot === "number"
+      ? state.pot
+      : (state as { pot?: { amount?: number } }).pot?.amount ?? 0;
+  const blinds = state.blinds ?? { small: 0, big: 0 };
+  lines.push(`Street: ${state.street} | Pot: ${potValue.toFixed(2)} | Blinds: ${blinds.small}/${blinds.big}`);
   lines.push(`Positions: hero=${state.positions.hero}, button=${state.positions.button}`);
 
   const playerLines = Array.from(state.players.entries())
-    .map(([position, info]) => {
+    .map(([position, info]: PlayerEntry) => {
       const cards = info.holeCards ? ` | cards=${formatCards(info.holeCards)}` : "";
       return `${position}: stack=${info.stack}${cards}`;
     })
@@ -92,7 +99,8 @@ function formatGameState(state: GameState): string {
   }
 
   lines.push(`Legal actions: ${state.legalActions.map(formatAction).join(", ")}`);
-  lines.push(`Vision confidence: ${state.confidence.overall.toFixed(3)}`);
+  const confidenceOverall = state.confidence?.overall ?? 1;
+  lines.push(`Vision confidence: ${confidenceOverall.toFixed(3)}`);
 
   return lines.join("\n");
 }

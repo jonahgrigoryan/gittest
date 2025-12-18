@@ -6,10 +6,23 @@ import type { ValidateFunction } from "ajv";
 import type { LayoutPack, ROI } from "./types";
 import type { ValidationResult } from "../config/types";
 
-const defaultSchemaPath = path.resolve(
-  __dirname,
-  "../../../../config/schema/layout-pack.schema.json"
-);
+const DEFAULT_SCHEMA_CANDIDATES = [
+  process.env.LAYOUT_PACK_SCHEMA,
+  path.resolve(process.env.CONFIG_DIR ?? "/config", "schema/layout-pack.schema.json"),
+  path.resolve(process.cwd(), "config/schema/layout-pack.schema.json"),
+  path.resolve(__dirname, "../../../../config/schema/layout-pack.schema.json")
+].filter(Boolean) as string[];
+
+function resolveDefaultSchemaPath(): string {
+  for (const candidate of DEFAULT_SCHEMA_CANDIDATES) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return DEFAULT_SCHEMA_CANDIDATES[DEFAULT_SCHEMA_CANDIDATES.length - 1];
+}
+
+const defaultSchemaPath = resolveDefaultSchemaPath();
 
 interface ValidatorCache {
   schemaPath: string;

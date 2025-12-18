@@ -1,11 +1,14 @@
 # syntax=docker/dockerfile:1.7
 ARG NODE_VERSION=20.17.0
+ARG PNPM_VERSION=9.0.0
 
 FROM node:${NODE_VERSION}-bullseye AS builder
 ARG WORKSPACE="@poker-bot/orchestrator"
+ARG PNPM_VERSION=9.0.0
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Avoid signature lookup issues by pinning pnpm explicitly.
+RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
 WORKDIR /workspace
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
@@ -16,7 +19,11 @@ COPY services ./services
 COPY tools ./tools
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter "$WORKSPACE" run build
+RUN pnpm --filter @poker-bot/shared run build \
+ && pnpm --filter @poker-bot/agents run build \
+ && pnpm --filter @poker-bot/executor run build \
+ && pnpm --filter @poker-bot/logger run build \
+ && pnpm --filter "$WORKSPACE" run build
 RUN pnpm deploy --filter "$WORKSPACE" --prod /opt/deploy
 
 FROM node:${NODE_VERSION}-slim AS runner

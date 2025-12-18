@@ -140,3 +140,4 @@ export function createStructuredEvent<TPayload = Record<string, unknown>>(
     dedupKey: options.dedupParts ? makeDedupKey(options.dedupParts) : undefined
   };
 }
+

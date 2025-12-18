@@ -1,4 +1,23 @@
+import type {
+  EvaluationAggregateReport,
+  EvaluationRunConfig,
+  HandMetric,
+} from "@poker-bot/shared";
 import type { HandRecord } from "@poker-bot/shared";
+
+export interface EvaluationContext {
+  runId: string;
+  config: EvaluationRunConfig;
+}
+
+export interface EvaluationDataSink {
+  writeHandMetric(metric: HandMetric): Promise<void>;
+  flush(): Promise<void>;
+}
+
+export interface EvaluationRunner {
+  run(context: EvaluationContext): Promise<EvaluationAggregateReport>;
+}
 
 export interface EvaluationRunMetadata {
   runId: string;

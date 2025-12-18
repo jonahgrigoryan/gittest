@@ -1,11 +1,16 @@
 import { mkdir, appendFile } from "node:fs/promises";
 import path from "node:path";
-import type { StrategyDecision, HandMetric, EvaluationAggregateReport } from "@poker-bot/shared";
+import type { StrategyDecision } from "@poker-bot/shared";
+import type { HandMetric, EvaluationAggregateReport } from "@poker-bot/shared";
 import { createEvaluationReport } from "@poker-bot/shared";
 import { MinimalSimulator } from "../simulator/minimal";
 import { getOpponentDefinition } from "../opponents/registry";
 import type { OpponentDefinition } from "../opponents/types";
-import type { EvaluationRunner, EvaluationContext, EvaluationDataSink } from "../types";
+import type {
+  EvaluationRunner,
+  EvaluationContext,
+  EvaluationDataSink,
+} from "../types";
 
 export interface DecisionRequestContext {
   runId: string;
@@ -16,7 +21,10 @@ export interface DecisionRequestContext {
 }
 
 export interface DecisionProvider {
-  nextDecision(handId: string, context: DecisionRequestContext): Promise<StrategyDecision>;
+  nextDecision(
+    handId: string,
+    context: DecisionRequestContext,
+  ): Promise<StrategyDecision>;
 }
 
 export interface HarnessOptions {
@@ -37,25 +45,36 @@ export class EvaluationHarness implements EvaluationRunner {
   async run(context: EvaluationContext): Promise<EvaluationAggregateReport> {
     const metrics: HandMetric[] = [];
     const startedAt = Date.now();
-    const rng = createMulberry32(context.config.seed ?? this.options.rngSeed ?? Date.now());
+    const rng = createMulberry32(
+      context.config.seed ?? this.options.rngSeed ?? Date.now(),
+    );
     const simulator = this.options.simulatorFactory
       ? this.options.simulatorFactory({ bigBlind: 2 })
       : new MinimalSimulator({ bigBlind: 2 });
     const bigBlind = simulator.getBigBlind();
-    const opponents = context.config.opponents.length ? context.config.opponents : ["tight_aggressive"];
-    const sink = this.options.sink ?? (await createFileSink(context.runId, this.options.metricsDir));
+    const opponents = context.config.opponents.length
+      ? context.config.opponents
+      : ["tight_aggressive"];
+    const sink =
+      this.options.sink ??
+      (await createFileSink(context.runId, this.options.metricsDir));
 
     for (let i = 0; i < context.config.maxHands; i += 1) {
       const opponentId = opponents[i % opponents.length];
-      const decision = await this.options.decisionProvider.nextDecision(`${context.runId}-${i}`, {
-        runId: context.runId,
-        handIndex: i,
-        opponentId,
-        rng,
-        bigBlind
-      });
+      const decision = await this.options.decisionProvider.nextDecision(
+        `${context.runId}-${i}`,
+        {
+          runId: context.runId,
+          handIndex: i,
+          opponentId,
+          rng,
+          bigBlind,
+        },
+      );
       const profile = this.options.opponentProfiles?.[opponentId];
-      const opponent = profile?.style ? getOpponentDefinition(profile.style) : getOpponentDefinition(opponentId);
+      const opponent = profile?.style
+        ? getOpponentDefinition(profile.style)
+        : getOpponentDefinition(opponentId);
       if (!opponent && !profile) {
         throw new Error(`Unknown opponent: ${opponentId}`);
       }
@@ -63,14 +82,16 @@ export class EvaluationHarness implements EvaluationRunner {
         pot: 2,
         aggressionFactor: profile?.aggressionFactor ?? 1,
         bluffFrequency: profile?.bluffFrequency ?? 0.1,
-        rng
+        rng,
       });
       const result = simulator.playHand(decision, opponentAction);
       const metric: HandMetric = {
-        handId: decision.metadata?.rngSeed ? `${decision.metadata.rngSeed}` : `${context.runId}-${i}`,
+        handId: decision.metadata?.rngSeed
+          ? `${decision.metadata.rngSeed}`
+          : `${context.runId}-${i}`,
         opponentId,
         netChips: result.netChips,
-        bigBlind
+        bigBlind,
       };
       metrics.push(metric);
       await sink.writeHandMetric(metric);
@@ -82,7 +103,7 @@ export class EvaluationHarness implements EvaluationRunner {
       metricsPath: getMetricsPath(context.runId, this.options.metricsDir),
       startedAt,
       completedAt: Date.now(),
-      runId: context.runId
+      runId: context.runId,
     });
   }
 }
@@ -99,15 +120,20 @@ class FileMetricSink implements EvaluationDataSink {
   }
 }
 
-async function createFileSink(runId: string, metricsDir?: string): Promise<FileMetricSink> {
-  const dir = metricsDir ?? path.resolve(process.cwd(), "../../results/eval", runId);
+async function createFileSink(
+  runId: string,
+  metricsDir?: string,
+): Promise<FileMetricSink> {
+  const dir =
+    metricsDir ?? path.resolve(process.cwd(), "../../results/eval", runId);
   await mkdir(dir, { recursive: true });
   const filePath = path.join(dir, "metrics.jsonl");
   return new FileMetricSink(filePath);
 }
 
 function getMetricsPath(runId: string, metricsDir?: string) {
-  const dir = metricsDir ?? path.resolve(process.cwd(), "../../results/eval", runId);
+  const dir =
+    metricsDir ?? path.resolve(process.cwd(), "../../results/eval", runId);
   return path.join(dir, "metrics.jsonl");
 }
 
@@ -122,7 +148,12 @@ function createMulberry32(seed: number) {
   };
 }
 
-const defaultPolicy: OpponentDefinition["policy"] = ({ pot, aggressionFactor, bluffFrequency, rng }) => {
+const defaultPolicy: OpponentDefinition["policy"] = ({
+  pot,
+  aggressionFactor,
+  bluffFrequency,
+  rng,
+}) => {
   if (rng() < bluffFrequency) {
     return { action: "raise", amount: pot * Math.max(aggressionFactor, 1) };
   }

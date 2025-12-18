@@ -1,4 +1,4 @@
-import type { AgentProvider } from "@poker-bot/shared/src/config/types";
+import type { AgentProvider } from "@poker-bot/shared";
 import type { TransportFinishReason, TransportRequest, TransportResponse, TokenUsage } from "../types";
 import { BaseAgentTransport, type BaseAgentTransportOptions, TransportError } from "./base";
 

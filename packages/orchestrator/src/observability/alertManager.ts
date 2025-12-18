@@ -5,15 +5,15 @@ import {
   shouldLog,
   type MetricsSnapshot,
   type StructuredLogEvent,
-  type config
 } from "@poker-bot/shared";
+import type { ObservabilityAlertsConfig } from "@poker-bot/shared";
 import type { AlertConsumer, ObservabilityService } from "./service";
 
 interface AlertState {
   lastTriggeredAt: number;
 }
 
-type TriggerId = keyof config.ObservabilityAlertsConfig["triggers"];
+type TriggerId = keyof ObservabilityAlertsConfig["triggers"] & string;
 
 const triggerLevels: Record<TriggerId, LogLevel> = {
   panicStop: LogLevel.CRITICAL,
@@ -24,15 +24,15 @@ const triggerLevels: Record<TriggerId, LogLevel> = {
 };
 
 export class AlertManager implements AlertConsumer {
-  private readonly state = new Map<string, AlertState>();
+  private readonly state = new Map<TriggerId, AlertState>();
 
   constructor(
-    private alertsConfig: config.ObservabilityAlertsConfig,
+    private alertsConfig: ObservabilityAlertsConfig,
     private readonly service: ObservabilityService,
     private readonly logger: Pick<Console, "warn" | "error"> = console
   ) {}
 
-  updateConfig(next: config.ObservabilityAlertsConfig) {
+  updateConfig(next: ObservabilityAlertsConfig) {
     this.alertsConfig = next;
   }
 
@@ -96,7 +96,7 @@ export class AlertManager implements AlertConsumer {
     await this.notifyChannels(level, triggerId, payload);
   }
 
-  private async notifyChannels(level: LogLevel, triggerId: string, payload: unknown) {
+  private async notifyChannels(level: LogLevel, triggerId: TriggerId, payload: unknown) {
     const channels = this.alertsConfig.channels ?? [];
     const tasks = channels
       .filter(channel => channel.enabled)

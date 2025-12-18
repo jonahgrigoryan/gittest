@@ -6,6 +6,7 @@ dist/
 coverage/
 logs/
 results/
+sbom/
 # Rust build outputs
 services/**/target/
 # TS incremental build info

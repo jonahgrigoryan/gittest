@@ -1,0 +1,7 @@
+services:
+  solver:
+    ports:
+      - "50051:50051"
+  vision:
+    ports:
+      - "50052:50052"

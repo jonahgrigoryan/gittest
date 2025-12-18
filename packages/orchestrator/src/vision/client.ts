@@ -1,16 +1,31 @@
 import { credentials, Metadata } from "@grpc/grpc-js";
 import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import { vision, visionGen } from "@poker-bot/shared";
-
 const VisionServiceClient = visionGen.VisionServiceClient;
-type VisionServiceClientInstance = InstanceType<typeof visionGen.VisionServiceClient>;
+type VisionServiceClientInstance = InstanceType<
+  typeof visionGen.VisionServiceClient
+>;
 type RpcVisionOutput = visionGen.VisionOutput;
 type HealthStatus = visionGen.HealthStatus;
 type RpcActionButtons = visionGen.ActionButtons;
 type RpcButtonInfo = visionGen.ButtonInfo;
 
 const POSITION_VALUES: Position[] = ["BTN", "SB", "BB", "UTG", "MP", "CO"];
-const RANK_VALUES: Rank[] = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];
+const RANK_VALUES: Rank[] = [
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "T",
+  "J",
+  "Q",
+  "K",
+  "A",
+];
 const SUIT_VALUES: Suit[] = ["h", "d", "c", "s"];
 type RpcCardData = NonNullable<RpcVisionOutput["cards"]>;
 
@@ -20,24 +35,30 @@ export class VisionClient {
   private readonly layoutJson: string;
 
   constructor(serviceUrl: string, layoutPack: vision.LayoutPack) {
-    this.client = new VisionServiceClient(serviceUrl, credentials.createInsecure());
+    this.client = new VisionServiceClient(
+      serviceUrl,
+      credentials.createInsecure(),
+    );
     this.layoutJson = JSON.stringify(layoutPack);
   }
 
   async captureAndParse(): Promise<vision.VisionOutput> {
     const request = { layoutJson: this.layoutJson };
     const response = await new Promise<RpcVisionOutput>((resolve, reject) => {
-      this.client.captureFrame(request, (error: Error | null, result?: RpcVisionOutput) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        if (!result) {
-          reject(new Error("Vision capture returned empty result"));
-          return;
-        }
-        resolve(result);
-      });
+      this.client.captureFrame(
+        request,
+        (error: Error | null, result?: RpcVisionOutput) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          if (!result) {
+            reject(new Error("Vision capture returned empty result"));
+            return;
+          }
+          resolve(result);
+        },
+      );
     });
     return this.transformVisionOutput(response);
   }
@@ -45,13 +66,17 @@ export class VisionClient {
   async healthCheck(metadata?: Metadata): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const md = metadata ?? new Metadata();
-      this.client.healthCheck({}, md, (error: Error | null, status: HealthStatus) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(Boolean(status?.healthy));
-      });
+      this.client.healthCheck(
+        {},
+        md,
+        (error: Error | null, status: HealthStatus) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(Boolean(status?.healthy));
+        },
+      );
     });
   }
 
@@ -63,7 +88,10 @@ export class VisionClient {
     const stacks = new Map<Position, { amount: number; confidence: number }>();
     Object.entries(output.stacks ?? {}).forEach(([position, info]) => {
       if (this.isPosition(position) && info) {
-        stacks.set(position, { amount: info.amount ?? 0, confidence: info.confidence ?? 0 });
+        stacks.set(position, {
+          amount: info.amount ?? 0,
+          confidence: info.confidence ?? 0,
+        });
       }
     });
 
@@ -72,7 +100,9 @@ export class VisionClient {
       occlusion.set(key, value ?? 0);
     });
 
-    const dealer = this.isPosition(output.buttons?.dealer) ? output.buttons?.dealer : "BTN";
+    const dealer = this.isPosition(output.buttons?.dealer)
+      ? output.buttons?.dealer
+      : "BTN";
 
     const actionButtons = this.transformActionButtons(output.actionButtons);
 
@@ -80,7 +110,7 @@ export class VisionClient {
       ? {
           isHeroTurn: Boolean(output.turnState.isHeroTurn),
           actionTimer: output.turnState.actionTimer ?? 0,
-          confidence: output.turnState.confidence ?? 0
+          confidence: output.turnState.confidence ?? 0,
         }
       : undefined;
 
@@ -89,19 +119,19 @@ export class VisionClient {
       cards: {
         holeCards: this.transformCards(output.cards?.holeCards),
         communityCards: this.transformCards(output.cards?.communityCards),
-        confidence: output.cards?.confidence ?? 0
+        confidence: output.cards?.confidence ?? 0,
       },
       stacks,
       pot: {
         amount: output.pot?.amount ?? 0,
-        confidence: output.pot?.confidence ?? 0
+        confidence: output.pot?.confidence ?? 0,
       },
       buttons: {
         dealer,
-        confidence: output.buttons?.confidence ?? 0
+        confidence: output.buttons?.confidence ?? 0,
       },
       positions: {
-        confidence: output.positions?.confidence ?? 0
+        confidence: output.positions?.confidence ?? 0,
       },
       occlusion,
       actionButtons,
@@ -109,8 +139,8 @@ export class VisionClient {
       latency: {
         capture: output.latency?.capture ?? 0,
         extraction: output.latency?.extraction ?? 0,
-        total: output.latency?.total ?? 0
-      }
+        total: output.latency?.total ?? 0,
+      },
     };
   }
 
@@ -119,7 +149,7 @@ export class VisionClient {
       return [];
     }
     return cards
-      .map(card => this.toDomainCard(card))
+      .map((card) => this.toDomainCard(card))
       .filter((card): card is Card => card !== null);
   }
 
@@ -131,20 +161,22 @@ export class VisionClient {
   }
 
   private transformActionButtons(
-    actionButtons?: RpcActionButtons
+    actionButtons?: RpcActionButtons,
   ): vision.VisionOutput["actionButtons"] {
     if (!actionButtons) {
       return undefined;
     }
 
     const map: Record<string, vision.ButtonInfo> = {};
-    const entries: Array<[keyof RpcActionButtons & string, RpcButtonInfo | undefined]> = [
+    const entries: Array<
+      [keyof RpcActionButtons & string, RpcButtonInfo | undefined]
+    > = [
       ["fold", actionButtons.fold],
       ["check", actionButtons.check],
       ["call", actionButtons.call],
       ["raise", actionButtons.raise],
       ["bet", actionButtons.bet],
-      ["allIn", actionButtons.allIn]
+      ["allIn", actionButtons.allIn],
     ];
 
     entries.forEach(([key, value]) => {
@@ -158,11 +190,13 @@ export class VisionClient {
         isEnabled: Boolean(value.isEnabled),
         isVisible: Boolean(value.isVisible),
         confidence: value.confidence ?? 0,
-        text: value.text ?? ""
+        text: value.text ?? "",
       };
     });
 
-    return Object.keys(map).length > 0 ? (map as vision.VisionOutput["actionButtons"]) : undefined;
+    return Object.keys(map).length > 0
+      ? (map as vision.VisionOutput["actionButtons"])
+      : undefined;
   }
 
   private isPosition(value: string | undefined): value is Position {

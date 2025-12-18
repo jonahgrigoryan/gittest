@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { HealthMonitor } from "../../src/health/monitor";
 import { SafeModeController } from "../../src/health/safeModeController";
 import { PanicStopController } from "../../src/health/panicStopController";
-import type { HealthMonitoringConfig } from "@poker-bot/shared/src/config/types";
+import type { HealthMonitoringConfig } from "@poker-bot/shared";
 
 const baseConfig: HealthMonitoringConfig = {
   intervalMs: 50,

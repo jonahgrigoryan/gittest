@@ -4,7 +4,25 @@ import type { BotConfig, ValidationResult } from "./types";
 import { validateConfig } from "./loader";
 import type { FSWatcher } from "chokidar";
 
-const defaultSchemaPath = path.resolve(__dirname, "../../../../config/schema/bot-config.schema.json");
+const DEFAULT_SCHEMA_CANDIDATES = [
+  process.env.BOT_CONFIG_SCHEMA,
+  path.resolve(process.env.CONFIG_DIR ?? "/config", "schema/bot-config.schema.json"),
+  path.resolve(process.cwd(), "config/schema/bot-config.schema.json"),
+  path.resolve(__dirname, "../../../../config/schema/bot-config.schema.json")
+].filter(Boolean) as string[];
+
+function resolveDefaultSchemaPath(): string {
+  for (const candidate of DEFAULT_SCHEMA_CANDIDATES) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  // Fall back to the last candidate (original relative path) even if it does not exist,
+  // so the error message still surfaces the intended location.
+  return DEFAULT_SCHEMA_CANDIDATES[DEFAULT_SCHEMA_CANDIDATES.length - 1];
+}
+
+const defaultSchemaPath = resolveDefaultSchemaPath();
 
 /**
  * ConfigurationManager handles configuration loading, validation, hot-reload, and subscriptions.

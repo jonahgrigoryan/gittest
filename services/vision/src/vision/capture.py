@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Tuple
 
 import numpy as np
@@ -22,10 +22,10 @@ class ScreenCapture:
 
   window_title: Optional[str] = None
   fallback_resolution: Tuple[int, int] = (1080, 1920)
+  _grabber: Optional[object] = field(init=False, default=None)
+  _backend_name: Optional[str] = field(init=False, default=None)
 
   def __post_init__(self) -> None:
-    self._grabber = None
-    self._backend_name: Optional[str] = None
     self._detect_backend()
 
   def _detect_backend(self) -> None:

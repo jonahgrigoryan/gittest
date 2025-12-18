@@ -1,5 +1,5 @@
 import type { HandRecord } from "@poker-bot/shared";
-import type { RedactionConfig, RedactionField } from "./types";
+import type { RedactionConfig } from "./types";
 
 interface RedactionResult {
   record: HandRecord;
@@ -45,13 +45,19 @@ export function redactHandRecord(record: HandRecord, config: RedactionConfig): R
   return { record: clone, redactedFields: clone.metadata.redactedFields ?? [] };
 }
 
+type SerializedPlayer = HandRecord["rawGameState"]["players"][number] & {
+  name?: string;
+  alias?: string;
+};
+
 function redactPlayerNames(record: HandRecord, redactedFields: string[]) {
-  record.rawGameState.players.forEach((player, idx) => {
-    if ((player as any).name) {
-      delete (player as any).name;
+  const players = record.rawGameState.players as SerializedPlayer[];
+  players.forEach((player, idx) => {
+    if (player.name) {
+      delete player.name;
       redactedFields.push(`rawGameState.players.${idx}.name`);
     }
-    (player as any).alias = `Player${idx + 1}`;
+    player.alias = `Player${idx + 1}`;
     redactedFields.push(`rawGameState.players.${idx}.alias`);
   });
 }
@@ -60,7 +66,7 @@ function redactIdentifiers(record: HandRecord, redactedFields: string[]) {
   record.decision.metadata.configHash = record.decision.metadata.configHash.slice(0, 12);
   redactedFields.push("decision.metadata.configHash");
   if (record.execution?.metadata?.windowHandle) {
-    delete (record.execution.metadata as any).windowHandle;
+    delete record.execution.metadata.windowHandle;
     redactedFields.push("execution.metadata.windowHandle");
   }
 }

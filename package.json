@@ -1,24 +1,31 @@
 {
   "name": "poker-bot",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "check:node": "node -e \"console.log(process.version)\"",
     "check:pnpm": "pnpm -v",
     "check:python": "python3 -V || python -V",
-    "check:protoc": "protoc --version || echo 'protoc not installed'",
-    "check:buf": "buf --version || echo 'buf not installed'",
-    "verify:env": "pnpm run check:node && pnpm run check:pnpm && pnpm run check:python && pnpm run check:protoc && pnpm run check:buf",
-    "proto:gen": "buf generate --template proto/buf.gen.yaml proto || echo \"buf not installed, skipping codegen\"",
-    "prebuild": "pnpm run proto:gen || echo \"codegen skipped\"",
-    "build": "pnpm -r --filter ./packages/** run build",
-    "lint": "pnpm -r --filter ./packages/** run lint",
-    "test:unit": "pnpm -r --filter ./packages/** run test",
+    "check:protoc": "protoc --version",
+    "check:buf": "buf --version",
+    "verify:env": "pnpm run check:node && pnpm run check:pnpm && pnpm run check:python && pnpm run check:buf && tsx tools/validate-env.ts",
+    "proto:gen": "PATH=\"$PWD/node_modules/.bin:$PATH\" buf generate --template proto/buf.gen.yaml proto",
+    "proto:gen:safe": "PATH=\"$PWD/node_modules/.bin:$PATH\" buf generate --template proto/buf.gen.yaml proto || echo 'WARN: proto generation failed, using existing stubs'",
+    "prebuild": "test \"$CI\" = 'true' && pnpm run proto:gen || pnpm run proto:gen:safe",
+    "build": "pnpm -r --filter \"./packages/**\" run build",
+    "lint": "pnpm -r --filter \"./packages/**\" run lint",
+    "test:unit": "pnpm -r --filter \"./packages/**\" run test",
     "test": "node tools/summarize.cjs",
+    "ci:verify": "pnpm run lint && pnpm run build && pnpm run test:unit && AGENTS_USE_MOCK=1 BOT_CONFIG=config/bot/default.bot.json pnpm exec tsx packages/orchestrator/src/cli/replay.ts --file packages/evaluator/test/fixtures/session_test-session/hand_records.jsonl --limit 50 --output results/replay/report.json && tsx tools/check-replay-report.ts && tsx tools/check-artifacts.ts && cd services/vision && POETRY_PYTHON=\"$(command -v python3 || command -v python)\" poetry install --no-root && POETRY_PYTHON=\"$(command -v python3 || command -v python)\" poetry run pytest && cd ../solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test",
+    "ci:verify:mock": "pnpm run lint && pnpm run build && pnpm run test:unit && REPLAY_TRUST_LOGS=1 ORCH_SKIP_STARTUP_CHECKS=1 AGENTS_USE_MOCK=1 BOT_CONFIG=config/bot/default.bot.json pnpm exec tsx packages/orchestrator/src/cli/replay.ts --file packages/evaluator/test/fixtures/session_test-session/hand_records.jsonl --limit 50 --output results/replay/report.json && tsx tools/check-replay-report.ts && tsx tools/check-artifacts.ts && (cd services/solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test)",
     "eval:smoke": "pnpm --filter \"@poker-bot/evaluator\" exec tsx src/cli/eval.ts smoke --hands 1000"
   },
   "devDependencies": {
+    "@bufbuild/buf": "1.28.1",
+    "@bufbuild/protoc-gen-es": "2.2.3",
     "@types/node": "20.14.11",
     "@typescript-eslint/eslint-plugin": "8.7.0",
     "@typescript-eslint/parser": "8.7.0",
@@ -32,6 +39,7 @@
     "tsup": "8.2.4",
     "tsx": "4.16.5",
     "typescript": "5.6.3",
-    "vitest": "2.1.3"
+    "vitest": "2.1.3",
+    "dotenv": "16.4.5"
   }
 }

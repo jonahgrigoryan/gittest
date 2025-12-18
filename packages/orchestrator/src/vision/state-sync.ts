@@ -1,19 +1,19 @@
 import type { Position } from "@poker-bot/shared";
-import type { vision } from "@poker-bot/shared";
+import type { ParsedGameState } from "@poker-bot/shared";
 
 export class StateSyncTracker {
-  private history: vision.ParsedGameState[] = [];
+  private history: ParsedGameState[] = [];
 
   constructor(private readonly maxFrameHistory: number = 10) {}
 
-  addFrame(state: vision.ParsedGameState): void {
+  addFrame(state: ParsedGameState): void {
     this.history.push(state);
     if (this.history.length > this.maxFrameHistory) {
       this.history.shift();
     }
   }
 
-  detectInconsistencies(currentState: vision.ParsedGameState): string[] {
+  detectInconsistencies(currentState: ParsedGameState): string[] {
     const errors: string[] = [];
     const previous = this.history.at(-1);
     if (!previous) {
@@ -52,8 +52,8 @@ export class StateSyncTracker {
   }
 
   private isNewHand(
-    current: vision.ParsedGameState,
-    previous: vision.ParsedGameState
+    current: ParsedGameState,
+    previous: ParsedGameState
   ): boolean {
     if (current.street === "preflop" && previous.street !== "preflop") {
       return true;
