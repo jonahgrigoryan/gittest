@@ -11,3 +11,9 @@ sbom/
 services/**/target/
 # TS incremental build info
 packages/**/tsconfig.tsbuildinfo
+# Python bytecode
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
