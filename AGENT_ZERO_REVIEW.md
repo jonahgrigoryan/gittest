@@ -4,6 +4,14 @@
 
 This document provides Agent Zero with comprehensive information to review, test, and fix issues in the poker bot codebase.
 
+**⚠️ Important: Holistic Review Approach**
+
+Agent Zero should analyze the **entire bot as a whole** rather than reviewing each individual task separately. The codebase represents a merged, integrated system where all components work together. Focus on:
+- **Integration issues** between modules that may not have been caught during individual task development
+- **End-to-end functionality** of the complete bot system
+- **Cross-module interactions** and how components interact in production scenarios
+- **System-wide problems** that emerge when all tasks are integrated together
+
 ## Codebase Structure
 
 ### Monorepo Architecture
@@ -57,6 +65,15 @@ This document provides Agent Zero with comprehensive information to review, test
    - **Key Files**: `src/vision.py`
 
 ## Testing Strategy
+
+**Focus on Integration Testing**
+
+Since this is a merged main branch with all tasks integrated, testing should emphasize:
+- **End-to-end workflows** that span multiple packages
+- **Integration points** between modules (orchestrator ↔ agents ↔ solver ↔ executor)
+- **Cross-package interactions** that may not be covered by unit tests
+- **Functional behavior** of the complete bot system
+- **Runtime integration issues** that only appear when all components work together
 
 ### 1. Build All Packages
 ```bash
@@ -143,7 +160,13 @@ pnpm run verify:env
 - Look for unhandled promise rejections
 - Memory leaks or resource issues
 
-### 3. Integration Issues
+### 3. Integration Issues (High Priority)
+- **Cross-module communication failures** (e.g., orchestrator → agents → strategy engine)
+- **Data flow problems** between packages (type mismatches, serialization issues)
+- **Configuration inconsistencies** across modules
+- **Runtime integration failures** not caught by unit tests
+- **Module interaction bugs** (e.g., agent output not properly consumed by strategy engine)
+- **End-to-end workflow breaks** (vision → parser → decision → execution)
 - Package dependencies not resolving
 - Configuration loading failures
 - Missing environment variables
@@ -210,23 +233,31 @@ pnpm run clean && pnpm run build
 
 ## Agent Zero Instructions
 
+**Review Approach: Bot-Wide Integration Focus**
+
 1. **Start with Build**: Run `pnpm run build` and note any errors
-2. **Run Tests**: Execute `pnpm run test` and document failures
-3. **Check Logs**: Review logs in `results/` directory
-4. **Type Check**: Run `pnpm run typecheck` for type errors
-5. **Lint**: Run `pnpm run lint` for code quality issues
-6. **Review Code**: Systematically review each package
-7. **Fix Issues**: Implement fixes with proper testing
-8. **Document**: Update this file with findings and fixes
+2. **Run Integration Tests**: Execute `pnpm run test` focusing on cross-module tests
+3. **Run End-to-End Tests**: Test complete workflows (vision → decision → execution)
+4. **Check Logs**: Review logs in `results/` directory for integration failures
+5. **Type Check**: Run `pnpm run typecheck` for type errors, especially at module boundaries
+6. **Lint**: Run `pnpm run lint` for code quality issues
+7. **Review Integration Points**: Focus on how modules interact, not just individual packages
+8. **Test Functional Behavior**: Validate the bot works as a complete system
+9. **Fix Issues**: Implement fixes with proper integration testing
+10. **Document**: Update AGENT_ZERO_ISSUES.md with findings, especially integration problems
 
 ## Priority Areas
 
-Based on the codebase structure, focus on:
-1. **Orchestrator** - Main entry point, most critical
-2. **Agents** - Complex multi-LLM coordination
-3. **Shared Types** - Foundation for all packages
-4. **Configuration** - System setup and validation
-5. **Tests** - Ensure test suite is comprehensive
+Based on the codebase structure, focus on **integration and end-to-end functionality**:
+
+1. **Orchestrator Integration** - How orchestrator coordinates vision, solver, agents, and executor
+2. **Decision Pipeline** - End-to-end flow from game state to action execution
+3. **Agent-Stategy Integration** - How agent outputs are consumed by strategy engine
+4. **Cross-Module Data Flow** - Type consistency and data transformation between packages
+5. **Configuration Integration** - How config flows through all modules
+6. **Error Handling Across Modules** - Fallback mechanisms when modules fail
+7. **End-to-End Tests** - Functional tests that validate complete bot behavior
+8. **Runtime Integration Issues** - Problems that only appear when all components run together
 
 ## Notes
 

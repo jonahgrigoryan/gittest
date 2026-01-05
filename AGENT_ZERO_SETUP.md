@@ -32,6 +32,7 @@
 ### Step 4: Create Project Workspace
 - Create a new project in Agent Zero called "Poker Bot Codebase Review"
 - Set the project directory to this repository's root: `/Users/jonahgrigoryan/gittest`
+- **Important**: This branch (`agent-zero-codebase-review`) contains the **merged main branch** with all tasks integrated. Agent Zero should review the bot as a complete, integrated system.
 
 ## Agent Zero Workflow
 
@@ -40,58 +41,89 @@
 ```
 I need you to review the poker bot codebase located at /Users/jonahgrigoryan/gittest.
 
+This is the merged main branch with all tasks integrated. Review the bot as a complete, integrated system.
+
 Start by:
-1. Reading AGENT_ZERO_REVIEW.md to understand the codebase structure
+1. Reading AGENT_ZERO_REVIEW.md to understand the codebase structure and holistic review approach
 2. Running `pnpm run build` and documenting any build errors
-3. Running `pnpm run test` and documenting any test failures
-4. Running `pnpm run typecheck` and documenting any type errors
+3. Running `pnpm run test` and documenting any test failures (especially integration tests)
+4. Running `pnpm run typecheck` and documenting any type errors (focus on cross-module type issues)
 5. Running `pnpm run lint` and documenting any linting issues
-6. Reviewing logs in the results/ directory for runtime errors
+6. Reviewing logs in the results/ directory for runtime errors and integration failures
+7. Running end-to-end functional tests to validate complete bot behavior
 
-Document all findings in AGENT_ZERO_ISSUES.md using the provided template.
+Document all findings in AGENT_ZERO_ISSUES.md, with special attention to integration problems.
 ```
 
-### Phase 2: Code Review
+### Phase 2: Integration-Focused Code Review
 **Prompt for Agent Zero:**
 ```
-Now perform a systematic code review:
+Now perform a systematic code review with focus on integration:
 
-1. Review each package in packages/:
-   - @poker-bot/orchestrator (most critical)
-   - @poker-bot/agents
-   - @poker-bot/shared
-   - @poker-bot/logger
-   - @poker-bot/executor
-   - @poker-bot/evaluator
+1. Review integration points between packages:
+   - How orchestrator integrates vision, solver, agents, and executor
+   - Data flow between modules (game state → decision → execution)
+   - How agent outputs are consumed by strategy engine
+   - Configuration propagation across all modules
+   - Error propagation and fallback mechanisms
 
-2. Look for:
-   - Type safety issues
-   - Error handling gaps
-   - Race conditions
-   - Memory leaks
-   - Configuration issues
-   - Missing tests
-   - Code quality issues
+2. Review each package's integration with others:
+   - @poker-bot/orchestrator (main coordinator - most critical)
+   - @poker-bot/agents (how it integrates with orchestrator and strategy)
+   - @poker-bot/shared (shared types used across all packages)
+   - @poker-bot/logger (how it captures data from all modules)
+   - @poker-bot/executor (how it receives decisions from orchestrator)
+   - @poker-bot/evaluator (how it tests the integrated system)
 
-3. Check integration points between packages
-4. Verify configuration loading and validation
-5. Review error handling and fallback mechanisms
+3. Look for integration-specific issues:
+   - Type mismatches at module boundaries
+   - Data serialization/deserialization problems
+   - Cross-module error handling gaps
+   - Configuration inconsistencies
+   - Module interaction bugs
+   - Race conditions in multi-module workflows
+   - Memory leaks in integration paths
 
-Document findings in AGENT_ZERO_ISSUES.md.
+4. Verify end-to-end workflows work correctly
+5. Test module interactions that weren't covered in individual task testing
+
+Document findings in AGENT_ZERO_ISSUES.md, categorizing as integration issues.
 ```
 
-### Phase 3: Testing & Validation
+### Phase 3: End-to-End Testing & Validation
 **Prompt for Agent Zero:**
 ```
-Now test the system:
+Now test the integrated system with end-to-end functional tests:
 
 1. Run the full test suite: `pnpm run test`
-2. Run CI verification: `pnpm run ci:verify`
-3. Check for flaky tests or tests that should exist but don't
-4. Review test coverage
-5. Verify all integration points work correctly
+   - Pay special attention to integration tests
+   - Look for tests that span multiple packages
+   - Identify missing integration test coverage
 
-Update AGENT_ZERO_ISSUES.md with test-related findings.
+2. Run CI verification: `pnpm run ci:verify`
+   - This validates the merged main branch
+   - Note any issues that weren't caught during individual task CI
+
+3. Test complete workflows:
+   - Vision → Parser → Decision Pipeline → Execution
+   - Agent coordination → Strategy blending → Action selection
+   - Error handling across the entire pipeline
+   - Configuration loading and propagation
+
+4. Validate module interactions:
+   - Test how one module's output becomes another's input
+   - Verify data transformations between modules
+   - Check error propagation and fallback mechanisms
+
+5. Check for functional problems not caught in CI:
+   - Runtime integration failures
+   - Cross-module type mismatches
+   - Configuration inconsistencies
+   - End-to-end workflow breaks
+
+6. Review test coverage for integration scenarios
+
+Update AGENT_ZERO_ISSUES.md with test-related findings, especially integration test gaps.
 ```
 
 ### Phase 4: Fix Implementation
@@ -235,22 +267,28 @@ gittest/
 ## Success Criteria
 
 The review is complete when:
-- ✅ All critical issues are fixed
+- ✅ All critical issues are fixed (especially integration issues)
 - ✅ All high priority issues are fixed
-- ✅ All tests pass
-- ✅ No type errors
+- ✅ All tests pass (including integration tests)
+- ✅ End-to-end functional tests validate complete bot behavior
+- ✅ No type errors (especially at module boundaries)
 - ✅ No linting errors
 - ✅ Build succeeds
 - ✅ CI verification passes
+- ✅ Module interactions work correctly
+- ✅ Integration problems identified and resolved
 - ✅ All fixes are documented
 - ✅ Code quality is maintained or improved
 
 ## Notes
 
-- Work on branch `agent-zero-codebase-review`
+- Work on branch `agent-zero-codebase-review` (contains merged main branch)
+- Review the bot as a complete, integrated system, not individual tasks
+- Focus on integration issues and end-to-end functionality
 - Commit frequently with descriptive messages
 - Follow existing code style
 - Maintain backward compatibility
-- Update tests when fixing bugs
+- Update tests when fixing bugs (especially integration tests)
 - Document breaking changes if any
+- Pay special attention to functional problems not caught during CI testing
 
