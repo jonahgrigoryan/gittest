@@ -108,6 +108,10 @@
 - **Expected Behavior**: What should happen
 - **Actual Behavior**: What actually happens
 - **CI Gap**: Why CI didn't catch this
+- **Root Cause Analysis**:
+  - Why did this issue occur?
+  - What underlying problem allowed this to slip through?
+  - What could prevent similar issues in the future?
 - **Fix**: [Description of fix or "TODO"]
 - **Status**: Open / In Progress / Fixed / Verified
 
@@ -137,6 +141,9 @@
 - [ ] Failed tests: [count]
 - [ ] Skipped tests: [count]
 - [ ] Test coverage: [percentage]
+- [ ] Flaky tests detected: [list test names that pass/fail intermittently]
+- [ ] Integration test coverage: [percentage]
+- [ ] Missing integration test scenarios: [list gaps]
 
 ### Lint Status
 - [ ] No linting errors
@@ -161,8 +168,20 @@
 - Pattern 2: [Description]
 
 ### Integration Patterns
-- Integration Pattern 1: [Description of cross-module issue pattern]
-- Integration Pattern 2: [Description of end-to-end workflow issue]
+Common integration issue patterns to watch for:
+- **Data Mismatch Pattern**: Type mismatches when passing data between `@poker-bot/agents` and `@poker-bot/orchestrator` or `@poker-bot/orchestrator` and `@poker-bot/strategy`
+- **Synchronization Pattern**: One module expects data that another module hasn't fully processed (e.g., game state changes between vision capture and decision)
+- **Configuration Propagation Pattern**: Missing or misconfigured environment variables affecting integration between modules
+- **Timing Pattern**: Race conditions or timeout issues when coordinating parallel module execution
+- **State Consistency Pattern**: State synchronization issues where modules have inconsistent views of game state
+- **Error Propagation Pattern**: Errors not properly propagated or handled across module boundaries
+
+### Test Coverage Gaps
+- [ ] Missing integration tests for: [specific scenario]
+- [ ] Missing end-to-end tests for: [specific workflow]
+- [ ] Missing test coverage for: [specific module interaction]
+- [ ] Flaky tests identified: [test names and frequency]
+- **Coverage Analysis**: [Summary of test coverage gaps and recommendations]
 
 ---
 
@@ -170,10 +189,14 @@
 
 ### [FIX-001] - [Title]
 - **Issue**: [ISSUE-XXX]
+- **Root Cause**: [Why the issue occurred]
 - **Changes**: 
   - File 1: [what changed]
   - File 2: [what changed]
 - **Testing**: [how it was tested]
+  - Integration tests added: [yes/no, which tests]
+  - End-to-end validation: [yes/no, what was validated]
+- **Prevention**: [What prevents similar issues in the future]
 - **Status**: Fixed / Verified
 
 ---

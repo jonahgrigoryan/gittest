@@ -25,9 +25,16 @@
 - Upload or create documents:
   - `AGENT_ZERO_REVIEW.md` (this codebase overview)
   - `AGENT_ZERO_ISSUES.md` (issue tracker template)
+  - `AGENT_ZERO_SETUP.md` (this setup guide)
   - `requirements.md` (project requirements)
   - `design.md` (system design)
   - `AGENTS.md` (agents package documentation)
+  - `docs/config_guide.md` (configuration guide)
+  - `docs/env.md` (environment variables documentation)
+  - `docs/troubleshooting.md` (troubleshooting guide)
+  - `package.json` (root package configuration)
+  - `config/bot/default.bot.json` (main bot configuration)
+  - `tasks.md` (task breakdown and requirements)
 
 ### Step 4: Create Project Workspace
 - Create a new project in Agent Zero called "Poker Bot Codebase Review"
@@ -210,9 +217,26 @@ git diff
 # Stage changes
 git add .
 
-# Commit changes
+# Commit changes (use descriptive messages)
 git commit -m "M3: Agent Zero review - [description]"
+
+# View commit history
+git log --oneline -10
+
+# Check branch status
+git branch -v
+
+# View differences from main
+git diff main..agent-zero-codebase-review --stat
 ```
+
+**Git Workflow for Agent Zero**:
+- **Branch**: Work on `agent-zero-codebase-review` branch
+- **Commit Frequently**: Commit each fix or set of related changes with descriptive messages
+- **Track Changes**: Use `git diff` to review changes before committing
+- **Document Fixes**: Include issue numbers in commit messages (e.g., "Fix ISSUE-001: integration failure")
+- **Keep History Clean**: Make focused commits that are easy to review and understand
+- **Before Pushing**: Ensure all tests pass and documentation is updated
 
 ## File Structure Reference
 
@@ -255,14 +279,34 @@ gittest/
 - `AGENTS.md` - Agents package docs
 - `docs/config_guide.md` - Configuration guide
 
+## Review Focus & Prioritization
+
+Agent Zero should prioritize issues in this order:
+
+1. **Critical Integration Failures**: Issues that break the entire bot or prevent end-to-end functionality
+2. **Cross-Module Communication Problems**: Data flow issues between modules
+3. **Functional Issues Not Caught in CI**: Problems that work in isolation but fail when integrated
+4. **Test Coverage Gaps**: Missing integration tests or end-to-end test scenarios
+5. **Flaky Tests**: Tests that pass/fail intermittently (indicate timing or state issues)
+6. **High Priority Code Issues**: Type errors, configuration problems, error handling gaps
+7. **Medium/Low Priority**: Code quality improvements, optimizations
+
+**Review Strategy**: 
+- Start with critical integration failures that prevent the bot from functioning
+- Then focus on cross-module issues that affect multiple components
+- Document root causes to help prevent similar issues
+- Prioritize fixes that improve system stability and test coverage
+
 ## Tips for Agent Zero
 
 1. **Read First**: Always read relevant documentation before making changes
-2. **Test Often**: Run tests after each change
+2. **Test Often**: Run tests after each change, especially integration tests
 3. **Small Changes**: Make focused, minimal changes
-4. **Document**: Update issue tracker as you go
-5. **Verify**: Always verify fixes work before moving on
-6. **Ask Questions**: If something is unclear, note it in the issues file
+4. **Document**: Update issue tracker as you go, including root cause analysis
+5. **Verify**: Always verify fixes work in the integrated system before moving on
+6. **Track Coverage**: Note test coverage gaps and missing integration scenarios
+7. **Git Workflow**: Commit changes frequently with descriptive messages
+8. **Ask Questions**: If something is unclear, note it in the issues file
 
 ## Success Criteria
 
@@ -282,13 +326,26 @@ The review is complete when:
 
 ## Notes
 
-- Work on branch `agent-zero-codebase-review` (contains merged main branch)
-- Review the bot as a complete, integrated system, not individual tasks
-- Focus on integration issues and end-to-end functionality
-- Commit frequently with descriptive messages
-- Follow existing code style
-- Maintain backward compatibility
-- Update tests when fixing bugs (especially integration tests)
-- Document breaking changes if any
-- Pay special attention to functional problems not caught during CI testing
+- **Branch**: Work on `agent-zero-codebase-review` (contains merged main branch)
+- **Review Approach**: Review the bot as a complete, integrated system, not individual tasks
+- **Focus Areas**: 
+  - Integration issues and end-to-end functionality
+  - Cross-module communication and data flow
+  - Functional problems not caught during CI testing
+  - Test coverage gaps, especially integration tests
+  - Root cause analysis for all issues found
+- **Git Workflow**: 
+  - Commit frequently with descriptive messages
+  - Track changes through git history
+  - Document fixes with issue numbers
+- **Code Standards**: 
+  - Follow existing code style
+  - Maintain backward compatibility
+  - Update tests when fixing bugs (especially integration tests)
+  - Document breaking changes if any
+- **Documentation**: 
+  - Update AGENT_ZERO_ISSUES.md with all findings
+  - Include root cause analysis for issues
+  - Document test coverage gaps
+  - Note patterns of integration issues
 
