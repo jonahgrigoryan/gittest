@@ -1,12 +1,12 @@
-# Agent Zero Codebase Review Guide
+# Agent Zero (for holistic review and testing) Codebase Review Guide
 
 ## Overview
 
-This document provides Agent Zero with comprehensive information to review, test, and fix issues in the poker bot codebase.
+This document provides Agent Zero (for holistic review and testing) with comprehensive information to review, test, and fix issues in the poker bot codebase.
 
 **⚠️ Important: Holistic Review Approach**
 
-Agent Zero should analyze the **entire bot as a whole** rather than reviewing each individual task separately. The codebase represents a merged, integrated system where all components work together. Focus on:
+Agent Zero (for holistic review and testing) should analyze the **entire bot as a whole** rather than reviewing each individual task separately. The codebase represents a merged, integrated system where all components work together. Focus on:
 - **Integration issues** between modules that may not have been caught during individual task development
 - **End-to-end functionality** of the complete bot system
 - **Cross-module interactions** and how components interact in production scenarios
@@ -26,48 +26,31 @@ Agent Zero should analyze the **entire bot as a whole** rather than reviewing ea
    - Personas: GTO Purist, Exploitative Aggressor, Risk-Averse Value
    - Coordinator, weighting engine, schema validation
    - **Key Files**: `src/coordinator.ts`, `src/personas/`, `src/weighting/`
-   - **Dependencies**: Receives `GameState` from orchestrator, outputs `AggregatedAgentOutput` to strategy engine
-   - **Integration Points**: Called by orchestrator's decision pipeline, outputs consumed by strategy engine
 
 2. **`@poker-bot/orchestrator`** (`packages/orchestrator/`)
    - Main decision-making pipeline
    - Integrates vision, GTO solver, agents, strategy engine
    - **Key Files**: `src/main.ts`, `src/decision/pipeline.ts`, `src/strategy/engine.ts`
-   - **Dependencies**: Coordinates all modules, depends on outputs from agents, solver, vision
-   - **Integration Points**: 
-     - Receives game state from vision/parser
-     - Calls GTO solver and agents in parallel
-     - Passes outputs to strategy engine for blending
-     - Sends final decision to executor
-   - **Timing**: Must coordinate parallel execution within time budget
 
 3. **`@poker-bot/shared`** (`packages/shared/`)
    - Shared types, utilities, configuration
    - Game state definitions, action types
    - **Key Files**: `src/types.ts`, `src/config.ts`
-   - **Dependencies**: Used by all packages
-   - **Integration Points**: Type definitions must be consistent across all modules
 
 4. **`@poker-bot/logger`** (`packages/logger/`)
    - Hand history logging
    - Structured logging with redaction
    - **Key Files**: `src/handHistory.ts`
-   - **Dependencies**: Receives data from orchestrator and all modules
-   - **Integration Points**: Captures data from entire pipeline for audit trail
 
 5. **`@poker-bot/executor`** (`packages/executor/`)
    - Action execution (simulator/API)
    - Action verification
    - **Key Files**: `src/executor.ts`
-   - **Dependencies**: Receives `StrategyDecision` from orchestrator
-   - **Integration Points**: Final step in pipeline, must verify actions match decisions
 
 6. **`@poker-bot/evaluator`** (`packages/evaluator/`)
    - Testing and evaluation framework
    - Smoke tests, AB testing
    - **Key Files**: `src/evaluator.ts`
-   - **Dependencies**: Tests entire integrated system
-   - **Integration Points**: Validates end-to-end bot behavior
 
 ### Services (Rust/Python)
 
@@ -140,41 +123,26 @@ pnpm --filter "@poker-bot/agents" run lint
 
 ### 5. CI Verification
 ```bash
-# Run full CI verification
+# Run full test validation
 pnpm run ci:verify
 ```
 
 ### 6. Environment Validation
 ```bash
 # Validate environment setup
-pnpm run verify:env
+Ensure environment variables are properly set, especially for external services like GTO solver and vision service
 ```
 
 ## Log Locations
 
 ### Application Logs
 - **Session Logs**: `results/session/health-*.jsonl`
-  - Look for ERROR level logs indicating integration failures
-  - Check WARN level logs for potential cross-module issues
-  - Review INFO level logs for workflow tracking
 - **Hand History**: `results/hands/session_*/`
-  - Contains structured JSONL logs with decision traces
-  - Look for errors in decision pipeline or execution failures
 - **Replay Reports**: `results/replay/report.json`
-  - Compare original vs replayed decisions to find inconsistencies
-
-### Log Levels to Focus On
-- **ERROR**: Critical failures, integration breakpoints, module communication failures
-- **WARN**: Potential issues, fallback activations, timeout warnings
-- **INFO**: Workflow tracking, decision traces, module interactions
-- **DEBUG**: Detailed execution flow (if verbose logging enabled)
 
 ### Test Outputs
 - **Test Results**: Check console output from `pnpm run test`
-  - Pay attention to integration test failures
-  - Look for flaky tests that pass/fail intermittently
 - **Coverage**: May be in `coverage/` directories (if configured)
-  - Identify gaps in integration test coverage
 
 ### Build Artifacts
 - **Dist Folders**: `packages/*/dist/`
@@ -199,18 +167,6 @@ pnpm run verify:env
 - **Runtime integration failures** not caught by unit tests
 - **Module interaction bugs** (e.g., agent output not properly consumed by strategy engine)
 - **End-to-end workflow breaks** (vision → parser → decision → execution)
-- **Timing and synchronization issues**:
-  - Race conditions when modules execute in parallel
-  - State synchronization problems (e.g., game state changes between vision and decision)
-  - Timeout issues when coordinating multiple modules
-  - Order dependencies between module outputs
-- **Data mismatches**:
-  - Type mismatches when passing data between `@poker-bot/agents` and `@poker-bot/orchestrator`
-  - Serialization/deserialization issues across module boundaries
-  - Missing or incomplete data when one module expects data another hasn't processed
-- **Environment and configuration**:
-  - Missing or misconfigured environment variables affecting integration
-  - Configuration not properly propagated across modules
 - Package dependencies not resolving
 - Configuration loading failures
 - Missing environment variables
@@ -275,7 +231,7 @@ pnpm run clean && pnpm run build
 4. **Verify Fix**: Run tests and build to ensure fix works
 5. **Document**: Update this file or create issue notes
 
-## Agent Zero Instructions
+## Agent Zero (for holistic review and testing) Instructions
 
 **Review Approach: Bot-Wide Integration Focus**
 
@@ -287,7 +243,7 @@ pnpm run clean && pnpm run build
 6. **Lint**: Run `pnpm run lint` for code quality issues
 7. **Review Integration Points**: Focus on how modules interact, not just individual packages
 8. **Test Functional Behavior**: Validate the bot works as a complete system
-9. **Fix Issues**: Implement fixes with proper integration testing
+9. **Fix Issues**: Implement fixes with proper end-to-end and integration testing
 10. **Document**: Update AGENT_ZERO_ISSUES.md with findings, especially integration problems
 
 ## Priority Areas
