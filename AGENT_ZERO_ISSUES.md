@@ -1,11 +1,11 @@
-# Agent Zero (for holistic review and testing) Codebase Review - Issue Tracker
+# Agent Zero Codebase Review - Issue Tracker
 
-## Review Session: [Date]
+## Review Session: Sat Jan 10 03:53:54 AM UTC 2026
 
 ### Summary
-- **Branch**: `agent-zero-codebase-review`
-- **Base**: `main` (merged branch with all tasks integrated)
-- **Reviewer**: Agent Zero (for holistic review and testing)
+- **Branch**: agent-zero/review-fixes-20260108
+- **Base**: agent-zero-codebase-review
+- **Reviewer**: Agent Zero
 - **Status**: In Progress
 - **Review Focus**: Bot-wide integration and end-to-end functionality
 
@@ -13,215 +13,126 @@
 
 ## Issues Found
 
-**Note**: Focus on capturing bot-wide integration problems and functional issues that weren't caught during individual task CI testing.
-
 ### Critical Issues
 
-#### [ISSUE-001] - [Title]
+#### [ISSUE-001] - Silent Error Suppression in Strategy Engine
 - **Severity**: Critical
-- **Package**: `@poker-bot/[package]`
-- **File**: `path/to/file.ts`
-- **Description**: 
-  - What is the issue?
-  - How was it discovered?
-  - What are the symptoms?
+- **Package**: @poker-bot/orchestrator
+- **File**: src/strategy/engine.ts (Lines ~350-360)
+- **Description**:
+  - The shouldPreempt function wraps its logic in a try-catch block that catches all errors and returns false without logging.
+  - **Snippet**:
+    typescript
+    private shouldPreempt(): boolean {
+      // ...
+      try {
+        // ... logic ...
+      } catch {
+        return false; // Error swallowed here
+      }
+    }
+    
+  - **Current Behavior**: If the time budget tracker fails or throws, the error is swallowed, and the system proceeds as if no preemption is needed.
+  - **Failure Mode**: Critical runtime errors (e.g., memory issues, logic bugs in tracker) are hidden, potentially leading to timeouts or undefined behavior downstream.
 - **Steps to Reproduce**:
-  1. Step 1
-  2. Step 2
-  3. Step 3
-- **Expected Behavior**: What should happen
-- **Actual Behavior**: What actually happens
-- **Fix**: [Description of fix or "TODO"]
-- **Status**: Open / In Progress / Fixed / Verified
+  1. Mock TimeBudgetTracker.remaining() to throw an error.
+  2. Call StrategyEngine.decide().
+  3. Observe that no error is logged, and execution continues.
+- **Proposed Fix**: Log the error with a warning before returning the safe fallback (false).
+- **Status**: Fixed (Commit: Fix(orchestrator): log and handle shouldPreempt errors safely)
+
+#### [ISSUE-002] - Silent Error Suppression in Health Monitor
+- **Severity**: Critical
+- **Package**: @poker-bot/orchestrator
+- **File**: src/health/monitor.ts (Lines ~50-60)
+- **Description**:
+  - Errors during health check execution are caught and swallowed inside runChecks.
+  - **Snippet**:
+    typescript
+    try {
+      const status = await def.fn();
+      // ...
+    } catch (error) {
+      statuses.push({ ... }); // Pushes failed status but DOES NOT LOG the error
+    }
+    
+  - **Current Behavior**: If a health check throws, it is ignored/swallowed without logging the stack trace or error details to the system logger.
+  - **Failure Mode**: The bot could be in a degraded state (e.g., vision service down) but operators won't see the root cause in the logs.
+- **Steps to Reproduce**:
+  1. Create a health check that throws an error.
+  2. Run the health monitor.
+  3. Observe that the error is not logged.
+- **Proposed Fix**: Log the error explicitly in the catch block.
+- **Status**: Fixed (Commit: Fix(orchestrator): report failing health checks instead of swallowing errors)
 
 ---
 
 ### High Priority Issues
 
-#### [ISSUE-002] - [Title]
+#### [ISSUE-003] - Type Safety Bypass in Main Initialization
 - **Severity**: High
-- **Package**: `@poker-bot/[package]`
-- **File**: `path/to/file.ts`
-- **Description**: 
+- **Package**: @poker-bot/orchestrator
+- **File**: src/main.ts (Line ~200)
+- **Description**:
+  - The configManager is cast to any when creating the AgentCoordinatorService.
+  - **Snippet**: configManager: (useMockAgents ? ... : configManager) as any
+  - **Current Behavior**: TypeScript type checking is disabled for this critical dependency injection.
+  - **Failure Mode**: If the AgentCoordinatorService expects a specific interface that configManager doesn't satisfy (e.g., after a refactor), it will crash at runtime instead of failing at compile time.
 - **Steps to Reproduce**:
-- **Expected Behavior**: 
-- **Actual Behavior**: 
-- **Fix**: 
-- **Status**: Open
+  1. Inspect src/main.ts around line 200.
+- **Proposed Fix**: Define a proper interface for the config proxy or use a union type, removing the as any cast.
+
+#### [ISSUE-004] - Type Safety Bypass in Replay Tool
+- **Severity**: High
+- **Package**: @poker-bot/orchestrator
+- **File**: src/cli/replay.ts
+- **Description**:
+  - Similar to main.ts, configManager is cast to any.
+  - **Current Behavior**: Type safety is bypassed.
+  - **Failure Mode**: Runtime crashes during replay if config structure mismatches.
+- **Steps to Reproduce**:
+  1. Inspect src/cli/replay.ts.
+- **Proposed Fix**: Implement proper typing for the mock config injection.
 
 ---
 
 ### Medium Priority Issues
 
-#### [ISSUE-003] - [Title]
+#### [ISSUE-005] - Missing Environment Dependencies
 - **Severity**: Medium
-- **Package**: `@poker-bot/[package]`
-- **File**: `path/to/file.ts`
-- **Description**: 
+- **Package**: services/vision, services/solver
+- **File**: N/A (Environment)
+- **Description**:
+  - The current environment lacks poetry (Python) and cargo (Rust).
+  - **Current Behavior**: Cannot run tests for Vision and Solver services.
+  - **Failure Mode**: Inability to verify changes in these services.
 - **Steps to Reproduce**:
-- **Expected Behavior**: 
-- **Actual Behavior**: 
-- **Fix**: 
-- **Status**: Open
+  1. Run poetry --version or cargo --version.
+- **Proposed Fix**: Use Docker Compose to run these services in their own containers.
+  - **Command**:
+    bash
+    cd infra/compose
+    docker-compose up -d vision solver
+    # Then run integration tests against these containers
+    
 
 ---
 
-### Integration Issues
+## Phase 1 Summary
+The system is structurally sound and passes CI. The primary risks identified are silent error suppression and type safety gaps in critical paths.
 
-#### [ISSUE-004] - [Title]
-- **Severity**: [Critical/High/Medium]
-- **Type**: Integration Issue
-- **Affected Modules**: `@poker-bot/[module1]` ↔ `@poker-bot/[module2]`
-- **File**: `path/to/file.ts` (in module 1) and `path/to/file.ts` (in module 2)
-- **Description**: 
-  - What integration problem exists?
-  - Which modules are involved?
-  - How was it discovered? (end-to-end test, runtime error, etc.)
-  - What are the symptoms?
+
+#### [ISSUE-006] - Missing Blind Level Detection
+- **Severity**: High
+- **Package**: @poker-bot/orchestrator
+- **File**: src/vision/parser.ts
+- **Description**:
+  - The GameStateParser does not extract blind levels from VisionOutput. It relies entirely on previousState.blinds or defaults to zero.
+  - **Snippet**: blinds: previousState?.blinds ?? { small: 0, big: 0 }
+  - **Current Behavior**: Blinds are static. If the game changes blind levels (e.g., tournament), the bot will continue using old values.
+  - **Failure Mode**: Incorrect pot odds calculations, wrong raise sizing, and failure to identify forced actions correctly in tournaments.
 - **Steps to Reproduce**:
-  1. Step 1 (involving multiple modules)
-  2. Step 2
-  3. Step 3
-- **Expected Behavior**: What should happen across modules
-- **Actual Behavior**: What actually happens
-- **Root Cause**: [Analysis of why integration fails]
-- **Fix**: [Description of fix or "TODO"]
-- **Status**: Open / In Progress / Fixed / Verified
-
----
-
-### Functional Issues (Not Caught in CI)
-
-#### [ISSUE-005] - [Title]
-- **Severity**: [Critical/High/Medium]
-- **Type**: Functional Issue
-- **Package**: `@poker-bot/[package]` (or "Cross-module")
-- **File**: `path/to/file.ts`
-- **Description**: 
-  - What functional problem exists?
-  - Why wasn't it caught in CI?
-  - What end-to-end scenario fails?
-- **Steps to Reproduce**:
-  1. Step 1
-  2. Step 2
-  3. Step 3
-- **Expected Behavior**: What should happen
-- **Actual Behavior**: What actually happens
-- **CI Gap**: Why CI didn't catch this
-- **Fix**: [Description of fix or "TODO"]
-- **Status**: Open / In Progress / Fixed / Verified
-
----
-
-### Low Priority / Improvements
-
-#### [ISSUE-006] - [Title]
-- **Severity**: Low
-- **Package**: `@poker-bot/[package]`
-- **File**: `path/to/file.ts`
-- **Description**: 
-- **Suggestion**: 
-- **Status**: Open
-
----
-
-## Test Results
-
-### Build Status
-- [ ] All packages build successfully
-- [ ] Type errors: [count]
-- [ ] Build warnings: [count]
-
-### Test Status
-- [ ] All tests pass
-- [ ] Failed tests: [count]
-- [ ] Skipped tests: [count]
-- [ ] Test coverage: [percentage]
-
-### Lint Status
-- [ ] No linting errors
-- [ ] Linting errors: [count]
-- [ ] Linting warnings: [count]
-
-### Type Check Status
-- [ ] No type errors
-- [ ] Type errors: [count]
-
----
-
-## Log Analysis
-
-### Recent Errors Found
-```
-[Paste relevant log excerpts]
-```
-
-### Patterns Identified
-- Pattern 1: [Description]
-- Pattern 2: [Description]
-
-### Integration Patterns
-- Integration Pattern 1: [Description of cross-module issue pattern]
-- Integration Pattern 2: [Description of end-to-end workflow issue]
-
----
-
-## Fixes Implemented
-
-### [FIX-001] - [Title]
-- **Issue**: [ISSUE-XXX]
-- **Changes**: 
-  - File 1: [what changed]
-  - File 2: [what changed]
-- **Testing**: [how it was tested]
-- **Status**: Fixed / Verified
-
----
-
-## Recommendations
-
-### Integration & Architecture
-- [Recommendation 1 - e.g., "Add integration tests for orchestrator → agents → strategy flow"]
-- [Recommendation 2 - e.g., "Improve error propagation between modules"]
-
-### Code Quality
-- [Recommendation 1]
-- [Recommendation 2]
-
-### Testing
-- [Recommendation 1 - e.g., "Add end-to-end tests for complete decision pipeline"]
-- [Recommendation 2 - e.g., "Increase integration test coverage for cross-module interactions"]
-- [Recommendation 3 - e.g., "Add functional tests that weren't covered in CI"]
-
-### Documentation
-- [Recommendation 1]
-- [Recommendation 2]
-
----
-
-## Next Steps
-
-1. [ ] Complete initial holistic review of integrated bot
-2. [ ] Identify integration issues between modules
-3. [ ] Run end-to-end functional tests
-4. [ ] Fix critical integration issues
-5. [ ] Fix high priority issues (including functional problems)
-6. [ ] Run full test suite (especially integration tests)
-7. [ ] Validate end-to-end workflows
-8. [ ] Verify all fixes work in integrated system
-9. [ ] Update documentation
-10. [ ] Create PR for review
-
----
-
-## Notes
-
-**Review Focus**: This review focuses on the bot as a complete, integrated system. Pay special attention to:
-- Integration issues between modules
-- End-to-end functional problems
-- Cross-module interactions
-- Issues that weren't caught during individual task CI testing
-- Runtime integration failures
-
-[Any additional notes, observations, or context]
-
+  1. Create a test case where VisionOutput (hypothetically) contains new blind info.
+  2. Pass it to parser.parse().
+  3. Observe that state.blinds remains unchanged.
+- **Proposed Fix**: Update VisionOutput schema to include blinds (if available) and update parser to read them.
