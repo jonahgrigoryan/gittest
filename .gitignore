@@ -17,3 +17,15 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+
+# Agent Zero Artifacts
+.a0proj/
+.agents/
+.codebuff/
+.env.ci
+knowledge.md
+
+# Generated Metrics
+packages/evaluator/metrics.jsonl
+
+*.patch
