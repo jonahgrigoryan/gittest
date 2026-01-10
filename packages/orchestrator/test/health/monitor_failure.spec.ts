@@ -29,12 +29,12 @@ describe('HealthMonitor Error Handling', () => {
     });
 
     // Trigger check execution
-    // @ts-ignore - accessing private method for testing
+    // @ts-expect-error - accessing private method for testing
     await monitor.runChecks();
 
     const snapshot = monitor.getLatestSnapshot();
     expect(snapshot).toBeDefined();
-    expect(snapshot?.overall).toBe('unhealthy');
+    expect(snapshot?.overall).toBe('failed');
     
     const failedStatus = snapshot?.statuses.find(s => s.component === 'failing-check');
     expect(failedStatus).toBeDefined();

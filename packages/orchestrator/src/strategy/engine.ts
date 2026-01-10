@@ -352,8 +352,8 @@ export class StrategyEngine {
       return false;
     } catch (error) {
       this.logger?.warn?.("StrategyEngine: error in shouldPreempt, defaulting to false", {
-        component: \"StrategyEngine\",
-        method: \"shouldPreempt\",
+        component: "StrategyEngine",
+        method: "shouldPreempt",
         error: error instanceof Error ? error.message : String(error)
       });
       return false;
