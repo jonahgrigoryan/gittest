@@ -1,11 +1,20 @@
-name: ci
+name: CI
+
 on:
   push:
-    branches: ["main", "feat/**", "m3/**", "agent-zero/**", "agent-zero-codebase-review"]
-    tags: ["v*"]
+    branches:
+      - main
+      - feat/**
+      - m3/**
+      - agent-zero/**
+      - agent-zero-codebase-review
+    tags:
+      - v*
   pull_request:
-    branches: ["main", "agent-zero-codebase-review"]
-
+    branches:
+      - main
+      - agent-zero-codebase-review
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,8 +44,9 @@ jobs:
       - run: python -V
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@1.82.0
+        uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.85.0"
           components: rustfmt, clippy
 
       - run: pnpm run ci:verify
@@ -139,9 +149,11 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.85.0"
 
       - name: Install cargo-audit (compatible with toolchain)
-        run: cargo install --locked cargo-audit@0.21.2
+        run: cargo install --locked cargo-audit@0.22.0
 
       - name: cargo audit (solver)
         working-directory: services/solver
