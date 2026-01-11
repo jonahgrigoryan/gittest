@@ -440,3 +440,33 @@ pnpm --filter @poker-bot/orchestrator exec vitest run test/golden-replay/golden-
 
 **Conclusion:**
 The Golden Replay Pack provides a robust regression gate for critical cash game invariants. It ensures that the `StateSyncTracker` and system guards remain effective against known failure modes like phantom chips, position drift, and rapid state transitions.
+
+## Phase 8: Vision & Solver Client Integration
+
+**Status**: Completed
+**Branch**: agent-zero/phase8-vision-solver-client-integration-20260111
+
+**Objective:**
+Integrate deterministic contract tests for Vision and Solver clients within the poker-bot orchestrator. Implement client-side timeout logic and safety guards for gRPC responses.
+
+**Key Improvements:**
+1.  **Client-Side Timeouts**: Implemented Promise.race logic in clients with configurable timeoutMs.
+2.  **Safety Guards**: Enhanced handling of partial or malformed gRPC responses.
+3.  **Contract Tests**: Created new test suites to verify communication, timeouts, and error recovery without network dependencies.
+
+**Deliverables:**
+- **Updated Clients**: packages/orchestrator/src/solver_client/client.ts, packages/orchestrator/src/vision/client.ts
+- **New Test Suites**: 
+  - packages/orchestrator/test/solver/client.spec.ts
+  - packages/orchestrator/test/vision/client.spec.ts
+- **CI Verification**: pnpm run ci:verify passed.
+
+**Runbook: How to Run Client Tests**
+
+bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/solver/client.spec.ts
+pnpm --filter @poker-bot/orchestrator exec vitest run test/vision/client.spec.ts
+
+
+**Conclusion:**
+The Vision and Solver clients now have robust, deterministic tests ensuring they handle timeouts and errors gracefully, preventing system hangs during network issues.

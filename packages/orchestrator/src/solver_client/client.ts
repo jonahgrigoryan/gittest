@@ -33,9 +33,10 @@ export interface SolverClientAdapter {
 export function createSolverClient(
   address: string = DEFAULT_SOLVER_ADDR,
   clientCredentials: ChannelCredentials = credentials.createInsecure(),
+  timeoutMs: number = 30000,
 ): SolverClientAdapter {
   const client = new SolverClientConstructor(address, clientCredentials);
-  return new GrpcSolverClient(client);
+  return new GrpcSolverClient(client, timeoutMs);
 }
 
 export function makeRequest(params: {
@@ -70,10 +71,13 @@ export function parseResponse(resp: SubgameResponse): SolverCallResult {
 }
 
 class GrpcSolverClient implements SolverClientAdapter {
-  constructor(private readonly client: SolverClient) {}
+  constructor(
+    private readonly client: SolverClient,
+    private readonly timeoutMs: number,
+  ) {}
 
   solve(request: SubgameRequest): Promise<SubgameResponse> {
-    return new Promise((resolve, reject) => {
+    const callPromise = new Promise<SubgameResponse>((resolve, reject) => {
       this.client.solve(request, (error, response) => {
         if (error) {
           reject(error);
@@ -82,6 +86,14 @@ class GrpcSolverClient implements SolverClientAdapter {
         resolve(response);
       });
     });
+
+    const timeoutPromise = new Promise<SubgameResponse>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(Solver request timed out after {this.timeoutMs}ms));
+      }, this.timeoutMs);
+    });
+
+    return Promise.race([callPromise, timeoutPromise]);
   }
 
   waitForReady(timeoutMs: number = 5000): Promise<void> {

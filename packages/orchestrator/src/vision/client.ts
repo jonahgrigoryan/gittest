@@ -33,18 +33,21 @@ export class VisionClient {
   private readonly client: VisionServiceClientInstance;
 
   private readonly layoutJson: string;
+  private readonly timeoutMs: number;
 
-  constructor(serviceUrl: string, layoutPack: vision.LayoutPack) {
+  constructor(serviceUrl: string, layoutPack: vision.LayoutPack, timeoutMs: number = 5000) {
     this.client = new VisionServiceClient(
       serviceUrl,
       credentials.createInsecure(),
     );
     this.layoutJson = JSON.stringify(layoutPack);
+    this.timeoutMs = timeoutMs;
   }
 
   async captureAndParse(): Promise<vision.VisionOutput> {
     const request = { layoutJson: this.layoutJson };
-    const response = await new Promise<RpcVisionOutput>((resolve, reject) => {
+    
+    const callPromise = new Promise<RpcVisionOutput>((resolve, reject) => {
       this.client.captureFrame(
         request,
         (error: Error | null, result?: RpcVisionOutput) => {
@@ -60,6 +63,14 @@ export class VisionClient {
         },
       );
     });
+
+    const timeoutPromise = new Promise<RpcVisionOutput>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(Vision capture timed out after {this.timeoutMs}ms));
+      }, this.timeoutMs);
+    });
+
+    const response = await Promise.race([callPromise, timeoutPromise]);
     return this.transformVisionOutput(response);
   }
 
