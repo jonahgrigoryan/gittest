@@ -1,4 +1,4 @@
-import { credentials, Metadata } from "@grpc/grpc-js";
+import { credentials, Metadata, type ClientUnaryCall } from "@grpc/grpc-js";
 import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import { vision, visionGen } from "@poker-bot/shared";
 const VisionServiceClient = visionGen.VisionServiceClient;
@@ -46,9 +46,11 @@ export class VisionClient {
 
   async captureAndParse(): Promise<vision.VisionOutput> {
     const request = { layoutJson: this.layoutJson };
-    
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let call: ClientUnaryCall | undefined;
+
     const callPromise = new Promise<RpcVisionOutput>((resolve, reject) => {
-      this.client.captureFrame(
+      call = this.client.captureFrame(
         request,
         (error: Error | null, result?: RpcVisionOutput) => {
           if (error) {
@@ -64,13 +66,27 @@ export class VisionClient {
       );
     });
 
+    if (this.timeoutMs <= 0) {
+      const response = await callPromise;
+      return this.transformVisionOutput(response);
+    }
+
     const timeoutPromise = new Promise<RpcVisionOutput>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(Vision capture timed out after {this.timeoutMs}ms));
+      timeoutId = setTimeout(() => {
+        if (call) {
+          call.cancel();
+        }
+        reject(new Error(`Vision capture timed out after ${this.timeoutMs}ms`));
       }, this.timeoutMs);
     });
 
-    const response = await Promise.race([callPromise, timeoutPromise]);
+    const response = await Promise.race([callPromise, timeoutPromise]).finally(
+      () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      },
+    );
     return this.transformVisionOutput(response);
   }
 

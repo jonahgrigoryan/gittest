@@ -1,118 +1,201 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
+import {
+  Server,
+  ServerCredentials,
+  status,
+  type ServiceError,
+} from '@grpc/grpc-js';
 import { VisionClient } from '../../src/vision/client';
-import * as Shared from '@poker-bot/shared';
+import { vision, visionGen } from '@poker-bot/shared';
 
-// Hoist mocks so they are available in vi.mock factory
-const mocks = vi.hoisted(() => ({
-  captureFrame: vi.fn(),
-  healthCheck: vi.fn(),
-  close: vi.fn(),
-}));
+const roi = { x: 0, y: 0, width: 10, height: 10 };
 
-// Apply the mock
-vi.mock('@poker-bot/shared', async (importOriginal) => {
-  const actual = await importOriginal<typeof Shared>();
-  return {
-    ...actual,
-    visionGen: {
-      ...actual.visionGen,
-      VisionServiceClient: vi.fn(() => ({
-        captureFrame: mocks.captureFrame,
-        healthCheck: mocks.healthCheck,
-        close: mocks.close,
-      })),
-    },
-  };
-});
+const layoutPack: vision.LayoutPack = {
+  version: 'test',
+  platform: 'test',
+  theme: 'test',
+  resolution: { width: 800, height: 600 },
+  dpiCalibration: 1,
+  cardROIs: [],
+  stackROIs: {
+    BTN: roi,
+    SB: roi,
+    BB: roi,
+    UTG: roi,
+    MP: roi,
+    CO: roi,
+  },
+  potROI: roi,
+  buttonROI: roi,
+  actionButtonROIs: {
+    fold: roi,
+    check: roi,
+    call: roi,
+    raise: roi,
+    bet: roi,
+    allIn: roi,
+  },
+  turnIndicatorROI: roi,
+  windowPatterns: { titleRegex: '.*', processName: 'test' },
+};
+
+const baseOutput: visionGen.VisionOutput = {
+  timestamp: 123,
+  cards: { holeCards: [], communityCards: [], confidence: 0.9 },
+  stacks: {},
+  pot: { amount: 100, confidence: 0.8 },
+  buttons: { dealer: 'BTN', confidence: 0.7 },
+  positions: { confidence: 0.6 },
+  occlusion: {},
+  actionButtons: undefined,
+  turnState: undefined,
+  latency: { capture: 1, extraction: 2, total: 3 },
+};
+
+const startVisionServer = async (
+  captureHandler: visionGen.VisionServiceServer['captureFrame'],
+  healthHandler?: visionGen.VisionServiceServer['healthCheck'],
+) => {
+  const server = new Server();
+  server.addService(visionGen.VisionServiceService, {
+    captureFrame: captureHandler,
+    healthCheck:
+      healthHandler ??
+      ((_call, callback) => {
+        callback(null, { healthy: true, message: 'ok' });
+      }),
+  });
+  const port = await new Promise<number>((resolve, reject) => {
+    server.bindAsync(
+      '127.0.0.1:0',
+      ServerCredentials.createInsecure(),
+      (error, assignedPort) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(assignedPort);
+      },
+    );
+  });
+
+  return { server, address: `127.0.0.1:${port}` };
+};
+
+const shutdownServer = (server: Server) =>
+  new Promise<void>((resolve) => {
+    server.tryShutdown(() => resolve());
+  });
 
 describe('VisionClient Contract', () => {
-  let client: VisionClient;
-  const serviceUrl = 'localhost:50051';
-  const layoutPack: any = { name: 'test', width: 800, height: 600, regions: [] };
+  let client: VisionClient | undefined;
+  let server: Server | undefined;
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-    mocks.captureFrame.mockReset();
-    mocks.healthCheck.mockReset();
-    mocks.close.mockReset();
-    // Re-instantiate client for each test
-    client = new VisionClient(serviceUrl, layoutPack);
+  afterEach(async () => {
+    if (client) {
+      client.close();
+      client = undefined;
+    }
+    if (server) {
+      await shutdownServer(server);
+      server = undefined;
+    }
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-    client.close();
-  });
-
-  it('should handle successful response', async () => {
-    const mockResponse = {
-      timestamp: 1234567890,
-      cards: { holeCards: [], communityCards: [] },
-      stacks: {},
-      pot: { amount: 100 },
-      buttons: { dealer: 'BTN' },
-      positions: {},
-      occlusion: {},
-      actionButtons: {},
-      turnState: { isHeroTurn: true },
-      latency: { total: 10 }
-    };
-
-    mocks.captureFrame.mockImplementation((req: any, cb: any) => {
-      cb(null, mockResponse);
+  it('parses a successful capture', async () => {
+    let receivedLayout = '';
+    const started = await startVisionServer((call, callback) => {
+      receivedLayout = call.request.layoutJson;
+      callback(null, baseOutput);
     });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
 
     const result = await client.captureAndParse();
-    expect(result).toBeDefined();
-    expect(result.timestamp).toBe(1234567890);
+    expect(result.timestamp).toBe(123);
+    expect(result.pot.amount).toBe(100);
+    expect(result.buttons.dealer).toBe('BTN');
+    expect(JSON.parse(receivedLayout).version).toBe('test');
+  });
+
+  it('times out when the server stalls', async () => {
+    const started = await startVisionServer(() => {
+      // Intentionally no callback to simulate a stalled request.
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 50);
+
+    await expect(client.captureAndParse()).rejects.toThrow(/timed out/i);
+  });
+
+  it('propagates gRPC errors', async () => {
+    const started = await startVisionServer((_call, callback) => {
+      const error: ServiceError = Object.assign(
+        new Error('vision offline'),
+        { code: status.UNAVAILABLE },
+      );
+      callback(error, null as unknown as visionGen.VisionOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
+
+    await expect(client.captureAndParse()).rejects.toThrow('vision offline');
+  });
+
+  it('handles partial payload defaults', async () => {
+    const partial: visionGen.VisionOutput = {
+      timestamp: 0,
+      cards: undefined,
+      stacks: {},
+      pot: undefined,
+      buttons: undefined,
+      positions: undefined,
+      occlusion: {},
+      actionButtons: undefined,
+      turnState: undefined,
+      latency: undefined,
+    };
+    const started = await startVisionServer((_call, callback) => {
+      callback(null, partial);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
+
+    const result = await client.captureAndParse();
+    expect(result.cards.holeCards).toEqual([]);
+    expect(result.pot.amount).toBe(0);
+    expect(result.buttons.dealer).toBe('BTN');
+  });
+
+  it('recovers after transient failures', async () => {
+    let attempts = 0;
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      if (attempts === 1) {
+        const error: ServiceError = Object.assign(
+          new Error('temporary'),
+          { code: status.UNAVAILABLE },
+        );
+        callback(error, null as unknown as visionGen.VisionOutput);
+        return;
+      }
+      callback(null, baseOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
+
+    await expect(client.captureAndParse()).rejects.toThrow('temporary');
+    const result = await client.captureAndParse();
     expect(result.pot.amount).toBe(100);
   });
 
-  it('should enforce timeout (client-side)', async () => {
-    // Simulate hanging request by never calling the callback
-    mocks.captureFrame.mockImplementation((req: any, cb: any) => {
-      // Do nothing
+  it('reports health check status', async () => {
+    const started = await startVisionServer((_call, callback) => {
+      callback(null, baseOutput);
     });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
 
-    const promise = client.captureAndParse();
-    
-    // Advance time by 5000ms (default timeout we expect/will implement)
-    vi.advanceTimersByTime(5000);
-
-    await expect(promise).rejects.toThrow(/timeout/i);
-  });
-
-  it('should handle gRPC errors gracefully', async () => {
-    const error = new Error('Connection failed');
-    mocks.captureFrame.mockImplementation((req: any, cb: any) => {
-      cb(error, null);
-    });
-
-    await expect(client.captureAndParse()).rejects.toThrow('Connection failed');
-  });
-
-  it('should handle empty/null result', async () => {
-    mocks.captureFrame.mockImplementation((req: any, cb: any) => {
-      cb(null, null);
-    });
-
-    await expect(client.captureAndParse()).rejects.toThrow(/empty result/i);
-  });
-
-  it('should handle malformed/partial payload safely', async () => {
-    // Missing optional fields should not crash
-    const partialResponse = {
-      // No timestamp, no cards, etc.
-    };
-
-    mocks.captureFrame.mockImplementation((req: any, cb: any) => {
-      cb(null, partialResponse);
-    });
-
-    const result = await client.captureAndParse();
-    expect(result).toBeDefined();
-    // Should use defaults
-    expect(result.cards.holeCards).toEqual([]);
-    expect(result.pot.amount).toBe(0);
+    await expect(client.healthCheck()).resolves.toBe(true);
   });
 });

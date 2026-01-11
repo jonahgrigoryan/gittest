@@ -1,4 +1,8 @@
-import { credentials, type ChannelCredentials } from "@grpc/grpc-js";
+import {
+  credentials,
+  type ChannelCredentials,
+  type ClientUnaryCall,
+} from "@grpc/grpc-js";
 import type { ActionType } from "@poker-bot/shared";
 import { solverGen } from "@poker-bot/shared";
 type SolverClient = solverGen.SolverClient;
@@ -77,23 +81,41 @@ class GrpcSolverClient implements SolverClientAdapter {
   ) {}
 
   solve(request: SubgameRequest): Promise<SubgameResponse> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let call: ClientUnaryCall | undefined;
+
     const callPromise = new Promise<SubgameResponse>((resolve, reject) => {
-      this.client.solve(request, (error, response) => {
+      call = this.client.solve(request, (error, response) => {
         if (error) {
           reject(error);
+          return;
+        }
+        if (!response) {
+          reject(new Error("Solver response was empty"));
           return;
         }
         resolve(response);
       });
     });
 
+    if (this.timeoutMs <= 0) {
+      return callPromise;
+    }
+
     const timeoutPromise = new Promise<SubgameResponse>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(Solver request timed out after {this.timeoutMs}ms));
+      timeoutId = setTimeout(() => {
+        if (call) {
+          call.cancel();
+        }
+        reject(new Error(`Solver request timed out after ${this.timeoutMs}ms`));
       }, this.timeoutMs);
     });
 
-    return Promise.race([callPromise, timeoutPromise]);
+    return Promise.race([callPromise, timeoutPromise]).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
   }
 
   waitForReady(timeoutMs: number = 5000): Promise<void> {
