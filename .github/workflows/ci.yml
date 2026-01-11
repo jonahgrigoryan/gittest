@@ -140,10 +140,8 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cargo-audit (prebuilt)
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-audit@0.22.0
+      - name: Install cargo-audit (supports CVSS v4)
+        run: cargo install --locked cargo-audit@0.22.0
 
       - name: cargo audit (solver)
         run: cargo audit
