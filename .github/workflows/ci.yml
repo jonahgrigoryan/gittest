@@ -152,7 +152,7 @@ jobs:
         with:
           toolchain: "1.85.0"
       - name: Install cargo-audit (compatible with toolchain)
-        run: cargo install --locked cargo-audit@0.22.0
+        run: cargo install cargo-audit --version 0.21.2
 
       - name: cargo audit (solver)
         working-directory: services/solver
