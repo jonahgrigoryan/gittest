@@ -326,3 +326,21 @@ Based on the codebase structure, focus on **integration and end-to-end functiona
    bash
    npx vitest run packages/orchestrator/test/cash-validation/cash-validation.spec.ts
    
+
+## Phase 4: Cash-Game Desync Audit (Player/Table State)
+
+**Status**: Completed
+**Branch**: agent-zero/phase4-desync-audit-20260111
+
+**Audit Targets & Results:**
+1.  **Position Correctness (A)**: Verified that dealer button movement correctly updates Hero's position (BTN -> CO -> MP) across sequential hands using `desync-audit.spec.ts`.
+2.  **Hand Boundary (B)**: Verified that rapid sequential hands (100ms gap) are correctly treated as separate hands with state resets (pot, etc.).
+3.  **State-Sync Robustness (C)**: Verified that `StateSyncTracker` correctly detects impossible state changes (e.g., pot decrease within a hand) and that `GameStateParser` triggers `SafeAction` when these errors occur.
+
+**Deliverables:**
+- New test suite: `packages/orchestrator/test/desync-audit/desync-audit.spec.ts`
+- Fixture generator: `packages/orchestrator/test/desync-audit/fixtures/generate_audit_fixture.ts`
+- Full CI verification passed (`pnpm run ci:verify`).
+
+**Conclusion:**
+The cash-game state tracking is robust against common desync scenarios. The system correctly identifies and handles inconsistent frame deltas, ensuring safety mechanisms are triggered.
