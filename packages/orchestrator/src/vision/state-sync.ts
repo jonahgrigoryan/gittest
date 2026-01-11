@@ -31,7 +31,7 @@ export class StateSyncTracker {
 
     previous.players.forEach((prevPlayer, position) => {
       const current = currentState.players.get(position as Position);
-      if (current && current.stack > prevPlayer.stack + currentState.pot) {
+      if (current && current.stack > prevPlayer.stack + Math.max(0, previous.pot - currentState.pot) + 0.1) {
         errors.push(`Stack increased unexpectedly for position ${position}`);
       }
     });

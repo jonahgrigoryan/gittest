@@ -376,3 +376,32 @@ pnpm --filter @poker-bot/orchestrator exec vitest run test/safety-rehearsals/saf
 - All 5 scenarios must pass.
 - No unhandled promise rejections.
 - Logs should show expected warnings/errors (e.g., "GTO solver failed", "Safe mode entered") but the process should not crash.
+
+## Phase 6: Player/Table State Audit (Cash Games)
+
+**Status**: Completed
+**Branch**: agent-zero/phase6-player-table-state-audit-20260111
+
+**Objective:**
+Harden CASH-game correctness by auditing and stress-testing Player/Table state logic for desynchronization risks (phantom chips, pot leaks, position drift).
+
+**Audit Targets & Results:**
+1.  **Position Stability (A)**: Verified BTN rotation and Hero position inference (BTN -> CO -> MP) across 3 sequential hands.
+2.  **Stack Delta Integrity (B)**: Hardened `StateSyncTracker` to detect "phantom chips" (stack increases without corresponding pot wins). Verified detection of illegal stack jumps.
+3.  **Pot Monotonicity (C)**: Verified that `StateSyncTracker` correctly flags pot decreases within a hand as inconsistencies.
+4.  **Blind/Stack Conservation (D)**: Verified detection of "double blind posting" or stack leaks where chips vanish without entering the pot.
+
+**Deliverables:**
+- **New Test Suite**: `packages/orchestrator/test/state-audit/state-audit.spec.ts`
+- **Fixture Generator**: `packages/orchestrator/test/state-audit/fixtures/generate_audit_fixture.ts`
+- **Code Hardening**: Updated `packages/orchestrator/src/vision/state-sync.ts` to strictly enforce stack-pot conservation.
+- **CI Verification**: `pnpm run ci:verify` passed.
+
+**Runbook: How to Run Audit Tests**
+
+```bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/state-audit/state-audit.spec.ts
+```
+
+**Conclusion:**
+The system now has explicit guards against silent state drift. `StateSyncTracker` is capable of detecting subtle integrity violations like phantom chip injection, ensuring the bot operates on valid game states.
