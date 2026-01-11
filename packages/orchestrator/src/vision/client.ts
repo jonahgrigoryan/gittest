@@ -1,4 +1,4 @@
-import { credentials, Metadata } from "@grpc/grpc-js";
+import { credentials, Metadata, type ClientUnaryCall } from "@grpc/grpc-js";
 import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import { vision, visionGen } from "@poker-bot/shared";
 const VisionServiceClient = visionGen.VisionServiceClient;
@@ -33,19 +33,24 @@ export class VisionClient {
   private readonly client: VisionServiceClientInstance;
 
   private readonly layoutJson: string;
+  private readonly timeoutMs: number;
 
-  constructor(serviceUrl: string, layoutPack: vision.LayoutPack) {
+  constructor(serviceUrl: string, layoutPack: vision.LayoutPack, timeoutMs: number = 5000) {
     this.client = new VisionServiceClient(
       serviceUrl,
       credentials.createInsecure(),
     );
     this.layoutJson = JSON.stringify(layoutPack);
+    this.timeoutMs = timeoutMs;
   }
 
   async captureAndParse(): Promise<vision.VisionOutput> {
     const request = { layoutJson: this.layoutJson };
-    const response = await new Promise<RpcVisionOutput>((resolve, reject) => {
-      this.client.captureFrame(
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let call: ClientUnaryCall | undefined;
+
+    const callPromise = new Promise<RpcVisionOutput>((resolve, reject) => {
+      call = this.client.captureFrame(
         request,
         (error: Error | null, result?: RpcVisionOutput) => {
           if (error) {
@@ -60,6 +65,28 @@ export class VisionClient {
         },
       );
     });
+
+    if (this.timeoutMs <= 0) {
+      const response = await callPromise;
+      return this.transformVisionOutput(response);
+    }
+
+    const timeoutPromise = new Promise<RpcVisionOutput>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        if (call) {
+          call.cancel();
+        }
+        reject(new Error(`Vision capture timed out after ${this.timeoutMs}ms`));
+      }, this.timeoutMs);
+    });
+
+    const response = await Promise.race([callPromise, timeoutPromise]).finally(
+      () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      },
+    );
     return this.transformVisionOutput(response);
   }
 
