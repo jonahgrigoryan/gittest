@@ -405,3 +405,38 @@ pnpm --filter @poker-bot/orchestrator exec vitest run test/state-audit/state-aud
 
 **Conclusion:**
 The system now has explicit guards against silent state drift. `StateSyncTracker` is capable of detecting subtle integrity violations like phantom chip injection, ensuring the bot operates on valid game states.
+
+## Phase 7: Golden Replay Pack + Regression Gate
+
+**Status**: Completed
+**Branch**: agent-zero/phase7-golden-replay-pack-20260111
+
+**Objective:**
+Build a curated "golden replay pack" of 8-12 nightmare scenarios that stress-test the cash game guards (StateSyncTracker, SafeMode, Invariant Checks). These run on every PR as a permanent regression gate.
+
+**Scenarios & Expectations:**
+
+| ID | Scenario | Expectation |
+|----|----------|-------------|
+| **G01** | Seat Wobble | Tracker detects missing player; recovers cleanly when player returns. |
+| **G02** | Rapid Hand Transitions | Tracker resets state cleanly on new hand (<1s gap); no false positives. |
+| **G04** | Position Drift | Tracker detects unexpected button movement mid-hand. |
+| **G05** | Phantom Chips | Tracker detects stack increase without corresponding pot decrease. |
+| **G06** | Pot Leak | Tracker detects pot decrease mid-hand without showdown. |
+| **G08** | Stack Reload | Tracker allows stack increase between hands (clean reset). |
+| **G10** | Blind Posting Edge Case | Tracker accepts partial blind posting (all-in) without error. |
+| **G11** | Street Transition | Tracker handles rapid street changes (Flop->Turn->River) without false positives. |
+
+**Deliverables:**
+- **Fixture Generator**: `packages/orchestrator/test/golden-replay/fixtures/generate_golden_fixture.ts`
+- **Test Suite**: `packages/orchestrator/test/golden-replay/golden-replay.spec.ts`
+- **CI Integration**: Included in `pnpm run ci:verify`.
+
+**Runbook: How to Run Golden Replay Tests**
+
+```bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/golden-replay/golden-replay.spec.ts
+```
+
+**Conclusion:**
+The Golden Replay Pack provides a robust regression gate for critical cash game invariants. It ensures that the `StateSyncTracker` and system guards remain effective against known failure modes like phantom chips, position drift, and rapid state transitions.
