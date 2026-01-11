@@ -470,3 +470,29 @@ pnpm --filter @poker-bot/orchestrator exec vitest run test/vision/client.spec.ts
 
 **Conclusion:**
 The Vision and Solver clients now have robust, deterministic tests ensuring they handle timeouts and errors gracefully, preventing system hangs during network issues.
+
+## Phase 9: Time Budget & Preemption Hardening
+
+**Status**: Completed
+**Branch**: agent-zero/phase9-time-budget-hardening-20260111
+
+**Objective:**
+Harden TimeBudgetTracker edge cases so time allocations are safe, monotonic, and never go negative.
+
+**Key Improvements:**
+1.  **Overrun Cascades**: Added deterministic tests proving overruns clamp component budgets at zero.
+2.  **Global Preemption**: Verified `shouldPreemptTotal` behavior around the 100ms threshold.
+3.  **Budget Safety**: Ensured remaining budgets never return negative values across components.
+
+**Deliverables:**
+- **Extended Test Suite**: packages/orchestrator/test/budget/timeBudgetTracker.spec.ts
+- **CI Verification**: pnpm run ci:verify passed.
+
+**Runbook: How to Run Time Budget Tests**
+
+```bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/budget/timeBudgetTracker.spec.ts
+```
+
+**Conclusion:**
+Time budget guardrails now have regression coverage for cascade overruns and global preemption, preventing negative allocations under heavy load.
