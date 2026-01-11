@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { createConfigManager } from "@poker-bot/shared";
+import { createConfigManager, ConfigurationManager } from "@poker-bot/shared";
 import type { BotConfig } from "@poker-bot/shared";
 import type { AgentModelConfig } from "@poker-bot/shared";
 import { CacheLoader } from "../solver";
@@ -108,10 +108,9 @@ async function main() {
     if (transports.size > 0) {
       agentCoordinator = new AgentCoordinatorService({
         // Use config proxy to inject synthetic models
-        configManager: (useMockAgents
+        configManager: useMockAgents
           ? createMockConfigProxy(configManager, agentModels)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          : configManager) as any,
+          : configManager,
         transports,
         timeBudgetTracker: sharedTracker,
         logger: console
@@ -264,18 +263,22 @@ function createSyntheticMockModel(): AgentModelConfig {
 }
 
 function createMockConfigProxy(
-  configManager: { get: <T>(key: string) => T },
-  injectedModels: AgentModelConfig[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any {
-  return {
-    get: <T>(key: string): T => {
-      if (key === "agents.models") {
-        return injectedModels as T;
+  configManager: ConfigurationManager,
+  injectedModels: AgentModelConfig[],
+): ConfigurationManager {
+  return new Proxy(configManager, {
+    get(target, prop, receiver) {
+      if (prop === "get") {
+        return <T>(key: string): T => {
+          if (key === "agents.models") {
+            return injectedModels as unknown as T;
+          }
+          return target.get<T>(key);
+        };
       }
-      return configManager.get<T>(key);
-    }
-  };
+      return Reflect.get(target, prop, receiver);
+    },
+  });
 }
 
 function createAgentTransportsForReplay(models: AgentModelConfig[], useMock: boolean): Map<string, AgentTransport> {

@@ -267,3 +267,42 @@ Based on the codebase structure, focus on **integration and end-to-end functiona
 - Update tests when fixing bugs
 - Document any breaking changes
 
+
+## Player/Table State Map (Phase 2A Audit)
+
+### 1. Derivation & Mutation
+| State Component | Source (Vision) | Mutation/Inference Logic |
+|----------------|-----------------|--------------------------|
+| **Players** | stacks (Map) | Filtered by valid position names. |
+| **Stacks** | stacks (Map) | Direct mapping. No smoothing/averaging in Parser. |
+| **Cards** | cards.holeCards, cards.communityCards | Hero cards inferred from previousState if missing & inference enabled. |
+| **Pot** | pot.amount | Direct mapping. |
+| **Button** | buttons.dealer | Defaults to previousState.button or "BTN". |
+| **Hero Pos** | N/A | Derived from previousState.hero or calculated from Button (defaulting to SB relative to BTN). |
+| **Blinds** | **MISSING** | **Critical Gap**: Only derived from previousState or default {0,0}. No vision parsing. |
+| **Street** | Derived from Community Card count | 0->Pre, 3->Flop, 4->Turn, 5->River. Fallback to previousState. |
+
+### 2. State Synchronization (StateSyncTracker)
+- **Drift Detection**:
+  - **Pot Decrease**: Flags error if pot drops > 0.001 (unless new hand).
+  - **Stack Increase**: Flags error if stack grows more than pot size (chip injection).
+- **Reset Logic**:
+  - **New Hand**: Detected via Street reset (Preflop), Card count drop, or Hand ID change.
+  - **Action**: Clears history on new hand.
+- **Behavior**: Passive. Adds errors to parseErrors. Does **not** correct the state.
+
+### 3. Invariants & Enforcement
+| Invariant | Enforced At | Mechanism |
+|-----------|-------------|-----------|
+| **Legal Actions** | legal-actions.ts | Computed based on stack, pot, and street. |
+| **Street Progression** | parser.ts | Strictly tied to card count. |
+| **Stack Integrity** | state-sync.ts | Checks for impossible stack increases. |
+| **Forced Actions** | forced-actions.ts | Overrides decision if Blind/All-in forced. |
+
+### 4. Top Desync Risks
+1.  **Blind Level Stagnation**: Blinds are never updated from vision. Tournament play will fail when levels change.
+    - *Validation*: Test fixture with changing blinds in vision output -> verify state update (currently fails).
+2.  **Position Lock-in**: Hero position relies on previousState. If initialized wrong, it persists.
+    - *Validation*: Test sequence where button moves but hero position remains stuck if not explicitly re-detected.
+3.  **Hand Boundary Blur**: isNewHand relies on street/cards. Rapid restarts or replay glitches might merge two hands.
+    - *Validation*: Replay harness with identical hand IDs but different cards.

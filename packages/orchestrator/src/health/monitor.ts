@@ -67,6 +67,10 @@ export class HealthMonitor {
           checkedAt: status.checkedAt ?? Date.now()
         });
       } catch (error) {
+        this.options.logger?.error?.("Health check failed", {
+          component: def.name,
+          error: error instanceof Error ? error : String(error)
+        });
         statuses.push({
           component: def.name,
           state: "failed",
