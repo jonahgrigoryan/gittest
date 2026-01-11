@@ -44,9 +44,9 @@ jobs:
       - run: python -V
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@1.82.0
+        uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          toolchain: "1.85.0"
 
       - run: pnpm run ci:verify
 
@@ -148,6 +148,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.85.0
+
+      - run: rustc -V && cargo -V
 
       - name: Install cargo-audit (compatible with toolchain)
         run: cargo install --locked cargo-audit@0.22.0
