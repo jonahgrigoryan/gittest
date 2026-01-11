@@ -126,6 +126,8 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.85.0"
     steps:
       - uses: actions/checkout@v4
 
@@ -148,11 +150,9 @@ jobs:
         run: mkdir -p sbom
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: "1.85.0"
+        uses: dtolnay/rust-toolchain@1.85.0
       - name: Install cargo-audit (compatible with toolchain)
-        run: cargo install cargo-audit --version 0.21.2
+        run: cargo install cargo-audit --version 0.22.0
 
       - name: cargo audit (solver)
         working-directory: services/solver
