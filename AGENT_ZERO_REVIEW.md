@@ -306,3 +306,23 @@ Based on the codebase structure, focus on **integration and end-to-end functiona
     - *Validation*: Test sequence where button moves but hero position remains stuck if not explicitly re-detected.
 3.  **Hand Boundary Blur**: isNewHand relies on street/cards. Rapid restarts or replay glitches might merge two hands.
     - *Validation*: Replay harness with identical hand IDs but different cards.
+
+## Phase 3: Cash Validation
+
+**Added:**
+- **Fixture Generator**: packages/orchestrator/test/cash-validation/fixtures/generate_fixture.ts creates a deterministic 3-hand 6-max cash game session.
+- **Validation Tests**: packages/orchestrator/test/cash-validation/cash-validation.spec.ts validates:
+  - State invariants (pot, stacks, blinds).
+  - Position rotation (BTN -> CO -> MP for Hero).
+  - Stack updates based on game outcomes.
+  - State synchronization via StateSyncTracker.
+
+**How to Run:**
+1. Generate the fixture (if needed):
+   bash
+   npx tsx packages/orchestrator/test/cash-validation/fixtures/generate_fixture.ts
+   
+2. Run the tests:
+   bash
+   npx vitest run packages/orchestrator/test/cash-validation/cash-validation.spec.ts
+   
