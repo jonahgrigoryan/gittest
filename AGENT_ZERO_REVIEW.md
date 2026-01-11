@@ -344,3 +344,35 @@ Based on the codebase structure, focus on **integration and end-to-end functiona
 
 **Conclusion:**
 The cash-game state tracking is robust against common desync scenarios. The system correctly identifies and handles inconsistent frame deltas, ensuring safety mechanisms are triggered.
+
+## Phase 5: Safety Rehearsals (Cash Games)
+
+**Status**: Completed
+**Branch**: agent-zero/phase5-safety-rehearsals-20260111
+
+**Objective:**
+Strengthen confidence in cash games by adding deterministic chaos and recovery rehearsals to prove that failures degrade safely without corrupting state.
+
+**Rehearsal Scenarios & Results:**
+1.  **Solver Failure**: Verified that when the solver throws/timeouts, the system falls back to a safe action (check/fold) and marks `solverTimedOut: true`.
+2.  **Agent Failure**: Verified that when the agent coordinator fails, the system uses a stubbed agent output and proceeds with a GTO-based or safe decision.
+3.  **Vision Desync**: Verified that impossible state transitions (e.g., pot decrease) are detected by `StateSyncTracker`, triggering `SafeAction` via `GameStateParser`.
+4.  **Preemption**: Verified that `TimeBudgetTracker` errors are handled gracefully, defaulting to a safe path (GTO-only or SafeAction).
+5.  **Recovery**: Verified `SafeModeController` latching behavior and manual exit requirements.
+
+**Deliverables:**
+- **New Test Suite**: `packages/orchestrator/test/safety-rehearsals/safety-rehearsals.spec.ts`
+- **CI Verification**: `pnpm run ci:verify` passed.
+
+**Runbook: How to Run Safety Rehearsals**
+
+To run the safety rehearsals locally:
+
+```bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/safety-rehearsals/safety-rehearsals.spec.ts
+```
+
+**Pass Criteria:**
+- All 5 scenarios must pass.
+- No unhandled promise rejections.
+- Logs should show expected warnings/errors (e.g., "GTO solver failed", "Safe mode entered") but the process should not crash.
