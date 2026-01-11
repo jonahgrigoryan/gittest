@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { SimulatorExecutor } from "../src/simulators/simulator";
 import type { StrategyDecision } from "@poker-bot/shared";
+import type { ActionVerifier } from "../src/verifier";
 
 const baseDecision: StrategyDecision = {
   action: {
@@ -81,5 +82,62 @@ describe("SimulatorExecutor", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("API error");
   });
-});
 
+  describe("Phase 10: Executor Error Paths", () => {
+    // Scenario 3: Vision/API timeout (simulated via fetch rejection)
+    it("Scenario 3: handles API timeout gracefully", async () => {
+      // Deterministic mock: reject immediately to simulate timeout/error
+      (globalThis.fetch as any).mockRejectedValueOnce(new Error("Simulator API timeout"));
+
+      const executor = new SimulatorExecutor("http://localhost:9000/api");
+      const result = await executor.execute(baseDecision, { timeoutMs: 1000, verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Simulator API call failed");
+      expect(result.error).toContain("Simulator API timeout");
+    });
+
+    // Scenario 5: Retry logic reaching max retries
+    it("Scenario 5: retries verification exactly maxRetries times then fails", async () => {
+      const mockVerifier = {
+        verifyAction: vi.fn().mockResolvedValue({
+          passed: false,
+          mismatchReason: "State mismatch"
+        })
+      } as unknown as ActionVerifier;
+
+      const executor = new SimulatorExecutor("http://localhost:9000/api", mockVerifier);
+
+      // Execute with maxRetries = 2
+      const result = await executor.execute(baseDecision, { 
+        verifyAction: true, 
+        maxRetries: 2,
+        timeoutMs: 1000
+      });
+
+      // Initial attempt + 2 retries = 3 calls to API (fetch)
+      // Verification happens after each successful API call
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+      expect(mockVerifier.verifyAction).toHaveBeenCalledTimes(3);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Verification failed");
+      expect(result.verificationResult?.retryCount).toBe(1);
+    });
+
+    // Scenario 6: Action amount validation for raises
+    it("Scenario 6: rejects invalid raise amounts early", async () => {
+      const invalidDecision = { 
+        ...baseDecision, 
+        action: { ...baseDecision.action, amount: -10 } 
+      };
+
+      const executor = new SimulatorExecutor("http://localhost:9000/api");
+      const result = await executor.execute(invalidDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Raise action requires positive amount");
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+  });
+});
