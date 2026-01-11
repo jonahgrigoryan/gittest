@@ -44,7 +44,7 @@ jobs:
       - run: python -V
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.85.0"
           components: rustfmt, clippy
@@ -148,7 +148,7 @@ jobs:
         run: mkdir -p sbom
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.85.0"
 
