@@ -72,3 +72,148 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
 - When prompt or schema changes affect the solver interface, regenerate shared
   proto stubs with `pnpm run proto:gen` and re-run `pnpm run build`.
 - Treat every task as production work: no scaffolding, no placeholder code, and no partial implementations. Coding agents must follow the task requirements end-to-end so downstream collaborators can build on the result immediately.
+
+## Cash-Game Readiness Playbook (Phases 8-12)
+
+Use this section as the authoritative runbook. When the user says "start phase X",
+follow the steps and scope below without re-negotiating the plan.
+
+### Global Workflow
+- Base branch: `agent-zero/phase7-golden-replay-pack-20260111` until a later phase
+  branch is merged; if unsure, confirm the latest phase branch with the user.
+- Branch naming:
+  - Phase 8: `agent-zero/phase8-vision-solver-client-integration-YYYYMMDD`
+  - Phase 9: `agent-zero/phase9-time-budget-preemption-hardening-YYYYMMDD`
+  - Phase 10: `agent-zero/phase10-executor-action-verification-YYYYMMDD`
+  - Phase 11: `agent-zero/phase11-observability-health-controllers-YYYYMMDD`
+  - Phase 12: `agent-zero/phase12-decision-pipeline-e2e-YYYYMMDD`
+- Commit style: one focused commit per phase unless explicitly asked otherwise.
+- Always keep `git status -sb` clean after tests; delete generated fixtures if any.
+- Default test command for new specs:
+  - `pnpm --filter @poker-bot/orchestrator exec vitest run <spec path>`
+
+### Phase 8: Vision & Solver Client Integration (Priority: HIGH)
+Scope:
+- Add vision client communication tests.
+- Add solver gRPC client tests.
+- Test timeout/retry behavior.
+- Test network failure recovery.
+- Test partial response handling.
+- Test connection failures and reconnection.
+
+Implementation notes:
+- Use in-process gRPC servers with `@grpc/grpc-js` and generated service defs:
+  `visionGen.VisionServiceService`, `solverGen.SolverService`. Bind to
+  `127.0.0.1:0` and close in `afterAll`.
+- Add optional deadline + retry support in client methods if needed to test
+  timeout/retry behavior. Treat `UNAVAILABLE` and `DEADLINE_EXCEEDED` as
+  retryable; cap at 1 retry with a short backoff.
+- Vision tests should validate: `captureAndParse` mapping defaults, action button
+  transforms, health check success/fail, empty result handling, and server down.
+- Solver tests should validate: `solve` happy path, `waitForReady` timeout,
+  error propagation, normalization of unknown action types, and server restart.
+
+Files:
+- `packages/orchestrator/src/vision/client.ts`
+- `packages/orchestrator/src/solver_client/client.ts`
+- `packages/orchestrator/test/vision/client.spec.ts` (new)
+- `packages/orchestrator/test/solver/client.spec.ts` (new)
+
+Commit message:
+- `feat(test): add vision + solver client integration coverage`
+
+### Phase 9: Time Budget & Preemption Hardening (Priority: HIGH)
+Scope:
+- Test `applyOverrun()` cascade (can reduce GTO budget to 0).
+- Test component allocation never goes negative.
+- Test preemption with <100ms remaining.
+- Ensure downstream components never go negative.
+- Add global preemption signal when total budget <100ms.
+
+Implementation notes:
+- Extend `TimeBudgetTracker` with a global preempt helper (e.g.,
+  `shouldPreemptTotal(thresholdMs = 100)`), or explicitly test existing
+  `remaining()` logic in the StrategyEngine preemption path.
+- Add tests for `recordActual()` with overrun cascades and `remaining()` clamps.
+
+Files:
+- `packages/orchestrator/src/budget/timeBudgetTracker.ts`
+- `packages/orchestrator/test/budget/timeBudgetTracker.spec.ts` (extend)
+
+Commit message:
+- `feat(test): harden time budget preemption edge cases`
+
+### Phase 10: Executor & Action Verification (Priority: MEDIUM-HIGH)
+Scope:
+- Test compliance check failing.
+- Test window manager returning null.
+- Test vision timeout during turn-state check.
+- Test bet sizing failure in raise actions.
+- Test retry logic reaching max retries.
+- Verify action amount validation for raises.
+
+Implementation notes:
+- Add unit tests for both `SimulatorExecutor` and `ResearchUIExecutor`.
+- Mock `ComplianceChecker`, `WindowManager`, and `ActionVerifier` to force error
+  paths (null window, verifier mismatch, and retry cap).
+- Validate raise sizing errors surface as failures and are not swallowed.
+
+Files:
+- `packages/executor/src/simulators/simulator.ts`
+- `packages/executor/src/research_bridge.ts`
+- `packages/executor/test/*` (extend existing or add new)
+
+Commit message:
+- `feat(test): cover executor error paths and retries`
+
+### Phase 11: Observability & Health Controllers (Priority: MEDIUM)
+Scope:
+- Add unit tests for `SafeModeController`.
+- Add unit tests for `PanicStopController`.
+- Test `AlertManager`.
+- Test `ObservabilityService`.
+- Test multi-trigger scenarios and state transitions.
+
+Implementation notes:
+- Add tests for idempotent transitions (already in safe mode, already panic).
+- Verify alert emission on threshold crossings and config updates.
+- Exercise `ObservabilityService.applyConfig()` and `flush()` behavior.
+
+Files:
+- `packages/orchestrator/src/health/safeModeController.ts`
+- `packages/orchestrator/src/health/panicStopController.ts`
+- `packages/orchestrator/src/observability/alertManager.ts`
+- `packages/orchestrator/src/observability/service.ts`
+- `packages/orchestrator/test/health/*` (extend)
+- `packages/orchestrator/test/observability/*` (new)
+
+Commit message:
+- `feat(test): add observability + health controller coverage`
+
+### Phase 12: Decision Pipeline E2E & Final Integration (Priority: MEDIUM)
+Scope:
+- Decision pipeline E2E test for `decision/pipeline.ts`.
+- Test GTO solver timeout with 0ms budget.
+- Test agent coordinator timeout.
+- Test empty legal actions scenario.
+- Test concurrent GTO + agent budget exhaustion.
+- Fix `createSafeFallbackSolution()` to return proper frequency distribution.
+- Validate GTO dist has >0 actions before blending.
+- Final integration and stress testing (CI-smoke + long-run).
+- Documentation updates and sign-off.
+
+Implementation notes:
+- Create a CI-safe integration suite (50-100 hands) and guard 1000+ hand stress
+  with an env flag (e.g., `E2E_LONG_RUN=1`) so CI remains fast.
+- Update `AGENT_ZERO_ISSUES.md` and `AGENT_ZERO_REVIEW.md` with phase status.
+- Keep performance benchmarks in the long-run path only.
+
+Files:
+- `packages/orchestrator/src/decision/pipeline.ts`
+- `packages/orchestrator/test/decision/pipeline.spec.ts` (new)
+- `packages/orchestrator/test/integration/*` (new)
+- `AGENT_ZERO_ISSUES.md`
+- `AGENT_ZERO_REVIEW.md`
+
+Commit message:
+- `feat(test): add decision pipeline e2e + final integration gate`
