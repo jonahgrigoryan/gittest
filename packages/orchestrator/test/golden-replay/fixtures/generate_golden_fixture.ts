@@ -1,16 +1,66 @@
 import fs from 'node:fs';
 import { createParsedState } from '../../utils/factories';
 import { serializeGameState } from '@poker-bot/shared';
-import type { Position, GameState } from '@poker-bot/shared';
+import type {
+  Action,
+  GameState,
+  HandRecord,
+  Position,
+  SerializedStrategyDecision,
+  StrategyTimingBreakdown
+} from '@poker-bot/shared';
 
-// Helper to create a record wrapper
-function createRecord(serializedState: unknown, timestamp: number, handId: string): unknown {
+const SESSION_ID = 'golden-replay-session';
+const CONFIG_HASH = 'golden-replay';
+const BASE_TIMING: StrategyTimingBreakdown = {
+  gtoTime: 0,
+  agentTime: 0,
+  synthesisTime: 0,
+  totalTime: 0
+};
+
+function createDecision(state: GameState, rngSeed: number): SerializedStrategyDecision {
+  const action: Action = {
+    type: 'check',
+    position: state.positions.hero,
+    street: state.street
+  };
+
   return {
-    handId,
-    timestamp,
-    rawGameState: serializedState,
-    metadata: { modelVersions: {} },
-    sessionId: 'golden-replay-session'
+    action,
+    reasoning: {
+      gtoRecommendation: [],
+      agentRecommendation: [],
+      blendedDistribution: [],
+      alpha: 1,
+      divergence: 0,
+      riskCheckPassed: true,
+      sizingQuantized: true
+    },
+    timing: { ...BASE_TIMING },
+    metadata: {
+      rngSeed,
+      configHash: CONFIG_HASH
+    }
+  };
+}
+
+function createRecord(state: GameState, createdAt: number, rngSeed: number): HandRecord {
+  const rawGameState = serializeGameState(state);
+
+  return {
+    handId: state.handId,
+    sessionId: SESSION_ID,
+    createdAt,
+    rawGameState,
+    decision: createDecision(state, rngSeed),
+    timing: { ...BASE_TIMING },
+    metadata: {
+      configHash: CONFIG_HASH,
+      rngSeed,
+      redactionApplied: false,
+      modelVersions: {}
+    }
   };
 }
 
@@ -32,9 +82,9 @@ function getRole(seatIndex: number, btnIndex: number): Position {
 }
 
 export function generateGoldenFixture(outputPath: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const records: any[] = [];
-  let currentTime = Date.now();
+  const records: HandRecord[] = [];
+  let currentTime = 1700000000000;
+  let rngSeed = 9000;
 
   // --- G01: Seat Wobble ---
   // Player sits out then returns mid-session
@@ -54,7 +104,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G01'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 2000;
 
   // Frame 2: UTG disappears
@@ -68,7 +119,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G01'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 2000;
 
   // Frame 3: UTG returns
@@ -80,7 +132,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G01'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -95,7 +148,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G02-A'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 500; // Only 500ms gap
 
   // Hand G02-B
@@ -107,7 +161,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G02-B'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -123,7 +178,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G04'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 1000;
 
   // Frame 2: BTN moves to P1 (SB role) unexpectedly
@@ -138,7 +194,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'SB', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G04'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -154,7 +211,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G05'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 1000;
 
   // Frame 2: BTN stack jumps +5, Pot same
@@ -169,7 +227,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G05'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -185,7 +244,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G06'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 1000;
 
   // Frame 2: Pot 15
@@ -197,7 +257,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G06'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -214,7 +275,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G08-A'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 5000;
 
   // Hand G08-B: Starts with reloaded stack
@@ -228,7 +290,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G08-B'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -238,7 +301,22 @@ export function generateGoldenFixture(outputPath: string) {
   let playersMapPartial = new Map(playersMap);
   playersMapPartial.set('SB', { stack: 0.2 }); // Less than 0.5 SB
 
-  // Frame 1: Preflop, SB is all-in for 0.2
+  // Frame 1: BB posted, SB short stack not yet posted
+  state = createParsedState({
+    handId: 'hand-G10',
+    street: 'preflop',
+    pot: BB_AMT,
+    players: playersMapPartial,
+    positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
+    blinds: { small: SB_AMT, big: BB_AMT }
+  });
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
+  currentTime += 500;
+
+  // Frame 2: SB posts partial blind (all-in)
+  playersMapPartial = new Map(playersMapPartial);
+  playersMapPartial.set('SB', { stack: 0 });
   state = createParsedState({
     handId: 'hand-G10',
     street: 'preflop',
@@ -247,7 +325,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G10'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 60000;
 
 
@@ -263,7 +342,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G11'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 100; // 100ms gap
 
   // Frame 2: Turn
@@ -275,7 +355,8 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G11'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
+  rngSeed += 1;
   currentTime += 100; // 100ms gap
 
   // Frame 3: River
@@ -287,7 +368,7 @@ export function generateGoldenFixture(outputPath: string) {
     positions: { hero: 'BTN', button: 'BTN', smallBlind: 'SB', bigBlind: 'BB' },
     blinds: { small: SB_AMT, big: BB_AMT }
   });
-  records.push(createRecord(serializeGameState(state as unknown as GameState), currentTime, 'hand-G11'));
+  records.push(createRecord(state as unknown as GameState, currentTime, rngSeed));
   currentTime += 60000;
 
   const content = records.map(r => JSON.stringify(r)).join('\n');

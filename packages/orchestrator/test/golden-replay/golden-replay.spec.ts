@@ -68,8 +68,8 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     }
     expect(records.length).toBe(2);
 
-    const t1 = records[0].timestamp;
-    const t2 = records[1].timestamp;
+    const t1 = records[0].createdAt;
+    const t2 = records[1].createdAt;
     const diff = t2 - t1;
 
     expect(diff).toBeLessThan(1000);
@@ -198,16 +198,20 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
         records.push(record);
       }
     }
-    expect(records.length).toBe(1);
+    expect(records.length).toBe(2);
 
     const tracker = new StateSyncTracker();
     const s1 = deserializeGameState(records[0].rawGameState);
     const p1 = { ...s1, parseErrors: [], missingElements: [], inferredValues: {} } as any;
+    tracker.addFrame(p1);
+
+    const s2 = deserializeGameState(records[1].rawGameState);
+    const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
     // Should accept partial blind posting (all-in)
-    const errors = tracker.detectInconsistencies(p1);
+    const errors = tracker.detectInconsistencies(p2);
     expect(errors).toEqual([]);
-    tracker.addFrame(p1);
+    tracker.addFrame(p2);
   });
 
   it('G11: Street Transition Under Pressure', async () => {
