@@ -38,22 +38,25 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     // Frame 1: Full table
     const s1 = deserializeGameState(records[0].rawGameState);
     const p1 = { ...s1, parseErrors: [], missingElements: [], inferredValues: {} } as any;
-    tracker.addFrame(p1);
     expect(tracker.detectInconsistencies(p1)).toEqual([]);
+    tracker.addFrame(p1);
 
     // Frame 2: UTG Missing
     const s2 = deserializeGameState(records[1].rawGameState);
     const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
-    // Should not crash, might report inconsistency
+    // Should report missing player
     const errors = tracker.detectInconsistencies(p2);
-    expect(errors).toBeDefined();
+    expect(errors.some(e => e.includes('Player at UTG missing'))).toBe(true);
+    tracker.addFrame(p2);
 
     // Frame 3: UTG Returns
     const s3 = deserializeGameState(records[2].rawGameState);
     const p3 = { ...s3, parseErrors: [], missingElements: [], inferredValues: {} } as any;
+    // Returning player is fine, no error expected as previous frame didn't have UTG to compare stack against
     const errors3 = tracker.detectInconsistencies(p3);
-    expect(errors3).toBeDefined();
+    expect(errors3).toEqual([]);
+    tracker.addFrame(p3);
   });
 
   it('G02: Rapid Hand Transitions (< 1s between hands)', async () => {
@@ -71,7 +74,6 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
 
     expect(diff).toBeLessThan(1000);
 
-    // Ensure tracker handles new hand ID correctly even with short gap
     const tracker = new StateSyncTracker();
     const s1 = deserializeGameState(records[0].rawGameState);
     const p1 = { ...s1, parseErrors: [], missingElements: [], inferredValues: {} } as any;
@@ -80,15 +82,10 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const s2 = deserializeGameState(records[1].rawGameState);
     const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
-    // This is a new hand, so tracker should reset internal state or handle it gracefully
-    // We simulate the orchestrator logic which would likely reset the tracker or the tracker handles handId change
-    // StateSyncTracker usually tracks within a hand or session. If it tracks session, it should handle handId change.
-    // Let's check if it throws or reports error.
+    // New hand detected -> History cleared -> No errors (Clean Reset)
     const errors = tracker.detectInconsistencies(p2);
-    // If handId changed, it might not report inconsistency between hands if logic supports it.
-    // But if it compares stack across hands, it might flag something if not reset.
-    // For this test, we just ensure it runs.
-    expect(errors).toBeDefined();
+    expect(errors).toEqual([]);
+    tracker.addFrame(p2);
   });
 
   it('G04: Position Drift (BTN marker moves unexpectedly)', async () => {
@@ -112,15 +109,8 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
     const errors = tracker.detectInconsistencies(p2);
-    // This should definitely be flagged as an inconsistency or at least detected
-    // The tracker checks for "Button moved mid-hand" if implemented, or just general state consistency.
-    // If not explicitly checked, this test documents that we *want* to catch it.
-    // For now, we expect some error or at least successful execution.
-    // If StateSyncTracker doesn't check button consistency mid-hand, this might pass with empty errors.
-    // Let's assume we want to see if it catches it.
-    // If it doesn't, we might need to enhance StateSyncTracker, but the task is to build the TEST SUITE.
-    // So we verify the test runs.
-    expect(errors).toBeDefined();
+    expect(errors.some(e => e.includes('Button moved unexpectedly'))).toBe(true);
+    tracker.addFrame(p2);
   });
 
   it('G05: Phantom Chips (Stack increases without pot decrease)', async () => {
@@ -146,6 +136,7 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const errors = tracker.detectInconsistencies(p2);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some(e => e.includes('Stack increased unexpectedly'))).toBe(true);
+    tracker.addFrame(p2);
   });
 
   it('G06: Pot Leak (Pot decreases mid-hand)', async () => {
@@ -171,6 +162,7 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const errors = tracker.detectInconsistencies(p2);
     expect(errors.length).toBeGreaterThan(0);
     expect(errors.some(e => e.includes('Pot decreased'))).toBe(true);
+    tracker.addFrame(p2);
   });
 
   it('G08: Stack Reload Mid-Session', async () => {
@@ -193,11 +185,10 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const s2 = deserializeGameState(records[1].rawGameState);
     const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
-    // Since it's a new hand, stack increase should be allowed (reload)
-    // The tracker should NOT flag this as an error if it handles hand transitions correctly.
+    // New hand -> clean reset
     const errors = tracker.detectInconsistencies(p2);
-    // We expect NO errors for valid reload between hands
     expect(errors).toEqual([]);
+    tracker.addFrame(p2);
   });
 
   it('G10: Blind Posting Edge Case (Partial stack)', async () => {
@@ -214,9 +205,9 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const p1 = { ...s1, parseErrors: [], missingElements: [], inferredValues: {} } as any;
 
     // Should accept partial blind posting (all-in)
-    tracker.addFrame(p1);
     const errors = tracker.detectInconsistencies(p1);
     expect(errors).toEqual([]);
+    tracker.addFrame(p1);
   });
 
   it('G11: Street Transition Under Pressure', async () => {
@@ -240,11 +231,13 @@ describe('Phase 7: Golden Replay Pack Regression Gate', () => {
     const p2 = { ...s2, parseErrors: [], missingElements: [], inferredValues: {} } as any;
     let errors = tracker.detectInconsistencies(p2);
     expect(errors).toEqual([]);
+    tracker.addFrame(p2); // Add frame so next comparison is valid
 
     // River (100ms later)
     const s3 = deserializeGameState(records[2].rawGameState);
     const p3 = { ...s3, parseErrors: [], missingElements: [], inferredValues: {} } as any;
     errors = tracker.detectInconsistencies(p3);
     expect(errors).toEqual([]);
+    tracker.addFrame(p3);
   });
 });
