@@ -496,3 +496,36 @@ pnpm --filter @poker-bot/orchestrator exec vitest run test/budget/timeBudgetTrac
 
 **Conclusion:**
 Time budget guardrails now have regression coverage for cascade overruns and global preemption, preventing negative allocations under heavy load.
+
+## Phase 10: Executor Error Paths & Verification
+
+**Status**: Completed
+**Branch**: agent-zero/phase10-executor-action-verification-20260111
+
+**Objective:**
+Harden the Executor layer by adding deterministic unit tests that cover critical failure paths and retry behavior. Ensure failures are surfaced (not swallowed), retries cap correctly, and raise sizing/amount validation is enforced.
+
+**Key Improvements:**
+1.  **SimulatorExecutor**: Updated to return failure on verification exhaustion and enforce strict raise amount validation (including non-finite values like NaN/Infinity).
+2.  **ResearchUIExecutor**: Added early raise amount validation (including non-finite values), bet sizing failure surfacing, and retry limit enforcement.
+3.  **Deterministic Tests**: Added comprehensive test suites covering:
+    - Compliance check failures
+    - Window manager errors
+    - Vision/turn-state timeouts
+    - Bet sizing failures
+    - Retry logic capping (with stubbed delays for determinism)
+    - Invalid raise amount validation (negative, NaN, Infinity)
+
+**Deliverables:**
+- **Updated Executors**: packages/executor/src/simulators/simulator.ts, packages/executor/src/research_bridge.ts
+- **New Test Scenarios**: Added to packages/executor/test/simulator.spec.ts and packages/executor/test/research_bridge.spec.ts
+- **CI Verification**: pnpm run ci:verify passed.
+
+**Runbook: How to Run Executor Tests**
+
+bash
+pnpm --filter @poker-bot/executor exec vitest run test/simulator.spec.ts test/research_bridge.spec.ts
+
+
+**Conclusion:**
+The Executor layer now has robust error handling and verification logic, ensuring that invalid actions or system failures are correctly identified and reported, preventing undefined behavior during gameplay.
