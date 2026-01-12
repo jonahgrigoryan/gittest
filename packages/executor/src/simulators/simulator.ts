@@ -146,7 +146,7 @@ export class SimulatorExecutor implements ActionExecutor {
 
     // Add amount for raise actions
     if (type === 'raise') {
-      if (amount === undefined || amount <= 0) {
+      if (amount === undefined || !Number.isFinite(amount) || amount <= 0) {
         throw new Error(`Raise action requires positive amount, got: ${amount}`);
       }
       command.amount = amount;

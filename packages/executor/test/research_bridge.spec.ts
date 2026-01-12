@@ -148,6 +148,9 @@ describe("ResearchUIExecutor", () => {
         console
       );
 
+      // Stub delay to avoid real sleeps (deterministic)
+      vi.spyOn(executor as any, "delay").mockResolvedValue(undefined);
+
       // Mock BetInputHandler instance to throw error
       // We need to access the instance property directly to mock the method on the specific instance
       (executor as any).betInputHandler.inputBetAmount = vi.fn().mockRejectedValue(new Error("Invalid bet size calculation"));
@@ -172,6 +175,9 @@ describe("ResearchUIExecutor", () => {
         mockVerifier as ActionVerifier, 
         console
       );
+
+      // Stub delay to avoid real sleeps (deterministic)
+      vi.spyOn(executor as any, "delay").mockResolvedValue(undefined);
 
       // Mock internal methods to avoid full execution overhead/delays during retries
       vi.spyOn(executor as any, "performAction").mockResolvedValue({
@@ -212,6 +218,48 @@ describe("ResearchUIExecutor", () => {
       );
 
       const result = await executor.execute(invalidDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid raise amount");
+      expect(mockComplianceChecker.validateExecution).not.toHaveBeenCalled();
+    });
+
+    // Scenario 6b: NaN raise amount validation
+    it("Scenario 6b: rejects NaN raise amounts", async () => {
+      const nanDecision = { 
+        ...baseDecision, 
+        action: { ...baseDecision.action, amount: NaN } 
+      };
+
+      const executor = new ResearchUIExecutor(
+        mockWindowManager as WindowManager, 
+        mockComplianceChecker as ComplianceChecker, 
+        undefined, 
+        console
+      );
+
+      const result = await executor.execute(nanDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Invalid raise amount");
+      expect(mockComplianceChecker.validateExecution).not.toHaveBeenCalled();
+    });
+
+    // Scenario 6c: Infinity raise amount validation
+    it("Scenario 6c: rejects Infinity raise amounts", async () => {
+      const infDecision = { 
+        ...baseDecision, 
+        action: { ...baseDecision.action, amount: Infinity } 
+      };
+
+      const executor = new ResearchUIExecutor(
+        mockWindowManager as WindowManager, 
+        mockComplianceChecker as ComplianceChecker, 
+        undefined, 
+        console
+      );
+
+      const result = await executor.execute(infDecision, { verifyAction: false });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Invalid raise amount");

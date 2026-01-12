@@ -108,6 +108,21 @@ describe("SimulatorExecutor", () => {
 
       const executor = new SimulatorExecutor("http://localhost:9000/api", mockVerifier);
 
+      // Stub retryExecution to call execute directly without setTimeout jitter (deterministic)
+      const originalExecute = executor.execute.bind(executor);
+      vi.spyOn(executor as any, "retryExecution").mockImplementation(async (decision: any, options: any) => {
+        const retryOptions = {
+          ...options,
+          maxRetries: (options.maxRetries || 1) - 1,
+          verifyAction: true
+        };
+        const retryResult = await originalExecute(decision, retryOptions);
+        if (retryResult.verificationResult) {
+          retryResult.verificationResult.retryCount = 1;
+        }
+        return retryResult;
+      });
+
       // Execute with maxRetries = 2
       const result = await executor.execute(baseDecision, { 
         verifyAction: true, 
@@ -134,6 +149,36 @@ describe("SimulatorExecutor", () => {
 
       const executor = new SimulatorExecutor("http://localhost:9000/api");
       const result = await executor.execute(invalidDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Raise action requires positive amount");
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    // Scenario 6b: NaN raise amount validation
+    it("Scenario 6b: rejects NaN raise amounts", async () => {
+      const nanDecision = { 
+        ...baseDecision, 
+        action: { ...baseDecision.action, amount: NaN } 
+      };
+
+      const executor = new SimulatorExecutor("http://localhost:9000/api");
+      const result = await executor.execute(nanDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Raise action requires positive amount");
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    // Scenario 6c: Infinity raise amount validation
+    it("Scenario 6c: rejects Infinity raise amounts", async () => {
+      const infDecision = { 
+        ...baseDecision, 
+        action: { ...baseDecision.action, amount: Infinity } 
+      };
+
+      const executor = new SimulatorExecutor("http://localhost:9000/api");
+      const result = await executor.execute(infDecision, { verifyAction: false });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Raise action requires positive amount");

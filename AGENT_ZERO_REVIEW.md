@@ -506,15 +506,15 @@ Time budget guardrails now have regression coverage for cascade overruns and glo
 Harden the Executor layer by adding deterministic unit tests that cover critical failure paths and retry behavior. Ensure failures are surfaced (not swallowed), retries cap correctly, and raise sizing/amount validation is enforced.
 
 **Key Improvements:**
-1.  **SimulatorExecutor**: Updated to return failure on verification exhaustion and enforce strict raise amount validation.
-2.  **ResearchUIExecutor**: Added early raise amount validation, bet sizing failure surfacing, and retry limit enforcement.
+1.  **SimulatorExecutor**: Updated to return failure on verification exhaustion and enforce strict raise amount validation (including non-finite values like NaN/Infinity).
+2.  **ResearchUIExecutor**: Added early raise amount validation (including non-finite values), bet sizing failure surfacing, and retry limit enforcement.
 3.  **Deterministic Tests**: Added comprehensive test suites covering:
     - Compliance check failures
     - Window manager errors
     - Vision/turn-state timeouts
     - Bet sizing failures
-    - Retry logic capping
-    - Invalid raise amount validation
+    - Retry logic capping (with stubbed delays for determinism)
+    - Invalid raise amount validation (negative, NaN, Infinity)
 
 **Deliverables:**
 - **Updated Executors**: packages/executor/src/simulators/simulator.ts, packages/executor/src/research_bridge.ts

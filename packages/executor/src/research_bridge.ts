@@ -74,7 +74,7 @@ export class ResearchUIExecutor implements ActionExecutor {
 
       // 0. Early validation for raise amount
       if (decision.action.type === 'raise') {
-        if (decision.action.amount === undefined || decision.action.amount <= 0) {
+        if (decision.action.amount === undefined || !Number.isFinite(decision.action.amount) || decision.action.amount <= 0) {
           const error = `Invalid raise amount: ${decision.action.amount}`;
           this.logger.error('ResearchUIExecutor: ' + error);
           return this.createFailureResult(error, startTime);
