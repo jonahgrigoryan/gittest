@@ -25,6 +25,11 @@ const createMockObservabilityService = (): AlertConsumer & {
   };
 };
 
+const createMockLogger = () => ({
+  warn: vi.fn(),
+  error: vi.fn(),
+});
+
 const baseConfig: ObservabilityAlertsConfig = {
   enabled: true,
   cooldownMs: 1000,
@@ -59,10 +64,12 @@ describe("AlertManager", () => {
   describe("Phase 11: AlertManager Coverage", () => {
     let mockService: ReturnType<typeof createMockObservabilityService>;
     let alertManager: AlertManager;
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
       mockService = createMockObservabilityService();
-      alertManager = new AlertManager(baseConfig, mockService as any);
+      mockLogger = createMockLogger();
+      alertManager = new AlertManager(baseConfig, mockService as any, mockLogger);
     });
 
     afterEach(() => {
@@ -171,6 +178,91 @@ describe("AlertManager", () => {
       expect(mockService.log).toHaveBeenCalledTimes(1);
     });
 
+    it("suppresses duplicate alerts within cooldown window", () => {
+      const nowSpy = vi.spyOn(Date, "now");
+      const event: StructuredLogEvent = {
+        sessionId: "test",
+        component: "test",
+        event: "panic_stop_triggered",
+        level: LogLevel.CRITICAL,
+        timestamp: 1000,
+        payload: {},
+      };
+
+      nowSpy.mockReturnValue(10_000);
+      alertManager.handleEvent(event);
+      nowSpy.mockReturnValue(12_000);
+      alertManager.handleEvent(event);
+
+      const dispatched = mockService.log.mock.calls.filter(
+        (call) => call[1] === "alert_dispatched",
+      );
+      const suppressed = mockService.log.mock.calls.filter(
+        (call) => call[1] === "alert_suppressed",
+      );
+      expect(dispatched).toHaveLength(1);
+      expect(suppressed).toHaveLength(1);
+    });
+
+    it("re-emits alerts after cooldown expires", () => {
+      const nowSpy = vi.spyOn(Date, "now");
+      const event: StructuredLogEvent = {
+        sessionId: "test",
+        component: "test",
+        event: "panic_stop_triggered",
+        level: LogLevel.CRITICAL,
+        timestamp: 1000,
+        payload: {},
+      };
+
+      nowSpy.mockReturnValue(10_000);
+      alertManager.handleEvent(event);
+      nowSpy.mockReturnValue(16_000);
+      alertManager.handleEvent(event);
+
+      const dispatched = mockService.log.mock.calls.filter(
+        (call) => call[1] === "alert_dispatched",
+      );
+      expect(dispatched).toHaveLength(2);
+    });
+
+    it("skips disabled channels", () => {
+      const disabledChannelConfig: ObservabilityAlertsConfig = {
+        ...baseConfig,
+        channels: [
+          {
+            id: "console",
+            type: "console",
+            enabled: false,
+            level: LogLevel.WARN,
+          },
+        ],
+      };
+      alertManager = new AlertManager(
+        disabledChannelConfig,
+        mockService as any,
+        mockLogger,
+      );
+
+      const event: StructuredLogEvent = {
+        sessionId: "test",
+        component: "test",
+        event: "panic_stop_triggered",
+        level: LogLevel.CRITICAL,
+        timestamp: Date.now(),
+        payload: {},
+      };
+      alertManager.handleEvent(event);
+
+      expect(mockService.log).toHaveBeenCalledWith(
+        LogLevel.CRITICAL,
+        "alert_dispatched",
+        expect.objectContaining({ triggerId: "panicStop" }),
+        "observability.alerts",
+      );
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
     it("dispatches alert with correct log level", () => {
       const panicEvent: StructuredLogEvent = {
         sessionId: "test",
@@ -193,10 +285,12 @@ describe("AlertManager", () => {
   describe("Phase 11: Metrics Threshold Handling", () => {
     let mockService: ReturnType<typeof createMockObservabilityService>;
     let alertManager: AlertManager;
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
       mockService = createMockObservabilityService();
-      alertManager = new AlertManager(baseConfig, mockService as any);
+      mockLogger = createMockLogger();
+      alertManager = new AlertManager(baseConfig, mockService as any, mockLogger);
     });
 
     afterEach(() => {
@@ -378,9 +472,14 @@ describe("AlertManager", () => {
   });
 
   describe("Phase 11: Multi-Trigger Scenarios", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it("handles multiple alert sources firing", () => {
       const mockService = createMockObservabilityService();
-      const alertManager = new AlertManager(baseConfig, mockService as any);
+      const mockLogger = createMockLogger();
+      const alertManager = new AlertManager(baseConfig, mockService as any, mockLogger);
 
       const panicEvent: StructuredLogEvent = {
         sessionId: "test",

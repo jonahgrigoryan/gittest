@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { SafeModeController } from "../../src/health/safeModeController";
 import { PanicStopController } from "../../src/health/panicStopController";
-import type { PanicStopReason } from "@poker-bot/shared";
 
 describe("PanicStopController", () => {
   describe("Phase 11: Idempotent Transitions", () => {

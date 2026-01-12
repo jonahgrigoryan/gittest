@@ -1,6 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { SafeModeController } from "../../src/health/safeModeController";
-import type { SafeModeState } from "@poker-bot/shared";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("SafeModeController", () => {
   describe("Phase 11: Idempotent Transitions", () => {
@@ -18,14 +21,14 @@ describe("SafeModeController", () => {
 
     it("idempotent: enter() called twice with same reason preserves first reason", () => {
       const controller = new SafeModeController();
-      const firstEnteredAt = Date.now();
-      vi.spyOn(Date, "now").mockReturnValue(firstEnteredAt);
+      const nowSpy = vi.spyOn(Date, "now");
+      const firstEnteredAt = 1000;
+      nowSpy.mockReturnValue(firstEnteredAt);
 
       controller.enter("first reason");
-      const firstState = controller.getState();
 
       const secondEnteredAt = firstEnteredAt + 1000;
-      vi.spyOn(Date, "now").mockReturnValue(secondEnteredAt);
+      nowSpy.mockReturnValue(secondEnteredAt);
       controller.enter("second reason");
 
       const state = controller.getState();
@@ -86,11 +89,12 @@ describe("SafeModeController", () => {
 
     it("preserves enteredAt timestamp on idempotent enter", () => {
       const controller = new SafeModeController();
-      vi.spyOn(Date, "now").mockReturnValue(1000);
+      const nowSpy = vi.spyOn(Date, "now");
+      nowSpy.mockReturnValue(1000);
       controller.enter("reason");
       const firstTimestamp = controller.getState().enteredAt;
 
-      vi.spyOn(Date, "now").mockReturnValue(2000);
+      nowSpy.mockReturnValue(2000);
       controller.enter("new reason");
 
       expect(controller.getState().enteredAt).toBe(firstTimestamp);

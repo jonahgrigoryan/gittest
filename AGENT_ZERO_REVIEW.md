@@ -529,3 +529,31 @@ pnpm --filter @poker-bot/executor exec vitest run test/simulator.spec.ts test/re
 
 **Conclusion:**
 The Executor layer now has robust error handling and verification logic, ensuring that invalid actions or system failures are correctly identified and reported, preventing undefined behavior during gameplay.
+
+## Phase 11: Observability & Health Controllers
+
+**Status**: Completed
+**Branch**: agent-zero/phase11-observability-health-controllers-20260111
+
+**Objective:**
+Add deterministic unit tests for SafeModeController, PanicStopController, AlertManager, and ObservabilityService. Cover idempotency, state transitions, config updates, cooldown/dedupe behavior, and flush semantics.
+
+**Key Improvements:**
+1.  **SafeModeController**: Idempotent enter/exit, manual vs auto exit, reason latching, timestamp preservation.
+2.  **PanicStopController**: Idempotent trigger, reset behavior, safe mode interaction with panic reasons.
+3.  **AlertManager**: Threshold triggers, cooldown/dedupe suppression, config updates, disabled channels, multi-trigger handling.
+4.  **ObservabilityService**: applyConfig lifecycle (dispose + restart), alert consumer wiring, flush snapshots (including no-event flushes), no-sink config handling.
+
+**Deliverables:**
+- **Extended Health Tests**: packages/orchestrator/test/health/safe_mode.spec.ts, packages/orchestrator/test/health/panic_stop.spec.ts
+- **New Observability Tests**: packages/orchestrator/test/observability/alert_manager.spec.ts, packages/orchestrator/test/observability/service.spec.ts
+- **CI Verification**: pnpm run ci:verify passed.
+
+**Runbook: How to Run Observability + Health Tests**
+
+```bash
+pnpm --filter @poker-bot/orchestrator exec vitest run test/health/safe_mode.spec.ts test/health/panic_stop.spec.ts test/observability/alert_manager.spec.ts test/observability/service.spec.ts
+```
+
+**Conclusion:**
+The observability and health layers now have deterministic regression coverage. A PASS here means safe mode/panic stop state is stable under repeated triggers, alerts dedupe under cooldown, config updates rewire observability without leaving stray timers, and flush always emits a snapshot to downstream consumers.
