@@ -77,6 +77,14 @@ export async function makeDecision(
     gtoSolution = createSafeFallbackSolution(state);
   }
 
+  if (!gtoSolution.actions || gtoSolution.actions.size === 0) {
+    deps.logger?.warn?.("Decision pipeline: empty GTO solution, using safe fallback", {
+      handId: state.handId
+    });
+    solverTimedOut = true;
+    gtoSolution = createSafeFallbackSolution(state);
+  }
+
   if (deps.agentCoordinator) {
     const remainingAgentBudget = deps.tracker?.remaining?.("agents");
     const context: PromptContext = {
@@ -111,10 +119,11 @@ export async function makeDecision(
 
 function createSafeFallbackSolution(state: GameState): GTOSolution {
   const hero = state.positions.hero;
+  const legalActions = state.legalActions ?? [];
   const preferred =
-    state.legalActions.find(
+    legalActions.find(
       action => action.position === hero && (action.type === "check" || action.type === "call")
-    ) ?? state.legalActions.find(action => action.position === hero);
+    ) ?? legalActions.find(action => action.position === hero);
   const fallback: Action =
     preferred ??
     ({
