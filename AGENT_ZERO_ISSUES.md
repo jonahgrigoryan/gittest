@@ -3,6 +3,7 @@
 ## Review Session: Sat Jan 10 03:53:54 AM UTC 2026
 
 ### Summary
+
 - **Branch**: agent-zero/review-fixes-20260108
 - **Base**: agent-zero-codebase-review
 - **Reviewer**: Agent Zero
@@ -16,6 +17,7 @@
 ### Critical Issues
 
 #### [ISSUE-001] - Silent Error Suppression in Strategy Engine
+
 - **Severity**: Critical
 - **Package**: @poker-bot/orchestrator
 - **File**: src/strategy/engine.ts (Lines ~350-360)
@@ -24,14 +26,13 @@
   - **Snippet**:
     typescript
     private shouldPreempt(): boolean {
-      // ...
-      try {
-        // ... logic ...
-      } catch {
-        return false; // Error swallowed here
-      }
+    // ...
+    try {
+    // ... logic ...
+    } catch {
+    return false; // Error swallowed here
     }
-    
+    }
   - **Current Behavior**: If the time budget tracker fails or throws, the error is swallowed, and the system proceeds as if no preemption is needed.
   - **Failure Mode**: Critical runtime errors (e.g., memory issues, logic bugs in tracker) are hidden, potentially leading to timeouts or undefined behavior downstream.
 - **Steps to Reproduce**:
@@ -42,6 +43,7 @@
 - **Status**: Fixed (Commit: Fix(orchestrator): log and handle shouldPreempt errors safely)
 
 #### [ISSUE-002] - Silent Error Suppression in Health Monitor
+
 - **Severity**: Critical
 - **Package**: @poker-bot/orchestrator
 - **File**: src/health/monitor.ts (Lines ~50-60)
@@ -50,12 +52,11 @@
   - **Snippet**:
     typescript
     try {
-      const status = await def.fn();
-      // ...
+    const status = await def.fn();
+    // ...
     } catch (error) {
-      statuses.push({ ... }); // Pushes failed status but DOES NOT LOG the error
+    statuses.push({ ... }); // Pushes failed status but DOES NOT LOG the error
     }
-    
   - **Current Behavior**: If a health check throws, it is ignored/swallowed without logging the stack trace or error details to the system logger.
   - **Failure Mode**: The bot could be in a degraded state (e.g., vision service down) but operators won't see the root cause in the logs.
 - **Steps to Reproduce**:
@@ -70,6 +71,7 @@
 ### High Priority Issues
 
 #### [ISSUE-003] - Type Safety Bypass in Main Initialization
+
 - **Severity**: High
 - **Package**: @poker-bot/orchestrator
 - **File**: src/main.ts (Line ~200)
@@ -83,6 +85,7 @@
 - **Proposed Fix**: Define a proper interface for the config proxy or use a union type, removing the as any cast.
 
 #### [ISSUE-004] - Type Safety Bypass in Replay Tool
+
 - **Severity**: High
 - **Package**: @poker-bot/orchestrator
 - **File**: src/cli/replay.ts
@@ -99,6 +102,7 @@
 ### Medium Priority Issues
 
 #### [ISSUE-005] - Missing Environment Dependencies
+
 - **Severity**: Medium
 - **Package**: services/vision, services/solver
 - **File**: N/A (Environment)
@@ -114,15 +118,15 @@
     cd infra/compose
     docker-compose up -d vision solver
     # Then run integration tests against these containers
-    
 
 ---
 
 ## Phase 1 Summary
+
 The system is structurally sound and passes CI. The primary risks identified are silent error suppression and type safety gaps in critical paths.
 
-
 #### [ISSUE-006] - Missing Blind Level Detection
+
 - **Severity**: High
 - **Package**: @poker-bot/orchestrator
 - **File**: src/vision/parser.ts
@@ -136,3 +140,69 @@ The system is structurally sound and passes CI. The primary risks identified are
   2. Pass it to parser.parse().
   3. Observe that state.blinds remains unchanged.
 - **Proposed Fix**: Update VisionOutput schema to include blinds (if available) and update parser to read them.
+- **Note**: This issue affects tournaments only. Cash games have fixed blinds and are not impacted.
+
+---
+
+## Phase 12: Decision Pipeline E2E & Final Integration
+
+**Status**: Completed
+**Branch**: agent-zero/phase12-decision-pipeline-e2e-20260113
+
+### Completed Items
+
+- [x] Decision Pipeline E2E Unit Suite (17 tests)
+  - GTO solver timeout / 0ms budget handling
+  - Agent coordinator timeout and error recovery
+  - Empty legal actions scenarios
+  - Concurrent GTO + agent budget exhaustion
+  - Blending safety with GTO distribution validation
+  - Safe fallback solution correctness (createSafeFallbackSolution)
+  - Stub agent output correctness
+- [x] CI-Safe Integration Suite (50-100 hands)
+  - Processes all hands without exceptions
+  - Handles solver fallbacks correctly
+  - Handles agent fallbacks correctly
+  - Maintains state consistency across hands
+  - Produces deterministic results with same seed
+  - No invariant violations across all hands
+- [x] Long-Run Stress Test (1000+ hands, env-gated)
+  - Memory usage stability verification
+  - Extended invariant checking
+  - Performance metrics logging
+
+### Known Risks (Cash Games)
+
+1. **Vision Service Dependency**: Integration tests use mocks; real vision service failures need monitoring in production.
+2. **Solver Latency Spikes**: While timeout handling is tested, real-world solver latency may vary under load.
+3. **Agent LLM Availability**: Stub fallback is tested, but production monitoring should track agent failure rates.
+
+### Next Actions
+
+- Monitor solver/agent failure rates in production telemetry.
+- Consider adding circuit breaker metrics to health dashboard.
+- Evaluate if additional stress testing is needed for specific edge cases.
+
+---
+
+## Production Readiness: Cash Games Sign-Off Checklist
+
+| Component                      | Status | Notes                                            |
+| ------------------------------ | ------ | ------------------------------------------------ |
+| **Vision Client**              | PASS   | Phase 8: Timeout + error handling tested         |
+| **Solver Client**              | PASS   | Phase 8: Timeout + reconnection tested           |
+| **Time Budget Tracker**        | PASS   | Phase 9: Overrun cascade + preemption tested     |
+| **Executor**                   | PASS   | Phase 10: Error paths + retries tested           |
+| **Safe Mode Controller**       | PASS   | Phase 11: Idempotency + latch tested             |
+| **Panic Stop Controller**      | PASS   | Phase 11: Trigger + reset tested                 |
+| **Alert Manager**              | PASS   | Phase 11: Threshold + cooldown tested            |
+| **Observability Service**      | PASS   | Phase 11: Config lifecycle + flush tested        |
+| **Decision Pipeline**          | PASS   | Phase 12: E2E fallback paths tested              |
+| **Integration (50-100 hands)** | PASS   | Phase 12: Multi-hand session tested              |
+| **Long-Run (1000+ hands)**     | PASS   | Phase 12: Env-gated stress tested                |
+| **State Sync Tracker**         | PASS   | Phase 6: Phantom chips + pot monotonicity tested |
+| **Golden Replay Pack**         | PASS   | Phase 7: 8 nightmare scenarios tested            |
+
+**Overall Cash Game Readiness**: **APPROVED**
+
+All critical paths have deterministic test coverage. Fallback mechanisms are verified to trigger correctly under timeout, error, and budget exhaustion scenarios. The system degrades safely without corrupting state.
