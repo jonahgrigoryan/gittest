@@ -25,13 +25,31 @@ export class StateSyncTracker {
       return errors;
     }
 
+    // Check 1: Pot Monotonicity
     if (currentState.pot < previous.pot - 1e-3) {
       errors.push("Pot decreased between consecutive frames");
     }
 
+    // Check 2: Button Stability
+    // Within a hand, the button location (relative to roles) should not change.
+    if (currentState.positions.button !== previous.positions.button) {
+      errors.push(`Button moved unexpectedly from ${previous.positions.button} to ${currentState.positions.button}`);
+    }
+
+    // Check 3: Stack Integrity
     previous.players.forEach((prevPlayer, position) => {
       const current = currentState.players.get(position as Position);
-      if (current && current.stack > prevPlayer.stack + currentState.pot) {
+
+      // Check 3a: Missing Player
+      if (!current) {
+        errors.push(`Player at ${position} missing in current frame`);
+        return;
+      }
+
+      // Check 3b: Stack Increase (Phantom Chips)
+      // Allow increase if we won the pot (approximate check)
+      const maxAllowed = prevPlayer.stack + Math.max(0, previous.pot - currentState.pot) + 0.1;
+      if (current.stack > maxAllowed) {
         errors.push(`Stack increased unexpectedly for position ${position}`);
       }
     });

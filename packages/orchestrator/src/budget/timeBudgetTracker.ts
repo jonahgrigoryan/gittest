@@ -97,13 +97,18 @@ export class TimeBudgetTracker {
   }
 
   remaining(component?: BudgetComponent): number {
+    const totalRemaining = this.totalRemaining();
     if (!component) {
-      return Math.max(0, this.totalBudgetMs - this.elapsed());
+      return totalRemaining;
+    }
+    if (totalRemaining <= 0) {
+      return 0;
     }
     const limit = this.allocation[component] ?? 0;
     const used = this.usage[component] ?? 0;
     const reserved = this.pendingReservations[component] ?? 0;
-    return Math.max(0, limit - used - reserved);
+    const componentRemaining = Math.max(0, limit - used - reserved);
+    return Math.min(totalRemaining, componentRemaining);
   }
 
   reserve(component: BudgetComponent, durationMs: number): boolean {
@@ -272,6 +277,14 @@ export class TimeBudgetTracker {
     }
     const applied = Math.min(surplus, headroom);
     this.allocation.buffer += applied;
+  }
+
+  shouldPreemptTotal(thresholdMs = 100): boolean {
+    return this.totalRemaining() < thresholdMs;
+  }
+
+  private totalRemaining(): number {
+    return Math.max(0, this.totalBudgetMs - this.elapsed());
   }
 }
 

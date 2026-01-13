@@ -46,6 +46,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@1.85.0
         with:
+          toolchain: "1.85.0"
           components: rustfmt, clippy
 
       - run: pnpm run ci:verify
@@ -125,6 +126,8 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.85.0"
     steps:
       - uses: actions/checkout@v4
 

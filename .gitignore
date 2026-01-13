@@ -11,3 +11,21 @@ sbom/
 services/**/target/
 # TS incremental build info
 packages/**/tsconfig.tsbuildinfo
+# Python bytecode
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Agent Zero Artifacts
+.a0proj/
+.agents/
+.codebuff/
+.env.ci
+knowledge.md
+
+# Generated Metrics
+packages/evaluator/metrics.jsonl
+
+*.patch

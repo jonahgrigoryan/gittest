@@ -63,15 +63,35 @@ export class SimulatorExecutor implements ActionExecutor {
         });
 
         // Retry logic for verification failures
-        if (!verificationResult.passed && (options.maxRetries || 0) > 0) {
-          this.logger.warn('SimulatorExecutor: Verification failed, retrying', {
-            retryCount: 1,
-            reason: verificationResult.mismatchReason
-          });
+        if (!verificationResult.passed) {
+          if ((options.maxRetries || 0) > 0) {
+            this.logger.warn('SimulatorExecutor: Verification failed, retrying', {
+              retryCount: 1,
+              reason: verificationResult.mismatchReason
+            });
 
-          // Re-execute once on mismatch
-          const retryResult = await this.retryExecution(decision, options);
-          return retryResult;
+            // Re-execute once on mismatch
+            const retryResult = await this.retryExecution(decision, options);
+            return retryResult;
+          } else {
+            // Verification failed and no retries left
+            const totalTime = Date.now() - startTime;
+            return {
+              success: false,
+              error: `Verification failed: ${verificationResult.mismatchReason}`,
+              actionExecuted: decision.action,
+              verificationResult,
+              timing: {
+                executionMs: executionTime,
+                verificationMs: totalTime - executionTime,
+                totalMs: totalTime
+              },
+              metadata: {
+                executionMode: 'simulator',
+                platform: 'simulator'
+              }
+            };
+          }
         }
       }
 
@@ -126,7 +146,7 @@ export class SimulatorExecutor implements ActionExecutor {
 
     // Add amount for raise actions
     if (type === 'raise') {
-      if (amount === undefined || amount <= 0) {
+      if (amount === undefined || !Number.isFinite(amount) || amount <= 0) {
         throw new Error(`Raise action requires positive amount, got: ${amount}`);
       }
       command.amount = amount;

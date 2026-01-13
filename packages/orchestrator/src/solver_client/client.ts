@@ -1,4 +1,8 @@
-import { credentials, type ChannelCredentials } from "@grpc/grpc-js";
+import {
+  credentials,
+  type ChannelCredentials,
+  type ClientUnaryCall,
+} from "@grpc/grpc-js";
 import type { ActionType } from "@poker-bot/shared";
 import { solverGen } from "@poker-bot/shared";
 type SolverClient = solverGen.SolverClient;
@@ -33,9 +37,10 @@ export interface SolverClientAdapter {
 export function createSolverClient(
   address: string = DEFAULT_SOLVER_ADDR,
   clientCredentials: ChannelCredentials = credentials.createInsecure(),
+  timeoutMs: number = 30000,
 ): SolverClientAdapter {
   const client = new SolverClientConstructor(address, clientCredentials);
-  return new GrpcSolverClient(client);
+  return new GrpcSolverClient(client, timeoutMs);
 }
 
 export function makeRequest(params: {
@@ -70,17 +75,46 @@ export function parseResponse(resp: SubgameResponse): SolverCallResult {
 }
 
 class GrpcSolverClient implements SolverClientAdapter {
-  constructor(private readonly client: SolverClient) {}
+  constructor(
+    private readonly client: SolverClient,
+    private readonly timeoutMs: number,
+  ) {}
 
   solve(request: SubgameRequest): Promise<SubgameResponse> {
-    return new Promise((resolve, reject) => {
-      this.client.solve(request, (error, response) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let call: ClientUnaryCall | undefined;
+
+    const callPromise = new Promise<SubgameResponse>((resolve, reject) => {
+      call = this.client.solve(request, (error, response) => {
         if (error) {
           reject(error);
           return;
         }
+        if (!response) {
+          reject(new Error("Solver response was empty"));
+          return;
+        }
         resolve(response);
       });
+    });
+
+    if (this.timeoutMs <= 0) {
+      return callPromise;
+    }
+
+    const timeoutPromise = new Promise<SubgameResponse>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        if (call) {
+          call.cancel();
+        }
+        reject(new Error(`Solver request timed out after ${this.timeoutMs}ms`));
+      }, this.timeoutMs);
+    });
+
+    return Promise.race([callPromise, timeoutPromise]).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     });
   }
 

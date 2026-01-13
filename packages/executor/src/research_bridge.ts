@@ -72,6 +72,15 @@ export class ResearchUIExecutor implements ActionExecutor {
         options
       });
 
+      // 0. Early validation for raise amount
+      if (decision.action.type === 'raise') {
+        if (decision.action.amount === undefined || !Number.isFinite(decision.action.amount) || decision.action.amount <= 0) {
+          const error = `Invalid raise amount: ${decision.action.amount}`;
+          this.logger.error('ResearchUIExecutor: ' + error);
+          return this.createFailureResult(error, startTime);
+        }
+      }
+
       // 1. Compliance check first
       const complianceResult = await this.complianceChecker.validateExecution(decision);
       if (!complianceResult) {
@@ -156,14 +165,35 @@ export class ResearchUIExecutor implements ActionExecutor {
         });
 
         // Retry logic for verification failures
-        if (!verificationResult.passed && (options.maxRetries || 0) > 0) {
-          this.logger.warn('ResearchUIExecutor: Verification failed, retrying', {
-            retryCount: 1,
-            reason: verificationResult.mismatchReason
-          });
+        if (!verificationResult.passed) {
+          if ((options.maxRetries || 0) > 0) {
+            this.logger.warn('ResearchUIExecutor: Verification failed, retrying', {
+              retryCount: 1,
+              reason: verificationResult.mismatchReason
+            });
 
-          const retryResult = await this.retryExecution(decision, options);
-          return retryResult;
+            const retryResult = await this.retryExecution(decision, options);
+            return retryResult;
+          } else {
+             // Verification failed and no retries left
+             const totalTime = Date.now() - startTime;
+             return {
+               success: false,
+               error: `Verification failed: ${verificationResult.mismatchReason}`,
+               actionExecuted: decision.action,
+               verificationResult,
+               timing: {
+                 executionMs: executionTime,
+                 verificationMs: totalTime - executionTime,
+                 totalMs: totalTime
+               },
+               metadata: {
+                 executionMode: 'research-ui',
+                 platform: windowHandle.processName,
+                 windowHandle: windowHandle.id.toString()
+               }
+             };
+          }
         }
       }
 
@@ -334,6 +364,13 @@ export class ResearchUIExecutor implements ActionExecutor {
         amount,
         position
       });
+    } else if (type === 'call') {
+      // For call, we can't predict exact amount without game state
+      // This would need to be enhanced with actual game state context
+      changes.push({
+        type: 'stack_decrease',
+        position
+      });
     }
 
     // Pot increase for raise/call actions
@@ -341,6 +378,10 @@ export class ResearchUIExecutor implements ActionExecutor {
       changes.push({
         type: 'pot_increase',
         amount
+      });
+    } else if (type === 'call') {
+      changes.push({
+        type: 'pot_increase'
       });
     }
 
