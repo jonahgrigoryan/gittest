@@ -429,7 +429,7 @@ describe("Phase 12: Decision Pipeline E2E Tests", () => {
   });
 
   describe("5) Blending safety: GTO distribution validation", () => {
-    it("validates GTO distribution has >0 actions before blending", async () => {
+    it("replaces empty GTO distribution with safe fallback before blending", async () => {
       const state = createTestState();
 
       // Create solver that returns empty actions
@@ -450,12 +450,14 @@ describe("Phase 12: Decision Pipeline E2E Tests", () => {
         logger: mockLogger,
       });
 
-      // Pipeline should handle empty GTO gracefully
-      expect(result).toBeDefined();
-      expect(result.decision).toBeDefined();
+      expect(result.solverTimedOut).toBe(true);
+      expect(result.gtoSolution.actions.size).toBe(1);
+      const entry = result.gtoSolution.actions.values().next().value;
+      expect(entry.solution.frequency).toBe(1);
+      expect(result.gtoSolution.source).toBe("subgame");
     });
 
-    it("uses safe fallback path when GTO distribution is empty", async () => {
+    it("passes non-empty GTO solution to strategy engine when solver returns empty", async () => {
       const state = createTestState();
 
       // Create solver that returns empty actions
@@ -468,44 +470,7 @@ describe("Phase 12: Decision Pipeline E2E Tests", () => {
         }),
       } as unknown as GTOSolver;
 
-      // Strategy engine that detects empty GTO and uses fallback
-      const engine = {
-        decide: vi.fn((_state, gto, _agent, _sessionId) => {
-          const hasActions = gto.actions && gto.actions.size > 0;
-          return {
-            action: {
-              type: hasActions ? "check" : "fold",
-              position: "BTN",
-              street: "flop",
-            },
-            reasoning: {
-              gtoRecommendation: new Map(),
-              agentRecommendation: new Map(),
-              blendedDistribution: new Map(),
-              alpha: 0.6,
-              divergence: 0,
-              riskCheckPassed: true,
-              sizingQuantized: false,
-              fallbackReason: hasActions ? undefined : "gto_empty",
-            },
-            timing: {
-              gtoTime: 0,
-              agentTime: 0,
-              synthesisTime: 0,
-              totalTime: 0,
-            },
-            metadata: {
-              rngSeed: 0,
-              configSnapshot: {
-                alphaGTO: 0.6,
-                betSizingSets: { preflop: [], flop: [], turn: [], river: [] },
-                divergenceThresholdPP: 30,
-              },
-              usedGtoOnlyFallback: !hasActions,
-            },
-          };
-        }),
-      } as unknown as StrategyEngine;
+      const engine = createMockStrategyEngine();
 
       const result = await makeDecision(state, "session-1", {
         strategyEngine: engine,
@@ -513,10 +478,10 @@ describe("Phase 12: Decision Pipeline E2E Tests", () => {
         logger: mockLogger,
       });
 
-      // Verify fallback was triggered
-      expect(result.gtoSolution.actions.size).toBe(0);
-      expect(result.decision.metadata.usedGtoOnlyFallback).toBe(true);
-      expect(result.decision.reasoning.fallbackReason).toBe("gto_empty");
+      expect(engine.decide).toHaveBeenCalled();
+      const gtoSolutionArg = (engine.decide as ReturnType<typeof vi.fn>).mock
+        .calls[0][1] as GTOSolution;
+      expect(gtoSolutionArg.actions.size).toBeGreaterThan(0);
     });
   });
 
