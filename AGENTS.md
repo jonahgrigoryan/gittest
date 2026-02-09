@@ -73,10 +73,74 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
   proto stubs with `pnpm run proto:gen` and re-run `pnpm run build`.
 - Treat every task as production work: no scaffolding, no placeholder code, and no partial implementations. Coding agents must follow the task requirements end-to-end so downstream collaborators can build on the result immediately.
 
+## Active Workflow (Current Phase: CoinPoker macOS Autonomy)
+
+This section is the operational workflow for ongoing "hands + eyes" work. Use it
+as the default runbook for all coding agents until replaced.
+
+### Scope & Source of Truth
+- Brain/core decision stack is complete (solver + agents + strategy + replay).
+- Active development scope is CoinPoker macOS autonomy:
+  - "Hands": executor/macOS automation integration.
+  - "Eyes": vision/layout/runtime integration for live operation.
+- Source docs in priority order:
+  1. `.kiro/specs/coinpoker-macos-autonomy/requirements.md`
+  2. `.kiro/specs/coinpoker-macos-autonomy/design.md`
+  3. `.kiro/specs/coinpoker-macos-autonomy/tasks.md`
+  4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation aid)
+
+### Branching & PR Policy (Mandatory)
+- Start each task from `main`.
+- Branch name must start with `feat/` so push-trigger CI runs on branch updates.
+- Recommended pattern: `feat/task-<task-number>-<shortname>`.
+- Example: `feat/task-1-executor-research-ui-config`.
+- Keep one cohesive task slice per branch/PR.
+- Open PR into `main`.
+- If CI fails, iterate on the same branch until green, then merge.
+- Preferred merge style: squash merge.
+- Delete merged feature branch.
+
+### Per-Task Development Loop
+1. Sync branch base:
+   - `git checkout main`
+   - `git pull --ff-only`
+2. Create task branch:
+   - `git checkout -b feat/task-<task-number>-<shortname>`
+3. Implement code + tests for the task scope.
+4. Run verification before pushing:
+   - `pnpm run lint`
+   - `pnpm run build`
+   - `pnpm run test:unit`
+   - If vision code changed: `cd services/vision && poetry run pytest`
+   - If solver code changed: `cd services/solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test`
+   - Optional high-confidence check: `pnpm run ci:verify:mock`
+5. Commit focused changes with clear message.
+6. Push branch and create PR.
+7. Resolve CI failures (if any) until all required checks pass.
+8. Merge PR, then move to next task from latest `main`.
+
+### Handoff Requirements (Agent-to-Agent Continuity)
+- Update `progress.md` at the end of each merged task with:
+  - Task(s) completed.
+  - Branch/PR reference.
+  - Verification commands run and outcomes.
+  - Known risks or follow-up tasks.
+- Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes aligned with
+  real completion status.
+- In any handoff note, always include:
+  - Current active branch.
+  - Next task ID/name.
+  - Exact next command to run.
+
 ## Cash-Game Readiness Playbook (Phases 8-12)
 
 Use this section as the authoritative runbook. When the user says "start phase X",
 follow the steps and scope below without re-negotiating the plan.
+
+Historical note:
+- This playbook reflects the completed phase-8..12 hardening track.
+- For current CoinPoker autonomy implementation, follow `## Active Workflow (Current Phase: CoinPoker macOS Autonomy)` above.
+- Do not use legacy `agent-zero/*` branch names for new task branches; use `feat/*`.
 
 ### Global Workflow
 - Base branch: `agent-zero/phase7-golden-replay-pack-20260111` until a later phase
