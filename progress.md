@@ -1,5 +1,16 @@
 # Project Progress & Workflow
 
+## Current Focus (Updated: 2026-02-09)
+
+- Brain stack is complete: solver, agent coordinator, strategy engine, replay, observability, deployment.
+- Active implementation phase is CoinPoker macOS autonomy ("hands + eyes").
+- Source of truth for upcoming work:
+  1. `.kiro/specs/coinpoker-macos-autonomy/requirements.md`
+  2. `.kiro/specs/coinpoker-macos-autonomy/design.md`
+  3. `.kiro/specs/coinpoker-macos-autonomy/tasks.md`
+  4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
+- Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
+
 ## Completed Tasks
 
 - **Task 1 – Scaffolding & Core Interfaces**  
@@ -43,49 +54,69 @@
   Delivered the evaluation runner with smoke/offline/shadow/AB modes, CLI tooling, opponent registry, and metadata plumbing so evaluation runs are logged alongside hand histories.
 - **Task 16 – Deployment & Environment Integration**
   Added deterministic Dockerfiles, solver/vision containers, a Compose stack, env/secrets governance (`.env.example`, `env/.env.*`), and deployment docs/runbooks so the full system can run via `docker compose up`.
+- **Task 17 – Production Hardening & Operational Readiness**
+  Wired real `AgentCoordinator` end-to-end with proper `AGENTS_USE_MOCK=1` support.
+  - Agent wiring fixes:
+    - `packages/orchestrator/src/main.ts`: Creates coordinator when `agents.models` non-empty OR `AGENTS_USE_MOCK=1`; injects synthetic `mock-default` model via config proxy.
+    - `packages/orchestrator/src/cli/replay.ts`: Same pattern for replay mode.
+    - `packages/evaluator/src/providers/pipeline.ts`: Same pattern for evaluation mode.
+    - `packages/orchestrator/src/startup/validateConnectivity.ts`: `useMockAgents` option to skip agent-env checks in mock mode.
+  - Proto tooling fixes:
+    - `proto/buf.gen.yaml`: Uses `ts_proto` to match npm binary name.
+    - Root `package.json`: `proto:gen` adds `node_modules/.bin` to `PATH`; `prebuild` behavior aligned for CI.
+  - CI scripts:
+    - `ci:verify`: full suite (includes vision + solver toolchains).
+    - `ci:verify:mock`: mock mode with `REPLAY_TRUST_LOGS=1` and `ORCH_SKIP_STARTUP_CHECKS=1`.
+  - Verification result: `pnpm run ci:verify:mock` passing.
 
-## Workflow
+## Workflow (Task-by-Task, Branch-per-Task)
 
-1. Capture detailed plan in `taskN.md` aligned with requirements/design docs.
-2. Spin up parallel model branches (e.g., `cursor/implement-poker-bot-task-4-*`) to explore implementations.
-3. Evaluate each branch locally: review diffs vs plan, run verification commands, list gaps.
-4. Select the strongest branch, apply fixes, and run the full verification suite.
-5. Push to a feature branch (`feat/taskN-*`), open PR, squash-merge into `main`, and retire exploratory branches.
+1. Start from latest `main`:
+   - `git checkout main`
+   - `git pull --ff-only`
+2. Create one feature branch per task slice:
+   - `git checkout -b feat/task-<task-number>-<shortname>`
+3. Implement code and tests for only that task scope.
+4. Run verification locally (see checklist below).
+5. Push branch; open PR to `main`.
+6. If CI fails, fix on same branch and push again until green.
+7. Merge PR (prefer squash), delete feature branch.
+8. Repeat from latest `main` for the next task.
 
 ## Verification Checklist (per task/PR)
 
-- `pnpm -r --filter "./packages/**" run lint`
-- `pnpm -r --filter "./packages/**" run build`
-- `pnpm -r --filter "./packages/**" run test`
-- `cd services/vision && poetry run pytest` (whenever Task 3 components change)
-- `cd services/solver && cargo fmt && cargo clippy && cargo test` (whenever solver code changes)
+- Required baseline:
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+- Conditional:
+  - `cd services/vision && poetry run pytest` (when vision Python code changes)
+  - `cd services/solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test` (when solver Rust code changes)
+- Optional high-confidence pre-PR:
+  - `pnpm run ci:verify:mock`
 
 All commands must pass before declaring a task complete.
 
-- **Task 17 – Production Hardening & Operational Readiness**
-  Wired real `AgentCoordinator` end-to-end with proper `AGENTS_USE_MOCK=1` support:
-  
-  **Agent Wiring Fixes:**
-  - `packages/orchestrator/src/main.ts`: Creates coordinator when `agents.models` non-empty OR `AGENTS_USE_MOCK=1`. Injects synthetic "mock-default" model and uses `createMockConfigProxy` for mock mode.
-  - `packages/orchestrator/src/cli/replay.ts`: Same pattern with mock transport for replay.
-  - `packages/evaluator/src/providers/pipeline.ts`: Same pattern for evaluation.
-  - `packages/orchestrator/src/startup/validateConnectivity.ts`: Added `useMockAgents` option to skip agent env validation when using mock.
-  
-  **Proto Tooling Fixes:**
-  - `proto/buf.gen.yaml`: Uses `ts_proto` (underscore) to match npm binary name.
-  - `package.json`: `proto:gen` adds `node_modules/.bin` to PATH; `prebuild` fails hard in CI.
-  
-  **CI Scripts:**
-  - `ci:verify`: Full suite requiring solver/vision/poetry services.
-  - `ci:verify:mock`: Mock-only mode with `REPLAY_TRUST_LOGS=1` and `ORCH_SKIP_STARTUP_CHECKS=1`.
-  
-  **Tests:**
-  - `packages/orchestrator/test/chaos/chaos.spec.ts`: 12 tests including agent wiring verification.
-  - `packages/agents/src/schema/validator.ts`: Fixed Ajv JSON Schema 2020-12 compatibility.
-  - `packages/orchestrator/src/replay/deserialize.ts`: Fixed optional field handling.
+## Active Backlog (CoinPoker macOS Autonomy)
 
-  Verification: `pnpm run ci:verify:mock` passes (lint, build, 102+ tests, replay, artifact scan, solver tests).
+- [ ] Config/schema extensions for research UI (`windowTitlePatterns`, `processNames`, `minWindowSize`, `betInputField`, `minRaiseAmount`)
+- [ ] Real macOS `WindowManager` implementation (AppleScript runner + bounds/focus + DPI handling)
+- [ ] Real `ComplianceChecker` process detection (replace mock process/site checks)
+- [ ] nut.js automation integration in executor/bet input path
+- [ ] Vision-driven turn detection and action-button selection in `ResearchUIExecutor`
+- [ ] CoinPoker layout pack + templates + metadata validation hardening
+- [ ] Live game loop + CLI runner for continuous autonomous operation
+- [ ] Operator docs update for live setup, safety gates, and troubleshooting
 
-## Upcoming Work
+## Handoff Protocol (When Switching Coding Agents)
 
-- All 17 tasks complete. Ready for final PR review and merge to main.
+- Update this file (`progress.md`) at the end of every merged task with:
+  - What was completed.
+  - Branch and PR reference.
+  - Verification commands run and results.
+  - Remaining blockers/risks.
+- Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes in sync with real completion state.
+- Include in handoff message:
+  - Current branch.
+  - Next task to execute.
+  - Exact next command to run.
