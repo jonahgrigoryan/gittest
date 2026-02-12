@@ -1,7 +1,7 @@
 import { WindowManager } from './window_manager';
 import { ComplianceChecker } from './compliance';
 import { BetInputHandler } from './bet_input_handler';
-import type { ActionExecutor, ExecutionResult, ExecutionOptions } from './types';
+import type { ActionExecutor, ExecutionResult, ExecutionOptions, ResearchUIConfig } from './types';
 import type { StrategyDecision } from '@poker-bot/shared';
 import type { ActionVerifier } from './verifier';
 import { deterministicRandom } from './rng';
@@ -44,6 +44,7 @@ export class ResearchUIExecutor implements ActionExecutor {
   private readonly complianceChecker: ComplianceChecker;
   private readonly betInputHandler: BetInputHandler;
   private readonly verifier?: ActionVerifier;
+  private readonly researchUIConfig?: ResearchUIConfig;
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
   private jitterCounter = 0;
 
@@ -51,11 +52,13 @@ export class ResearchUIExecutor implements ActionExecutor {
     windowManager: WindowManager,
     complianceChecker: ComplianceChecker,
     verifier?: ActionVerifier,
+    researchUIConfig?: ResearchUIConfig,
     logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console
   ) {
     this.windowManager = windowManager;
     this.complianceChecker = complianceChecker;
-    this.betInputHandler = new BetInputHandler(logger);
+    this.researchUIConfig = researchUIConfig;
+    this.betInputHandler = new BetInputHandler(researchUIConfig, logger);
     this.verifier = verifier;
     this.logger = logger;
   }

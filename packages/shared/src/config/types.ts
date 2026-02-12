@@ -88,6 +88,15 @@ export interface BotConfig {
       allowlist: string[];
       prohibitedSites: string[];
       requireBuildFlag: boolean;
+      betInputField?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        decimalPrecision: number;
+        decimalSeparator: "," | ".";
+      };
+      minRaiseAmount?: number;
     };
   };
   safety: {
