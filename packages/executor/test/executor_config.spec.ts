@@ -37,12 +37,6 @@ vi.mock("../src/bet_input_handler", () => {
 
 describe("createActionExecutor", () => {
   describe("ResearchUI config validation", () => {
-    const baseResearchUIConfig: ResearchUIConfig = {
-      allowlist: ["CoinPoker"],
-      prohibitedSites: ["pokerstars.com"],
-      requireBuildFlag: true,
-    };
-
     const validBetInputField = {
       x: 100,
       y: 200,
@@ -50,6 +44,14 @@ describe("createActionExecutor", () => {
       height: 30,
       decimalPrecision: 2,
       decimalSeparator: "." as const,
+    };
+
+    const baseResearchUIConfig: ResearchUIConfig = {
+      allowlist: ["CoinPoker"],
+      prohibitedSites: ["pokerstars.com"],
+      requireBuildFlag: true,
+      betInputField: validBetInputField,
+      minRaiseAmount: 2,
     };
 
     it("accepts valid betInputField configuration", () => {
@@ -68,17 +70,40 @@ describe("createActionExecutor", () => {
       expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
     });
 
-    it("accepts researchUI config without optional betInputField", () => {
+    it("throws descriptive error when betInputField is missing", () => {
       const config: ExecutorConfig = {
         enabled: true,
         mode: "research-ui",
         verifyActions: true,
         maxRetries: 1,
         verificationTimeoutMs: 2000,
-        researchUI: baseResearchUIConfig,
+        researchUI: {
+          ...baseResearchUIConfig,
+          betInputField: undefined,
+        },
       };
 
-      expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
+      expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
+        "betInputField is required for research-ui mode"
+      );
+    });
+
+    it("throws descriptive error when minRaiseAmount is missing", () => {
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          minRaiseAmount: undefined,
+        },
+      };
+
+      expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
+        "minRaiseAmount is required for research-ui mode"
+      );
     });
 
     it("throws descriptive error for missing betInputField.x", () => {

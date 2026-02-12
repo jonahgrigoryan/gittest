@@ -18,8 +18,10 @@ import type {
 function validateResearchUIConfig(config: ResearchUIConfig): void {
   const errors: string[] = [];
 
-  // Validate betInputField if present
-  if (config.betInputField !== undefined) {
+  // Validate betInputField (required for research-ui mode)
+  if (config.betInputField === undefined) {
+    errors.push('betInputField is required for research-ui mode');
+  } else {
     const field = config.betInputField;
     
     if (typeof field.x !== 'number') {
@@ -42,8 +44,10 @@ function validateResearchUIConfig(config: ResearchUIConfig): void {
     }
   }
 
-  // Validate minRaiseAmount if present
-  if (config.minRaiseAmount !== undefined) {
+  // Validate minRaiseAmount (required for research-ui mode)
+  if (config.minRaiseAmount === undefined) {
+    errors.push('minRaiseAmount is required for research-ui mode');
+  } else {
     if (typeof config.minRaiseAmount !== 'number' || config.minRaiseAmount < 0) {
       errors.push('minRaiseAmount must be a non-negative number');
     }
