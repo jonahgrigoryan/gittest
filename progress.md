@@ -11,6 +11,17 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
+## CoinPoker Autonomy Progress (Updated: 2026-02-15)
+
+- **Task 1 – Extend ResearchUIConfig schema and validation**  
+  Merged to `main` via PR [#37](https://github.com/jonahgrigoryan/gittest/pull/37). Included schema/type wiring, executor validation hardening, and follow-up security fixes (`undici`, solver `bytes`, vision `pillow`/`protobuf`) with CI green.
+
+- **Task 0 – fast-check prerequisite for property tests**  
+  Implemented on branch `feat/task-0-fast-check`: added `fast-check` as a dev dependency in `@poker-bot/executor` and `@poker-bot/orchestrator`, plus trivial import/property tests:
+  - `packages/executor/test/fast_check_import.spec.ts`
+  - `packages/orchestrator/test/fast_check_import.spec.ts`
+  Local verification run: `pnpm run lint`, `pnpm run build`, `pnpm run test:unit`.
+
 ## Completed Tasks
 
 - **Task 1 – Scaffolding & Core Interfaces**  

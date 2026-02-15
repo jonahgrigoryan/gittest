@@ -6,13 +6,13 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
 
 ## Tasks
 
-- [ ] 0. Install `fast-check` as dev dependency for property-based testing
+- [x] 0. Install `fast-check` as dev dependency for property-based testing
   - Run `pnpm --filter @poker-bot/executor add -D fast-check`
   - Run `pnpm --filter @poker-bot/orchestrator add -D fast-check`
   - Verify import works in a trivial test
   - _Prerequisite for all property tests in tasks 2–13_
 
-- [ ] 1. Extend ResearchUIConfig schema and add validation
+- [x] 1. Extend ResearchUIConfig schema and add validation
   - **Note:** `WindowConfig` (titlePatterns, processNames, minWindowSize) and `ComplianceConfig` (allowlist, prohibitedSites, requireBuildFlag) already exist in `packages/executor/src/types.ts`. `BotConfig.execution.researchUI` in `packages/shared/src/config/types.ts` already has allowlist, prohibitedSites, requireBuildFlag.
   - Add `betInputField` to `BotConfig.execution.researchUI` (extends existing `InputField` with `decimalPrecision` and `decimalSeparator`)
   - Add `minRaiseAmount` to `BotConfig.execution.researchUI`
@@ -20,7 +20,7 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
   - Implement config validation that checks new required fields are present
   - _Requirements: 1.3, 1.4, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8_
   
-  - [ ] 1.1 Write unit tests for config validation
+  - [x] 1.1 Write unit tests for config validation
     - Test missing required fields produce descriptive errors
     - Test invalid field values produce validation errors
     - _Requirements: 9.6, 9.7, 9.8_

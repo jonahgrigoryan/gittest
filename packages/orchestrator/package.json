@@ -61,5 +61,8 @@
     "@poker-bot/logger": "workspace:*",
     "@poker-bot/shared": "workspace:*",
     "undici": "6.23.0"
+  },
+  "devDependencies": {
+    "fast-check": "^4.5.3"
   }
 }
