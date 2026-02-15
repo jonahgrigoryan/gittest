@@ -54,6 +54,25 @@ describe("ConfigurationManager", () => {
       expect(cfg).toHaveProperty("compliance");
     });
 
+    it("accepts researchUI window discovery fields in schema validation", async () => {
+      const config = JSON.parse(await fs.promises.readFile(tempConfigPath, "utf-8")) as BotConfig;
+      if (!config.execution.researchUI) {
+        throw new Error("expected execution.researchUI in default config fixture");
+      }
+
+      config.execution.researchUI.windowTitlePatterns = ["CoinPoker Table"];
+      config.execution.researchUI.processNames = ["CoinPoker"];
+      config.execution.researchUI.minWindowSize = { width: 1280, height: 720 };
+      await fs.promises.writeFile(tempConfigPath, JSON.stringify(config, null, 2), "utf-8");
+
+      manager = new ConfigurationManager(schemaPath);
+      const loaded = await manager.load(tempConfigPath);
+
+      expect(loaded.execution.researchUI?.windowTitlePatterns).toEqual(["CoinPoker Table"]);
+      expect(loaded.execution.researchUI?.processNames).toEqual(["CoinPoker"]);
+      expect(loaded.execution.researchUI?.minWindowSize).toEqual({ width: 1280, height: 720 });
+    });
+
     it("throws error on invalid config", async () => {
       const invalidConfigPath = path.join(tempDir, "invalid.json");
       await fs.promises.writeFile(invalidConfigPath, JSON.stringify({ invalid: "config" }), "utf-8");

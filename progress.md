@@ -13,6 +13,16 @@
 
 ## CoinPoker Autonomy Progress (Updated: 2026-02-15)
 
+- **Task 2 – WindowManager AppleScript implementation (Req 2.1–2.5)**  
+  Implemented on branch `feat/task-2-window-manager-applescript` (PR pending). Replaced `WindowManager` stubs with AppleScript-backed discovery/focus/bounds behavior, added injectable `AppleScriptRunner` + production `OsaScriptRunner`, wired executor factory runner injection and window config mapping (`windowTitlePatterns` / `processNames` / `minWindowSize` with backward-compatible fallbacks), and added Task 2 property/unit coverage:
+  - `packages/executor/test/window_manager.spec.ts` (Properties 1–3 via `fast-check`)
+  - `packages/executor/test/research_bridge.spec.ts` (focus-before-action and focus-failure behavior)
+  - `packages/executor/test/executor_config.spec.ts` (factory runner wiring + config mapping)
+  Verification run (all passing):
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+
 - **Task 1 – Extend ResearchUIConfig schema and validation**  
   Merged to `main` via PR [#37](https://github.com/jonahgrigoryan/gittest/pull/37). Included schema/type wiring, executor validation hardening, and follow-up security fixes (`undici`, solver `bytes`, vision `pillow`/`protobuf`) with CI green.
 

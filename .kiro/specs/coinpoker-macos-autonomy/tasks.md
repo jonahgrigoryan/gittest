@@ -25,8 +25,8 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Test invalid field values produce validation errors
     - _Requirements: 9.6, 9.7, 9.8_
 
-- [ ] 2. Extend existing WindowManager with real macOS AppleScript implementation
-  - [ ] 2.1 Replace stubs in existing `packages/executor/src/window_manager.ts` with AppleScript runner
+- [x] 2. Extend existing WindowManager with real macOS AppleScript implementation
+  - [x] 2.1 Replace stubs in existing `packages/executor/src/window_manager.ts` with AppleScript runner
     - **Existing:** `findPokerWindow()` returns mock data; `focusWindow()` is a no-op; `getWindowBounds()` returns placeholder bounds; `detectDPIScale()` returns 1
     - Replace `findPokerWindow()` with AppleScript window discovery by process name and title patterns
     - Replace `focusWindow()` with AppleScript `set frontmost to true`
@@ -36,19 +36,19 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Add injectable `AppleScriptRunner` for testability (mock in tests, real `osascript` in production)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
   
-  - [ ] 2.2 Write property test for window discovery
+  - [x] 2.2 Write property test for window discovery
     - **Property 1: Window Discovery and Selection**
     - **Validates: Requirements 2.1, 2.2**
   
-  - [ ] 2.3 Write property test for window bounds retrieval
+  - [x] 2.3 Write property test for window bounds retrieval
     - **Property 2: Window Bounds Retrieval**
     - **Validates: Requirements 2.3**
   
-  - [ ] 2.4 Write property test for window size validation
+  - [x] 2.4 Write property test for window size validation
     - **Property 3: Window Size Validation**
     - **Validates: Requirements 2.5**
   
-  - [ ] 2.5 Write unit tests for window focus behavior
+  - [x] 2.5 Write unit tests for window focus behavior
     - Test focus is called before actions
     - Test focus failure handling
     - _Requirements: 2.4_

@@ -127,6 +127,9 @@ export interface BetInputConfig extends InputField {
  * Extended ResearchUI configuration with bet input handling
  */
 export interface ResearchUIConfig extends ComplianceConfig {
+  windowTitlePatterns?: string[];
+  processNames?: string[];
+  minWindowSize?: { width: number; height: number };
   betInputField?: BetInputConfig;
   minRaiseAmount?: number;
 }

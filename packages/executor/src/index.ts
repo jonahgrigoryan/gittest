@@ -1,6 +1,6 @@
 import { SimulatorExecutor } from './simulators/simulator';
 import { ResearchUIExecutor } from './research_bridge';
-import { WindowManager } from './window_manager';
+import { WindowManager, OsaScriptRunner } from './window_manager';
 import { ComplianceChecker } from './compliance';
 import { ActionVerifier } from './verifier';
 import type {
@@ -10,6 +10,32 @@ import type {
   WindowConfig,
   ResearchUIConfig
 } from './types';
+import type { AppleScriptRunner } from './window_manager';
+
+export interface ExecutorFactoryDependencies {
+  appleScriptRunner?: AppleScriptRunner;
+}
+
+function normalizeSelectorValues(values: string[] | undefined): string[] {
+  if (!values) {
+    return [];
+  }
+  return values.map((value) => value.trim()).filter((value) => value.length > 0);
+}
+
+function resolveWindowSelectors(config: ResearchUIConfig): {
+  titlePatterns: string[];
+  processNames: string[];
+} {
+  const allowlist = normalizeSelectorValues(config.allowlist);
+  const explicitTitlePatterns = normalizeSelectorValues(config.windowTitlePatterns);
+  const explicitProcessNames = normalizeSelectorValues(config.processNames);
+
+  return {
+    titlePatterns: explicitTitlePatterns.length > 0 ? explicitTitlePatterns : allowlist,
+    processNames: explicitProcessNames.length > 0 ? explicitProcessNames : allowlist
+  };
+}
 
 /**
  * Validates ResearchUI configuration for required fields
@@ -53,6 +79,21 @@ function validateResearchUIConfig(config: ResearchUIConfig): void {
     }
   }
 
+  if (config.minWindowSize !== undefined) {
+    const minWindowSize = config.minWindowSize;
+    if (typeof minWindowSize.width !== 'number' || minWindowSize.width <= 0) {
+      errors.push('minWindowSize.width must be a positive number');
+    }
+    if (typeof minWindowSize.height !== 'number' || minWindowSize.height <= 0) {
+      errors.push('minWindowSize.height must be a positive number');
+    }
+  }
+
+  const selectors = resolveWindowSelectors(config);
+  if (selectors.titlePatterns.length === 0 && selectors.processNames.length === 0) {
+    errors.push('at least one window selector must be configured via windowTitlePatterns/processNames (or allowlist fallback)');
+  }
+
   if (errors.length > 0) {
     throw new Error(`ResearchUI config validation failed: ${errors.join('; ')}`);
   }
@@ -65,7 +106,8 @@ export function createActionExecutor(
   mode: ExecutionMode,
   config?: ExecutorConfig,
   verifier?: ActionVerifier,
-  logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console
+  logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console,
+  dependencies: ExecutorFactoryDependencies = {}
 ): ActionExecutor {
   logger.debug('Creating ActionExecutor', { mode, config });
 
@@ -88,13 +130,19 @@ export function createActionExecutor(
       // Validate required fields for research-ui mode
       validateResearchUIConfig(config.researchUI);
 
+      const selectors = resolveWindowSelectors(config.researchUI);
+
       // Create window manager
       const windowConfig: WindowConfig = {
-        titlePatterns: config.researchUI.allowlist || [],
-        processNames: [], // Could be derived from allowlist
-        minWindowSize: { width: 800, height: 600 }
+        titlePatterns: selectors.titlePatterns,
+        processNames: selectors.processNames,
+        minWindowSize: config.researchUI.minWindowSize ?? { width: 800, height: 600 }
       };
-      const windowManager = new WindowManager(windowConfig, logger);
+      const windowManager = new WindowManager(
+        windowConfig,
+        logger,
+        dependencies.appleScriptRunner ?? new OsaScriptRunner()
+      );
 
       // Create compliance checker
       const complianceConfig: ResearchUIConfig = {
