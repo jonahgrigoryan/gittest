@@ -121,8 +121,8 @@ importers:
         specifier: workspace:*
         version: link:../shared
       undici:
-        specifier: 6.21.2
-        version: 6.21.2
+        specifier: 6.23.0
+        version: 6.23.0
 
   packages/shared:
     dependencies:
@@ -1644,8 +1644,8 @@ packages:
   undici-types@5.26.5:
     resolution: {integrity: sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==}
 
-  undici@6.21.2:
-    resolution: {integrity: sha512-uROZWze0R0itiAKVPsYhFov9LxrPMHLMEQFszeI2gCN6bnIIZ8twzBCJcN2LJrBBLfrP0t1FW0g+JmKVl8Vk1g==}
+  undici@6.23.0:
+    resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
     engines: {node: '>=18.17'}
 
   uri-js@4.4.1:
@@ -3094,7 +3094,7 @@ snapshots:
 
   undici-types@5.26.5: {}
 
-  undici@6.21.2: {}
+  undici@6.23.0: {}
 
   uri-js@4.4.1:
     dependencies:
