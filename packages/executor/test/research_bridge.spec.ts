@@ -288,5 +288,70 @@ describe("ResearchUIExecutor", () => {
       expect(result.error).toContain("Invalid raise amount");
       expect(mockComplianceChecker.validateExecution).not.toHaveBeenCalled();
     });
+
+    it("Task 2.5: focuses window before action execution", async () => {
+      const executor = new ResearchUIExecutor(
+        mockWindowManager as WindowManager,
+        mockComplianceChecker as ComplianceChecker,
+        undefined,
+        mockResearchUIConfig,
+        console
+      );
+
+      const performActionSpy = vi.spyOn(executor as any, "performAction").mockResolvedValue({
+        success: true,
+        actionExecuted: baseDecision.action,
+        timing: {
+          executionMs: 0,
+          totalMs: 0
+        },
+        metadata: {
+          executionMode: "research-ui",
+          platform: "poker",
+          windowHandle: "1"
+        }
+      });
+
+      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
+        isHeroTurn: true,
+        actionTimer: 20,
+        confidence: 0.99
+      });
+      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
+        screenCoords: { x: 250, y: 420 },
+        isEnabled: true,
+        isVisible: true,
+        confidence: 0.95
+      });
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(true);
+      expect(mockWindowManager.focusWindow).toHaveBeenCalledTimes(1);
+      expect(performActionSpy).toHaveBeenCalledTimes(1);
+
+      const focusInvocationOrder = mockWindowManager.focusWindow.mock.invocationCallOrder[0];
+      const performActionInvocationOrder = performActionSpy.mock.invocationCallOrder[0];
+      expect(focusInvocationOrder).toBeLessThan(performActionInvocationOrder);
+    });
+
+    it("Task 2.5: returns failure when focus operation fails", async () => {
+      mockWindowManager.focusWindow.mockResolvedValue(false);
+
+      const executor = new ResearchUIExecutor(
+        mockWindowManager as WindowManager,
+        mockComplianceChecker as ComplianceChecker,
+        undefined,
+        mockResearchUIConfig,
+        console
+      );
+
+      const performActionSpy = vi.spyOn(executor as any, "performAction");
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Failed to focus window");
+      expect(performActionSpy).not.toHaveBeenCalled();
+    });
   });
 });

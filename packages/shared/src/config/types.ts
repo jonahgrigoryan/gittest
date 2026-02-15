@@ -88,6 +88,12 @@ export interface BotConfig {
       allowlist: string[];
       prohibitedSites: string[];
       requireBuildFlag: boolean;
+      windowTitlePatterns?: string[];
+      processNames?: string[];
+      minWindowSize?: {
+        width: number;
+        height: number;
+      };
       betInputField?: {
         x: number;
         y: number;

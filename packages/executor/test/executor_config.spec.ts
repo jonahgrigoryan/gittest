@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createActionExecutor } from "../src/index";
 import type { ExecutorConfig, ResearchUIConfig } from "../src/types";
 
@@ -7,6 +7,9 @@ vi.mock("../src/window_manager", () => {
   return {
     WindowManager: vi.fn().mockImplementation(() => ({
       findPokerWindow: vi.fn().mockResolvedValue({ id: 1, title: "Test", processName: "Test" }),
+    })),
+    OsaScriptRunner: vi.fn().mockImplementation(() => ({
+      run: vi.fn().mockResolvedValue(""),
     })),
   };
 });
@@ -36,6 +39,10 @@ vi.mock("../src/bet_input_handler", () => {
 });
 
 describe("createActionExecutor", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("ResearchUI config validation", () => {
     const validBetInputField = {
       x: 100,
@@ -357,6 +364,83 @@ describe("createActionExecutor", () => {
       expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
         "Research UI config required for research-ui mode"
       );
+    });
+
+    it("rejects research-ui config when all window selectors are empty", () => {
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          allowlist: [],
+          windowTitlePatterns: [],
+          processNames: [],
+        },
+      };
+
+      expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
+        "at least one window selector"
+      );
+    });
+
+    it("maps window config from researchUI fields and supports injected AppleScript runner", async () => {
+      const { WindowManager, OsaScriptRunner } = await import("../src/window_manager");
+      const injectedRunner = {
+        run: vi.fn().mockResolvedValue(""),
+      };
+
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          windowTitlePatterns: ["CoinPoker Table"],
+          processNames: ["CoinPoker"],
+          minWindowSize: { width: 1200, height: 700 },
+        },
+      };
+
+      createActionExecutor("research-ui", config, undefined, console, {
+        appleScriptRunner: injectedRunner,
+      });
+
+      expect(WindowManager).toHaveBeenCalledWith(
+        {
+          titlePatterns: ["CoinPoker Table"],
+          processNames: ["CoinPoker"],
+          minWindowSize: { width: 1200, height: 700 },
+        },
+        expect.anything(),
+        injectedRunner
+      );
+      expect(OsaScriptRunner).not.toHaveBeenCalled();
+    });
+
+    it("falls back to OsaScriptRunner when no runner override is provided", async () => {
+      const { OsaScriptRunner } = await import("../src/window_manager");
+
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          windowTitlePatterns: ["CoinPoker"],
+          processNames: ["CoinPoker"],
+        },
+      };
+
+      createActionExecutor("research-ui", config, undefined, console);
+
+      expect(OsaScriptRunner).toHaveBeenCalledTimes(1);
     });
   });
 });
