@@ -105,7 +105,7 @@ export interface ExecutorConfig {
   maxRetries: number;
   verificationTimeoutMs: number;
   simulatorEndpoint?: string;
-  researchUI?: ComplianceConfig;
+  researchUI?: ResearchUIConfig;
 }
 
 export interface InputField {
@@ -113,4 +113,20 @@ export interface InputField {
   y: number;
   width: number;
   height: number;
+}
+
+/**
+ * Configuration for bet input field with decimal formatting options
+ */
+export interface BetInputConfig extends InputField {
+  decimalPrecision: number;
+  decimalSeparator: "," | ".";
+}
+
+/**
+ * Extended ResearchUI configuration with bet input handling
+ */
+export interface ResearchUIConfig extends ComplianceConfig {
+  betInputField?: BetInputConfig;
+  minRaiseAmount?: number;
 }

@@ -431,6 +431,40 @@
             "requireBuildFlag": {
               "type": "boolean",
               "default": true
+            },
+            "betInputField": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["x", "y", "width", "height", "decimalPrecision", "decimalSeparator"],
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "width": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "height": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "decimalPrecision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "decimalSeparator": {
+                  "type": "string",
+                  "enum": [",", "."]
+                }
+              }
+            },
+            "minRaiseAmount": {
+              "type": "number",
+              "minimum": 0
             }
           }
         }

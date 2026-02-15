@@ -122,6 +122,13 @@ describe("ConfigurationManager", () => {
       expect(retries).toBeGreaterThanOrEqual(0);
     });
 
+    it("reads researchUI configuration when present", () => {
+      // Default config may or may not have researchUI, but we can verify the path works
+      const researchUI = manager!.get<{ allowlist: string[] }>("execution.researchUI");
+      expect(researchUI).toBeDefined();
+      expect(Array.isArray(researchUI.allowlist)).toBe(true);
+    });
+
     it("retrieves agent cost policy", () => {
       const maxTokens = manager!.get<number>("agents.costPolicy.maxTokensDecision");
       expect(maxTokens).toBeGreaterThan(0);

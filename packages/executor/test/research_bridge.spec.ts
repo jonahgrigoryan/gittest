@@ -53,6 +53,21 @@ const baseDecision: StrategyDecision = {
   }
 };
 
+const mockResearchUIConfig = {
+  allowlist: ["CoinPoker"],
+  prohibitedSites: ["pokerstars.com"],
+  requireBuildFlag: true,
+  betInputField: {
+    x: 100,
+    y: 200,
+    width: 150,
+    height: 30,
+    decimalPrecision: 2,
+    decimalSeparator: "." as const
+  },
+  minRaiseAmount: 2
+};
+
 describe("ResearchUIExecutor", () => {
   let mockWindowManager: any;
   let mockComplianceChecker: any;
@@ -92,6 +107,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -111,6 +127,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -127,6 +144,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -145,6 +163,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -173,6 +192,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         mockVerifier as ActionVerifier, 
+        mockResearchUIConfig,
         console
       );
 
@@ -214,6 +234,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -235,6 +256,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 
@@ -256,6 +278,7 @@ describe("ResearchUIExecutor", () => {
         mockWindowManager as WindowManager, 
         mockComplianceChecker as ComplianceChecker, 
         undefined, 
+        mockResearchUIConfig,
         console
       );
 

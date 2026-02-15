@@ -60,6 +60,6 @@
     "@poker-bot/executor": "workspace:*",
     "@poker-bot/logger": "workspace:*",
     "@poker-bot/shared": "workspace:*",
-    "undici": "6.21.2"
+    "undici": "6.23.0"
   }
 }

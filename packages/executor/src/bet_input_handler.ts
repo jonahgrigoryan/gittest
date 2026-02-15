@@ -1,5 +1,5 @@
 import type { Action } from "@poker-bot/shared";
-import type { WindowHandle, InputField } from "./types";
+import type { WindowHandle, InputField, ResearchUIConfig } from "./types";
 import { deterministicRandom } from "./rng";
 
 /**
@@ -7,13 +7,51 @@ import { deterministicRandom } from "./rng";
  * Handles UI input mechanics for bet sizing fields.
  */
 export class BetInputHandler {
+  private readonly config?: ResearchUIConfig;
   private readonly logger: Pick<Console, "debug" | "info" | "warn" | "error">;
   private jitterCounter = 0;
 
   constructor(
+    config?: ResearchUIConfig,
     logger: Pick<Console, "debug" | "info" | "warn" | "error"> = console,
   ) {
+    this.config = config;
     this.logger = logger;
+  }
+
+  /**
+   * Validates bet amount against configuration constraints
+   */
+  private validateBetAmount(amount: number): void {
+    // Check minRaiseAmount if configured
+    if (this.config?.minRaiseAmount !== undefined) {
+      if (amount < this.config.minRaiseAmount) {
+        throw new Error(
+          `Bet amount ${amount} is below minimum raise amount ${this.config.minRaiseAmount}`
+        );
+      }
+    }
+
+    // Check decimal precision if configured
+    if (this.config?.betInputField?.decimalPrecision !== undefined) {
+      const decimalPlaces = this.getDecimalPlaces(amount);
+      if (decimalPlaces > this.config.betInputField.decimalPrecision) {
+        throw new Error(
+          `Bet amount ${amount} exceeds decimal precision ${this.config.betInputField.decimalPrecision}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Gets the number of decimal places in a number
+   */
+  private getDecimalPlaces(num: number): number {
+    const str = num.toString();
+    if (str.includes(".")) {
+      return str.split(".")[1].length;
+    }
+    return 0;
   }
 
   /**
@@ -35,6 +73,9 @@ export class BetInputHandler {
     if (action.amount === undefined || action.amount <= 0) {
       throw new Error(`Invalid raise amount: ${action.amount}`);
     }
+
+    // Validate against configuration constraints
+    this.validateBetAmount(action.amount);
 
     this.logger.debug("BetInputHandler: Processing raise action", {
       amount: action.amount,
@@ -61,7 +102,7 @@ export class BetInputHandler {
 
   /**
    * Locates bet input field coordinates
-   * Could integrate with vision system for dynamic detection
+   * Uses configured coordinates if available, falls back to defaults
    */
   private async locateBetInputField(
     windowHandle: WindowHandle,
@@ -71,7 +112,16 @@ export class BetInputHandler {
       processName: windowHandle.processName,
     });
 
-    // In a production implementation, this would:
+    // If betInputField config is provided, use it
+    if (this.config?.betInputField) {
+      const { x, y, width, height } = this.config.betInputField;
+      this.logger.debug("BetInputHandler: Using configured bet input field", {
+        x, y, width, height
+      });
+      return { x, y, width, height };
+    }
+
+    // In a production implementation without config, this would:
     // 1. Use vision system to detect bet input field
     // 2. Apply layout pack coordinates
     // 3. Validate field is visible and enabled
@@ -85,6 +135,24 @@ export class BetInputHandler {
       width: 150,
       height: 30,
     };
+  }
+
+  /**
+   * Formats amount according to configuration (decimal separator, precision)
+   */
+  private formatAmount(amount: number): string {
+    const precision = this.config?.betInputField?.decimalPrecision ?? 2;
+    const separator = this.config?.betInputField?.decimalSeparator ?? ".";
+
+    // Format with configured precision
+    let amountStr = amount.toFixed(precision);
+
+    // Apply configured decimal separator
+    if (separator === ",") {
+      amountStr = amountStr.replace(".", ",");
+    }
+
+    return amountStr;
   }
 
   /**
@@ -103,12 +171,14 @@ export class BetInputHandler {
     // Clear existing text
     await this.clearInputField(inputField);
 
-    // Format amount as string
-    const amountStr = amount.toFixed(2); // Ensure proper decimal formatting
+    // Format amount according to configuration
+    const amountStr = this.formatAmount(amount);
 
     this.logger.debug("BetInputHandler: Formatted amount string", {
       amountStr,
       originalAmount: amount,
+      precision: this.config?.betInputField?.decimalPrecision ?? 2,
+      separator: this.config?.betInputField?.decimalSeparator ?? ".",
     });
 
     // Type the amount character by character with small delays
