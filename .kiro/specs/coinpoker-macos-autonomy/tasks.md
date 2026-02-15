@@ -53,8 +53,8 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Test focus failure handling
     - _Requirements: 2.4_
 
-- [ ] 3. Extend existing ComplianceChecker with real macOS process detection
-  - [ ] 3.1 Replace stubs in existing `packages/executor/src/compliance.ts`
+- [x] 3. Extend existing ComplianceChecker with real macOS process detection
+  - [x] 3.1 Replace stubs in existing `packages/executor/src/compliance.ts`
     - **Existing:** `checkRunningProcesses()` uses hardcoded mock process list; `checkProhibitedSites()` uses hardcoded mock site list
     - Replace `checkRunningProcesses()` with real macOS process enumeration (via AppleScript or `ps -A`)
     - Replace `checkProhibitedSites()` with real window/process scanning
@@ -62,19 +62,19 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Keep existing `isResearchUIModeAllowed()`, `validateExecution()`, `validateSite()`, `isProcessProhibited()` logic
     - _Requirements: 2.6, 2.7, 2.8, 2.9, 2.10, 2.11_
   
-  - [ ] 3.2 Write property test for process running verification
+  - [x] 3.2 Write property test for process running verification
     - **Property 5: Process Running Verification**
     - **Validates: Requirements 2.6, 2.7**
   
-  - [ ] 3.3 Write property test for allowlist enforcement
+  - [x] 3.3 Write property test for allowlist enforcement
     - **Property 6: Process Allowlist Enforcement**
     - **Validates: Requirements 2.8**
   
-  - [ ] 3.4 Write property test for prohibited process rejection
+  - [x] 3.4 Write property test for prohibited process rejection
     - **Property 7: Prohibited Process Rejection**
     - **Validates: Requirements 2.9**
   
-  - [ ] 3.5 Write property test for build flag validation
+  - [x] 3.5 Write property test for build flag validation
     - **Property 8: Build Flag Validation**
     - **Validates: Requirements 2.10, 2.11**
 

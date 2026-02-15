@@ -11,9 +11,11 @@ import type {
   ResearchUIConfig
 } from './types';
 import type { AppleScriptRunner } from './window_manager';
+import type { ProcessListProvider } from './compliance';
 
 export interface ExecutorFactoryDependencies {
   appleScriptRunner?: AppleScriptRunner;
+  processListProvider?: ProcessListProvider;
 }
 
 function normalizeSelectorValues(values: string[] | undefined): string[] {
@@ -43,6 +45,8 @@ function resolveWindowSelectors(config: ResearchUIConfig): {
  */
 function validateResearchUIConfig(config: ResearchUIConfig): void {
   const errors: string[] = [];
+  const normalizedAllowlist = normalizeSelectorValues(config.allowlist);
+  const normalizedProcessNames = normalizeSelectorValues(config.processNames);
 
   // Validate betInputField (required for research-ui mode)
   if (config.betInputField === undefined) {
@@ -92,6 +96,9 @@ function validateResearchUIConfig(config: ResearchUIConfig): void {
   const selectors = resolveWindowSelectors(config);
   if (selectors.titlePatterns.length === 0 && selectors.processNames.length === 0) {
     errors.push('at least one window selector must be configured via windowTitlePatterns/processNames (or allowlist fallback)');
+  }
+  if (normalizedAllowlist.length === 0 && normalizedProcessNames.length === 0) {
+    errors.push('at least one process selector must be configured via processNames or allowlist');
   }
 
   if (errors.length > 0) {
@@ -149,10 +156,15 @@ export function createActionExecutor(
         allowlist: config.researchUI.allowlist || [],
         prohibitedSites: config.researchUI.prohibitedSites || [],
         requireBuildFlag: config.researchUI.requireBuildFlag ?? true,
+        processNames: config.researchUI.processNames,
         betInputField: config.researchUI.betInputField,
         minRaiseAmount: config.researchUI.minRaiseAmount
       };
-      const complianceChecker = new ComplianceChecker(complianceConfig, logger);
+      const complianceChecker = new ComplianceChecker(
+        complianceConfig,
+        logger,
+        dependencies.processListProvider
+      );
 
       return new ResearchUIExecutor(
         windowManager,

@@ -386,6 +386,26 @@ describe("createActionExecutor", () => {
       );
     });
 
+    it("rejects research-ui config when process selectors are missing even if title selectors exist", () => {
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          allowlist: [],
+          windowTitlePatterns: ["CoinPoker Table"],
+          processNames: []
+        }
+      };
+
+      expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
+        "at least one process selector"
+      );
+    });
+
     it("maps window config from researchUI fields and supports injected AppleScript runner", async () => {
       const { WindowManager, OsaScriptRunner } = await import("../src/window_manager");
       const injectedRunner = {

@@ -13,6 +13,19 @@
 
 ## CoinPoker Autonomy Progress (Updated: 2026-02-15)
 
+- **Task 3 – ComplianceChecker process detection (Req 2.6–2.11)**
+  Implemented on branch `feat/task-3-compliance-process-detection` (PR pending). Replaced compliance stubs with provider-backed real process detection and scanning:
+  - Added injectable `ProcessListProvider` in `packages/executor/src/compliance.ts`
+  - Added production `MacOSProcessListProvider` using AppleScript (`osascript`) with safe `ps -A` fallback
+  - Enforced required-process running checks, active-process allowlist checks, prohibited indicator rejection using real process/window title inputs, and descriptive build-flag failure messaging for `RESEARCH_UI_ENABLED`
+  - Preserved executor-facing contract compatibility (`isResearchUIModeAllowed`, `validateExecution`, `validateSite`, `isProcessProhibited`)
+  - Wired `processNames` into compliance factory config and added optional dependency injection path via `createActionExecutor(..., dependencies.processListProvider)`
+  - Added Task 3 property/unit coverage in `packages/executor/test/compliance.spec.ts` (Properties 5–8 + `validateExecution` contract behavior)
+  Verification run (all passing):
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+
 - **Task 2 – WindowManager AppleScript implementation (Req 2.1–2.5)**  
   Implemented on branch `feat/task-2-window-manager-applescript` (PR pending). Replaced `WindowManager` stubs with AppleScript-backed discovery/focus/bounds behavior, added injectable `AppleScriptRunner` + production `OsaScriptRunner`, wired executor factory runner injection and window config mapping (`windowTitlePatterns` / `processNames` / `minWindowSize` with backward-compatible fallbacks), and added Task 2 property/unit coverage:
   - `packages/executor/test/window_manager.spec.ts` (Properties 1–3 via `fast-check`)
