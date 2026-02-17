@@ -78,6 +78,33 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
 This section is the operational workflow for ongoing "hands + eyes" work. Use it
 as the default runbook for all coding agents until replaced.
 
+## Active State Snapshot
+
+- Brain/core stack is complete and treated as stable baseline (solver, agents, strategy,
+  replay, evaluator, deployment, and associated observability/error handling).
+- Current project scope is CoinPoker macOS autonomy hands+eyes.
+- `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
+  - Tasks 0–3 are complete on `main`.
+  - Task 4 work is complete on branch `feat/task-4-nutjs-input-automation` and awaiting merge.
+    - Task 0 fast-check prerequisite
+    - Task 1 research UI config schema and validation
+    - Task 2 WindowManager AppleScript implementation
+    - Task 3 compliance process detection
+    - Task 4 nut.js input automation + bet input integration
+- Current next target is to finish Task 4 PR/merge, then Task 5 (executor infrastructure checkpoint).
+- Confirmed post-Phase-12 successful commits on main/task branch are:
+  - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
+  - `878b5d3` (`Phase 11: Observability + Health Controller Coverage`)
+  - `15f60cb` (`Phase 10: Executor Error Paths & Verification`)
+  - `be5e487` (`Phase 9: Time Budget & Preemption Hardening`)
+  - `be4babf` (`Phase 8: Vision & solver client integration tests`)
+  - `f176c2f` (`feat(executor): complete task 1 research-ui config schema and validation`)
+  - `930e47` (`chore(test): add fast-check prerequisite for autonomy tasks`)
+  - `7015f6e` (`feat(executor): harden window discovery, focus safety, and config schema`)
+  - `474f3d4` (`feat(executor): implement task 3 compliance process detection`)
+  - `9044613` (`feat(executor): implement task 4 input automation and scaling`)
+  - `616cfac` (`fix(executor): lazy-load nutjs bindings at runtime`)
+
 ### Scope & Source of Truth
 - Brain/core decision stack is complete (solver + agents + strategy + replay).
 - Active development scope is CoinPoker macOS autonomy:

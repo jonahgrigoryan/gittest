@@ -1,6 +1,6 @@
 # Project Progress & Workflow
 
-## Current Focus (Updated: 2026-02-09)
+## Current Focus (Updated: 2026-02-17)
 
 - Brain stack is complete: solver, agent coordinator, strategy engine, replay, observability, deployment.
 - Active implementation phase is CoinPoker macOS autonomy ("hands + eyes").
@@ -11,7 +11,10 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
-## CoinPoker Autonomy Progress (Updated: 2026-02-16)
+## CoinPoker Autonomy Progress (Updated: 2026-02-17)
+
+- **Task 5 – executor infrastructure checkpoint** (in-progress)
+  Task 5 is the next live milestone (`[ ] Checkpoint - Ensure executor infrastructure tests pass`) and is the current handoff target before moving to live-vision integration.
 
 - **Task 4 – nut.js input automation + coordinate scaling (Req 3.1–3.11, 12.1–12.5)**
   Implemented on branch `feat/task-4-nutjs-input-automation` (PR pending). Completed end-to-end input automation and Task 4 property coverage:
@@ -33,7 +36,7 @@
   - `pnpm run test:unit`
 
 - **Task 3 – ComplianceChecker process detection (Req 2.6–2.11)**
-  Implemented on branch `feat/task-3-compliance-process-detection` (PR pending). Replaced compliance stubs with provider-backed real process detection and scanning:
+  Merged to `main` via PR [#40](https://github.com/jonahgrigoryan/gittest/pull/40). Replaced compliance stubs with provider-backed real process detection and scanning:
   - Added injectable `ProcessListProvider` in `packages/executor/src/compliance.ts`
   - Added production `MacOSProcessListProvider` using AppleScript (`osascript`) with safe `ps -A` fallback
   - Enforced required-process running checks, active-process allowlist checks, prohibited indicator rejection using real process/window title inputs, and descriptive build-flag failure messaging for `RESEARCH_UI_ENABLED`
@@ -46,7 +49,7 @@
   - `pnpm run test:unit`
 
 - **Task 2 – WindowManager AppleScript implementation (Req 2.1–2.5)**  
-  Implemented on branch `feat/task-2-window-manager-applescript` (PR pending). Replaced `WindowManager` stubs with AppleScript-backed discovery/focus/bounds behavior, added injectable `AppleScriptRunner` + production `OsaScriptRunner`, wired executor factory runner injection and window config mapping (`windowTitlePatterns` / `processNames` / `minWindowSize` with backward-compatible fallbacks), and added Task 2 property/unit coverage:
+  Merged to `main` via PR [#39](https://github.com/jonahgrigoryan/gittest/pull/39). Replaced `WindowManager` stubs with AppleScript-backed discovery/focus/bounds behavior, added injectable `AppleScriptRunner` + production `OsaScriptRunner`, wired executor factory runner injection and window config mapping (`windowTitlePatterns` / `processNames` / `minWindowSize` with backward-compatible fallbacks), and added Task 2 property/unit coverage:
   - `packages/executor/test/window_manager.spec.ts` (Properties 1–3 via `fast-check`)
   - `packages/executor/test/research_bridge.spec.ts` (focus-before-action and focus-failure behavior)
   - `packages/executor/test/executor_config.spec.ts` (factory runner wiring + config mapping)
@@ -59,7 +62,7 @@
   Merged to `main` via PR [#37](https://github.com/jonahgrigoryan/gittest/pull/37). Included schema/type wiring, executor validation hardening, and follow-up security fixes (`undici`, solver `bytes`, vision `pillow`/`protobuf`) with CI green.
 
 - **Task 0 – fast-check prerequisite for property tests**  
-  Implemented on branch `feat/task-0-fast-check`: added `fast-check` as a dev dependency in `@poker-bot/executor` and `@poker-bot/orchestrator`, plus trivial import/property tests:
+  Merged to `main` via PR [#38](https://github.com/jonahgrigoryan/gittest/pull/38). Added `fast-check` as a dev dependency in `@poker-bot/executor` and `@poker-bot/orchestrator`, plus trivial import/property tests:
   - `packages/executor/test/fast_check_import.spec.ts`
   - `packages/orchestrator/test/fast_check_import.spec.ts`
   Local verification run: `pnpm run lint`, `pnpm run build`, `pnpm run test:unit`.
@@ -152,14 +155,23 @@ All commands must pass before declaring a task complete.
 
 ## Active Backlog (CoinPoker macOS Autonomy)
 
-- [ ] Config/schema extensions for research UI (`windowTitlePatterns`, `processNames`, `minWindowSize`, `betInputField`, `minRaiseAmount`)
-- [ ] Real macOS `WindowManager` implementation (AppleScript runner + bounds/focus + DPI handling)
-- [ ] Real `ComplianceChecker` process detection (replace mock process/site checks)
-- [ ] nut.js automation integration in executor/bet input path
-- [ ] Vision-driven turn detection and action-button selection in `ResearchUIExecutor`
-- [ ] CoinPoker layout pack + templates + metadata validation hardening
-- [ ] Live game loop + CLI runner for continuous autonomous operation
-- [ ] Operator docs update for live setup, safety gates, and troubleshooting
+- [x] Task 0: fast-check prerequisite for property tests
+- [x] Task 1: Extend ResearchUIConfig schema and add validation
+- [x] Task 2: Extend existing WindowManager with real macOS AppleScript implementation
+- [x] Task 3: Extend existing ComplianceChecker with real macOS process detection
+- [x] Task 4: Implement InputAutomation wrapper for nut.js and extend BetInputHandler
+- [ ] Task 5: Checkpoint - Ensure executor infrastructure tests pass
+- [ ] Task 6: Extend existing VisionClient with retry logic for live mode
+- [ ] Task 7: Extend ResearchUIExecutor to use vision output
+- [ ] Task 8: Implement vision service template loading and matching
+- [ ] Task 9: Create CoinPoker layout pack with ROIs and templates
+- [ ] Task 10: Checkpoint - Ensure vision integration tests pass
+- [ ] Task 11: Implement GameLoop with hand fingerprinting
+- [ ] Task 12: Implement CLI runner for live mode
+- [ ] Task 13: Implement error handling and safety gates
+- [ ] Task 14: Create coinpoker.bot.json configuration
+- [ ] Task 15: Update operator documentation
+- [ ] Task 16: Final checkpoint - Integration testing and validation
 
 ## Handoff Protocol (When Switching Coding Agents)
 
