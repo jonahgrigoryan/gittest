@@ -156,6 +156,8 @@ as the default runbook for all coding agents until replaced.
   - `AGENTS.md` updated to reflect current milestone and sequencing.
   - `progress.md` updated with milestone and task state.
   - A `check:handoff` command run before push.
+  - If the guard blocks because docs are missing, run:
+    - `pnpm run handoff:update` (or `pnpm run check:handoff:fix`), then commit docs, then re-run `pnpm run check:handoff`.
 - Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes aligned with
   real completion status.
 - In any handoff note, always include:
@@ -317,3 +319,11 @@ Files:
 
 Commit message:
 - `feat(test): add decision pipeline e2e + final integration gate`
+
+## Auto Handoff Log
+<!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->
+- 2026-02-17 | task 4 (nutjs input automation) | branch `feat/task-4-nutjs-input-automation` | base `origin/main` (`474f3d4`) | head `da6ab32` | changed files: 20
+- key files: `.githooks/pre-push`, `.github/PULL_REQUEST_TEMPLATE.md`, `.kiro/specs/coinpoker-macos-autonomy/task-4-kickoff-prompt.md`, `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `package.json`, `packages/executor/package.json`, `packages/executor/src/bet_input_handler.ts`, `packages/executor/src/index.ts`, `packages/executor/src/input_automation.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/window_manager.ts`, `packages/executor/test/bet_input_handler.spec.ts`
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:end -->
+<!-- AUTO_HANDOFF_END -->

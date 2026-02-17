@@ -188,3 +188,20 @@ All commands must pass before declaring a task complete.
 - For `feat/task-*` branches, also ensure both `AGENTS.md` and `progress.md` are
   updated before final push. `pnpm run check:handoff` validates this against
   `origin/main`.
+- If handoff validation fails due to missing doc changes, run:
+  - `pnpm run handoff:update` (or `pnpm run check:handoff:fix`)
+  - Commit `AGENTS.md` and `progress.md`
+  - Re-run `pnpm run check:handoff`
+
+## Auto Handoff Log
+<!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->
+### Auto Handoff: Task 4 (2026-02-17)
+- Branch: `feat/task-4-nutjs-input-automation`
+- Base: `origin/main` @ `474f3d4`
+- Head: `da6ab32`
+- Task label: nutjs input automation
+- Changed files (20): `.githooks/pre-push`, `.github/PULL_REQUEST_TEMPLATE.md`, `.kiro/specs/coinpoker-macos-autonomy/task-4-kickoff-prompt.md`, `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `package.json`, `packages/executor/package.json`, `packages/executor/src/bet_input_handler.ts`, `packages/executor/src/index.ts`, `packages/executor/src/input_automation.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/window_manager.ts`, `packages/executor/test/bet_input_handler.spec.ts`
+- Status note: Auto-generated handoff entry. Replace with final PR/CI/merge outcomes when task closes.
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:end -->
+<!-- AUTO_HANDOFF_END -->
