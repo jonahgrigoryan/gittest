@@ -141,6 +141,67 @@ describe("InputAutomation", () => {
     expect(provider.leftClick).toHaveBeenCalledTimes(1);
   });
 
+  it("clickScreenCoords uses absolute coordinates without translation", async () => {
+    const translator = {
+      visionToScreenCoords: vi.fn(() => ({ x: 1234, y: 5678 }))
+    };
+    const provider = {
+      setMouseSpeed: vi.fn(async () => undefined),
+      moveMouse: vi.fn(async () => undefined),
+      leftClick: vi.fn(async () => undefined),
+      typeText: vi.fn(async () => undefined),
+      pressKey: vi.fn(async () => undefined),
+      releaseKey: vi.fn(async () => undefined)
+    };
+    const automation = new InputAutomation(
+      {
+        dpiCalibration: 1,
+        layoutResolution: { width: 1920, height: 1080 },
+        windowBounds: { x: 0, y: 0, width: 3000, height: 2000 }
+      },
+      translator,
+      createLogger(),
+      provider as any,
+      {
+        sleep: vi.fn(async () => undefined)
+      }
+    );
+
+    await automation.clickScreenCoords(400, 500);
+    expect(translator.visionToScreenCoords).not.toHaveBeenCalled();
+    expect(provider.moveMouse).toHaveBeenCalledWith({ x: 400, y: 500 });
+  });
+
+  it("supports skipping pre-click delay for setup clicks", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const provider = {
+      setMouseSpeed: vi.fn(async () => undefined),
+      moveMouse: vi.fn(async () => undefined),
+      leftClick: vi.fn(async () => undefined),
+      typeText: vi.fn(async () => undefined),
+      pressKey: vi.fn(async () => undefined),
+      releaseKey: vi.fn(async () => undefined)
+    };
+    const automation = new InputAutomation(
+      {
+        dpiCalibration: 1,
+        layoutResolution: { width: 1000, height: 800 },
+        windowBounds: { x: 0, y: 0, width: 1000, height: 800 }
+      },
+      {
+        visionToScreenCoords: vi.fn((x: number, y: number) => ({ x, y }))
+      },
+      createLogger(),
+      provider as any,
+      { sleep }
+    );
+
+    await automation.clickAt(100, 100, { applyPreClickDelay: false });
+    expect(sleep).not.toHaveBeenCalled();
+    expect(provider.moveMouse).toHaveBeenCalledTimes(1);
+    expect(provider.leftClick).toHaveBeenCalledTimes(1);
+  });
+
   it("applies deterministic pre-click delay in the 1-3 second range", async () => {
     const delays: number[] = [];
     const makeAutomation = () =>

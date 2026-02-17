@@ -57,8 +57,10 @@ export class BetInputHandler {
       throw new Error(`Invalid raise amount: ${action.amount}`);
     }
 
-    // Validate against configuration constraints
-    this.validateBetAmount(action.amount);
+    // Format first, then validate to avoid sending a value below minimum after rounding/truncation.
+    const amountString = this.formatAmount(action.amount);
+    const roundedAmount = this.parseAmount(amountString);
+    this.validateBetAmount(roundedAmount);
 
     this.logger.debug("BetInputHandler: Processing raise action", {
       amount: action.amount,
@@ -74,9 +76,9 @@ export class BetInputHandler {
 
     this.logger.debug("BetInputHandler: Located input field", { inputField });
 
-    // Input the pre-calculated amount (sizing already done in strategy layer)
-    const amount = action.amount;
-    await this.typeBetAmount(inputField, amount, rngSeed);
+    // Input the UI-formatted amount (sizing already done in strategy layer)
+    const amount = roundedAmount;
+    await this.typeBetAmount(inputField, amountString, amount, rngSeed);
 
     this.logger.info("BetInputHandler: Successfully input bet amount", {
       amount,
@@ -124,16 +126,29 @@ export class BetInputHandler {
     return amountStr;
   }
 
+  private parseAmount(amountStr: string): number {
+    const separator = this.config?.betInputField?.decimalSeparator ?? ".";
+    const normalized = separator === "," ? amountStr.replace(/,/g, ".") : amountStr;
+    const parsed = Number(normalized);
+
+    if (!Number.isFinite(parsed)) {
+      throw new Error(`Could not parse bet amount: ${amountStr}`);
+    }
+
+    return parsed;
+  }
+
   /**
    * Types bet amount into input field using cross-platform keyboard simulation
    */
   private async typeBetAmount(
     inputField: InputField,
-    amount: number,
+    amountString: string,
+    expectedAmount: number,
     rngSeed?: number,
   ): Promise<void> {
     this.logger.debug("BetInputHandler: Typing bet amount", {
-      amount,
+      expectedAmount,
       inputField,
     });
 
@@ -142,12 +157,11 @@ export class BetInputHandler {
     // Clear existing text
     await this.clearInputField(inputField);
 
-    // Format amount according to configuration
-    const amountStr = this.formatAmount(amount);
+    const amountStr = amountString;
 
     this.logger.debug("BetInputHandler: Formatted amount string", {
       amountStr,
-      originalAmount: amount,
+      originalAmount: expectedAmount,
       precision: this.config?.betInputField?.decimalPrecision ?? 2,
       separator: this.config?.betInputField?.decimalSeparator ?? ".",
     });
@@ -161,7 +175,7 @@ export class BetInputHandler {
     }
 
     // Verify the amount was typed correctly
-    await this.verifyTypedAmount(inputField, amount);
+    await this.verifyTypedAmount(inputField, expectedAmount);
   }
 
   /**
@@ -217,7 +231,8 @@ export class BetInputHandler {
     const automation = this.requireInputAutomation();
     await automation.clickAt(
       inputField.x + inputField.width / 2,
-      inputField.y + inputField.height / 2
+      inputField.y + inputField.height / 2,
+      { applyPreClickDelay: false }
     );
   }
 

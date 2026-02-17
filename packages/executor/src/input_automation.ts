@@ -55,6 +55,10 @@ export interface InputAutomationOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
+export interface ClickOptions {
+  applyPreClickDelay?: boolean;
+}
+
 const DEFAULT_MOUSE_SPEED = 1500;
 
 let nutJsBindingsPromise: Promise<NutJsBindings> | undefined;
@@ -153,7 +157,7 @@ export class InputAutomation {
     this.sleep = options.sleep ?? (async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
-  async clickAt(visionX: number, visionY: number): Promise<void> {
+  async clickAt(visionX: number, visionY: number, options: ClickOptions = {}): Promise<void> {
     const translated = this.coordinateTranslator.visionToScreenCoords(
       visionX,
       visionY,
@@ -161,31 +165,15 @@ export class InputAutomation {
       this.coordinateContext.windowBounds,
       this.coordinateContext.dpiCalibration
     );
+    await this.clickResolved(translated.x, translated.y, options, "vision");
+  }
 
-    if (
-      !this.isWithinBounds(
-        translated.x,
-        translated.y,
-        this.coordinateContext.windowBounds,
-        this.coordinateContext.dpiCalibration
-      )
-    ) {
-      const message = `Translated coordinates (${translated.x}, ${translated.y}) are outside window bounds`;
-      this.logger.error("InputAutomation: Refusing out-of-bounds click", {
-        translated,
-        windowBounds: this.coordinateContext.windowBounds
-      });
-      throw new Error(message);
-    }
-
-    const delayMs = Math.round(1000 + deterministicRandom(this.randomSeed, this.clickCounter) * 2000);
-    this.clickCounter += 1;
-
-    this.logger.debug("InputAutomation: Pre-click delay", { delayMs, translated });
-    await this.sleep(delayMs);
-    await this.provider.setMouseSpeed(this.mouseSpeed);
-    await this.provider.moveMouse(translated);
-    await this.provider.leftClick();
+  async clickScreenCoords(
+    screenX: number,
+    screenY: number,
+    options: ClickOptions = {}
+  ): Promise<void> {
+    await this.clickResolved(screenX, screenY, options, "screen");
   }
 
   async typeText(text: string): Promise<void> {
@@ -219,10 +207,54 @@ export class InputAutomation {
   ): boolean {
     const scale =
       Number.isFinite(dpiCalibration) && dpiCalibration > 0 ? dpiCalibration : 1;
+    const unscaledInBounds =
+      x >= bounds.x &&
+      x <= bounds.x + bounds.width &&
+      y >= bounds.y &&
+      y <= bounds.y + bounds.height;
     const minX = bounds.x * scale;
     const maxX = (bounds.x + bounds.width) * scale;
     const minY = bounds.y * scale;
     const maxY = (bounds.y + bounds.height) * scale;
-    return x >= minX && x <= maxX && y >= minY && y <= maxY;
+    const scaledInBounds = x >= minX && x <= maxX && y >= minY && y <= maxY;
+    return unscaledInBounds || scaledInBounds;
+  }
+
+  private async clickResolved(
+    x: number,
+    y: number,
+    options: ClickOptions,
+    coordinateSpace: "vision" | "screen"
+  ): Promise<void> {
+    if (
+      !this.isWithinBounds(
+        x,
+        y,
+        this.coordinateContext.windowBounds,
+        this.coordinateContext.dpiCalibration
+      )
+    ) {
+      const message = `Click coordinates (${x}, ${y}) are outside window bounds`;
+      this.logger.error("InputAutomation: Refusing out-of-bounds click", {
+        translated: { x, y },
+        coordinateSpace,
+        windowBounds: this.coordinateContext.windowBounds
+      });
+      throw new Error(message);
+    }
+
+    const applyPreClickDelay = options.applyPreClickDelay ?? true;
+    if (applyPreClickDelay) {
+      const delayMs = Math.round(
+        1000 + deterministicRandom(this.randomSeed, this.clickCounter) * 2000
+      );
+      this.clickCounter += 1;
+      this.logger.debug("InputAutomation: Pre-click delay", { delayMs, x, y, coordinateSpace });
+      await this.sleep(delayMs);
+    }
+
+    await this.provider.setMouseSpeed(this.mouseSpeed);
+    await this.provider.moveMouse({ x, y });
+    await this.provider.leftClick();
   }
 }

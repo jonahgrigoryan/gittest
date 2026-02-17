@@ -149,7 +149,14 @@ export class ResearchUIExecutor implements ActionExecutor {
         return this.createFailureResult(error, startTime);
       }
 
-      this.inputAutomation.updateCoordinateContext(this.createCoordinateContext(windowBounds));
+      const focusedWindowBounds = await this.windowManager.getWindowBounds(windowHandle);
+      if (!this.windowManager.validateWindow(windowHandle, focusedWindowBounds)) {
+        const error = 'Window validation failed after focus';
+        this.logger.error('ResearchUIExecutor: ' + error);
+        return this.createFailureResult(error, startTime);
+      }
+
+      this.inputAutomation.updateCoordinateContext(this.createCoordinateContext(focusedWindowBounds));
       this.inputAutomation.updateRandomSeed(decision.metadata?.rngSeed ?? 0);
 
       // 4. Check turn state
@@ -177,7 +184,12 @@ export class ResearchUIExecutor implements ActionExecutor {
 
       // 6. Execute action via OS automation
       const executionTime = Date.now() - startTime;
-      const actionResult = await this.performAction(decision, actionButton, windowHandle, windowBounds);
+      const actionResult = await this.performAction(
+        decision,
+        actionButton,
+        windowHandle,
+        focusedWindowBounds
+      );
 
       if (!actionResult.success) {
         return actionResult;
@@ -296,7 +308,10 @@ export class ResearchUIExecutor implements ActionExecutor {
         await this.betInputHandler.inputBetAmount(action, windowHandle, decision.metadata?.rngSeed);
       }
 
-      await this.inputAutomation.clickAt(buttonInfo.screenCoords.x, buttonInfo.screenCoords.y);
+      await this.inputAutomation.clickScreenCoords(
+        buttonInfo.screenCoords.x,
+        buttonInfo.screenCoords.y
+      );
       this.logger.info('ResearchUIExecutor: Clicked action button', {
         action: action.type,
         coordinates: buttonInfo.screenCoords

@@ -63,6 +63,11 @@ describe("BetInputHandler", () => {
         fc.double({ min: 0.01, max: 1_000, noNaN: true, noDefaultInfinity: true }),
         fc.double({ min: 0.0001, max: 0.9999, noNaN: true, noDefaultInfinity: true }),
         async (minRaiseAmount, ratio) => {
+          const inputAutomation = {
+            clickAt: vi.fn().mockResolvedValue(undefined),
+            clearTextField: vi.fn().mockResolvedValue(undefined),
+            typeText: vi.fn().mockResolvedValue(undefined)
+          };
           const handler = new BetInputHandler(
             {
               allowlist: ["CoinPoker"],
@@ -78,21 +83,56 @@ describe("BetInputHandler", () => {
                 decimalSeparator: "."
               }
             },
-            createLogger()
+            createLogger(),
+            inputAutomation as any
           );
+          vi.spyOn(handler as any, "delay").mockResolvedValue(undefined);
 
           const amount = minRaiseAmount * ratio;
+          const roundedAmount = Number((handler as any).formatAmount(amount));
           const promise = handler.inputBetAmount(
             createRaiseAction(amount),
             { id: "CoinPoker:1", title: "CoinPoker Table", processName: "CoinPoker" },
             123
           );
 
-          await expect(promise).rejects.toThrow(/below minimum raise amount/i);
+          if (roundedAmount < minRaiseAmount) {
+            await expect(promise).rejects.toThrow(/below minimum raise amount/i);
+          } else {
+            await expect(promise).resolves.toBeUndefined();
+          }
         }
       ),
       { numRuns: 100 }
     );
+  });
+
+  it("rejects raise amounts that would round below the configured minimum", async () => {
+    const handler = new BetInputHandler(
+      {
+        allowlist: ["CoinPoker"],
+        prohibitedSites: [],
+        requireBuildFlag: false,
+        minRaiseAmount: 2.041,
+        betInputField: {
+          x: 40,
+          y: 90,
+          width: 120,
+          height: 30,
+          decimalPrecision: 2,
+          decimalSeparator: "."
+        }
+      },
+      createLogger()
+    );
+
+    await expect(
+      handler.inputBetAmount(
+        createRaiseAction(2.041),
+        { id: "CoinPoker:1", title: "CoinPoker Table", processName: "CoinPoker" },
+        7
+      )
+    ).rejects.toThrow(/below minimum raise amount/i);
   });
 
   it("Feature: coinpoker-macos-autonomy, Property 11: Decimal Separator Formatting", async () => {
@@ -210,6 +250,11 @@ describe("BetInputHandler", () => {
     );
 
     expect(inputAutomation.clickAt).toHaveBeenCalledTimes(1);
+    expect(inputAutomation.clickAt).toHaveBeenCalledWith(
+      160,
+      215,
+      { applyPreClickDelay: false }
+    );
     expect(inputAutomation.clearTextField).toHaveBeenCalledTimes(1);
     expect(inputAutomation.typeText).toHaveBeenCalled();
   });
