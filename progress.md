@@ -185,3 +185,6 @@ All commands must pass before declaring a task complete.
   - Current branch.
   - Next task to execute.
   - Exact next command to run.
+- For `feat/task-*` branches, also ensure both `AGENTS.md` and `progress.md` are
+  updated before final push. `pnpm run check:handoff` validates this against
+  `origin/main`.

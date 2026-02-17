@@ -7,6 +7,7 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "check:node": "node -e \"console.log(process.version)\"",
+    "check:handoff": "bash scripts/check-task-handoff-docs.sh",
     "check:pnpm": "pnpm -v",
     "check:python": "python3 -V || python -V",
     "check:protoc": "protoc --version",

@@ -152,12 +152,21 @@ as the default runbook for all coding agents until replaced.
   - Branch/PR reference.
   - Verification commands run and outcomes.
   - Known risks or follow-up tasks.
+- On `feat/task-*` branches, the handoff update also requires:
+  - `AGENTS.md` updated to reflect current milestone and sequencing.
+  - `progress.md` updated with milestone and task state.
+  - A `check:handoff` command run before push.
 - Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes aligned with
   real completion status.
 - In any handoff note, always include:
   - Current active branch.
   - Next task ID/name.
   - Exact next command to run.
+- Repository guardrail (recommended):
+  - `git config core.hooksPath .githooks`
+  - `chmod +x .githooks/pre-push scripts/check-task-handoff-docs.sh`
+  - The pre-push hook runs `pnpm run check:handoff` and blocks task-branch pushes when
+    AGENTS.md and progress.md were not updated against `origin/main`.
 
 ## Cash-Game Readiness Playbook (Phases 8-12)
 
