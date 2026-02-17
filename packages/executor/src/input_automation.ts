@@ -1,4 +1,3 @@
-import { Key, Point, keyboard, mouse, straightTo } from "@nut-tree/nut-js";
 import { deterministicRandom } from "./rng";
 import type { WindowBounds } from "./types";
 
@@ -11,6 +10,24 @@ export interface CoordinateContext {
   dpiCalibration: number;
   layoutResolution: LayoutResolution;
   windowBounds: WindowBounds;
+}
+
+type AutomationKey = "LeftCmd" | "A" | "Backspace";
+
+interface NutJsBindings {
+  Key: Record<AutomationKey, unknown>;
+  Point: new (x: number, y: number) => unknown;
+  keyboard: {
+    type(text: string): Promise<void>;
+    pressKey(...keys: unknown[]): Promise<void>;
+    releaseKey(...keys: unknown[]): Promise<void>;
+  };
+  mouse: {
+    config: { mouseSpeed: number };
+    move(path: unknown): Promise<void>;
+    leftClick(): Promise<void>;
+  };
+  straightTo(point: unknown): unknown;
 }
 
 export interface CoordinateTranslator {
@@ -28,8 +45,8 @@ export interface MouseKeyboardProvider {
   moveMouse(point: { x: number; y: number }): Promise<void>;
   leftClick(): Promise<void>;
   typeText(text: string): Promise<void>;
-  pressKey(...keys: Key[]): Promise<void>;
-  releaseKey(...keys: Key[]): Promise<void>;
+  pressKey(...keys: AutomationKey[]): Promise<void>;
+  releaseKey(...keys: AutomationKey[]): Promise<void>;
 }
 
 export interface InputAutomationOptions {
@@ -40,29 +57,70 @@ export interface InputAutomationOptions {
 
 const DEFAULT_MOUSE_SPEED = 1500;
 
+let nutJsBindingsPromise: Promise<NutJsBindings> | undefined;
+
+async function loadNutJsBindings(): Promise<NutJsBindings> {
+  if (nutJsBindingsPromise) {
+    return nutJsBindingsPromise;
+  }
+
+  nutJsBindingsPromise = import("@nut-tree/nut-js")
+    .then((mod) => ({
+      Key: mod.Key as Record<AutomationKey, unknown>,
+      Point: mod.Point as new (x: number, y: number) => unknown,
+      keyboard: mod.keyboard as unknown as NutJsBindings["keyboard"],
+      mouse: mod.mouse as unknown as NutJsBindings["mouse"],
+      straightTo: mod.straightTo as (point: unknown) => unknown
+    }))
+    .catch((error) => {
+      nutJsBindingsPromise = undefined;
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to load @nut-tree/nut-js bindings: ${message}`);
+    });
+
+  return nutJsBindingsPromise;
+}
+
 class NutJsMouseKeyboardProvider implements MouseKeyboardProvider {
-  setMouseSpeed(speed: number): void {
+  async setMouseSpeed(speed: number): Promise<void> {
+    const { mouse } = await loadNutJsBindings();
     mouse.config.mouseSpeed = speed;
   }
 
   async moveMouse(point: { x: number; y: number }): Promise<void> {
+    const { mouse, Point, straightTo } = await loadNutJsBindings();
     await mouse.move(straightTo(new Point(Math.round(point.x), Math.round(point.y))));
   }
 
   async leftClick(): Promise<void> {
+    const { mouse } = await loadNutJsBindings();
     await mouse.leftClick();
   }
 
   async typeText(text: string): Promise<void> {
+    const { keyboard } = await loadNutJsBindings();
     await keyboard.type(text);
   }
 
-  async pressKey(...keys: Key[]): Promise<void> {
-    await keyboard.pressKey(...keys);
+  async pressKey(...keys: AutomationKey[]): Promise<void> {
+    const { keyboard } = await loadNutJsBindings();
+    await keyboard.pressKey(...(await this.resolveKeys(keys)));
   }
 
-  async releaseKey(...keys: Key[]): Promise<void> {
-    await keyboard.releaseKey(...keys);
+  async releaseKey(...keys: AutomationKey[]): Promise<void> {
+    const { keyboard } = await loadNutJsBindings();
+    await keyboard.releaseKey(...(await this.resolveKeys(keys)));
+  }
+
+  private async resolveKeys(keys: AutomationKey[]): Promise<unknown[]> {
+    const { Key } = await loadNutJsBindings();
+    return keys.map((key) => {
+      const resolvedKey = Key[key];
+      if (resolvedKey === undefined) {
+        throw new Error(`Unsupported nut.js key: ${key}`);
+      }
+      return resolvedKey;
+    });
   }
 }
 
@@ -135,10 +193,10 @@ export class InputAutomation {
   }
 
   async clearTextField(): Promise<void> {
-    await this.provider.pressKey(Key.LeftCmd, Key.A);
-    await this.provider.releaseKey(Key.LeftCmd, Key.A);
-    await this.provider.pressKey(Key.Backspace);
-    await this.provider.releaseKey(Key.Backspace);
+    await this.provider.pressKey("LeftCmd", "A");
+    await this.provider.releaseKey("LeftCmd", "A");
+    await this.provider.pressKey("Backspace");
+    await this.provider.releaseKey("Backspace");
   }
 
   updateCoordinateContext(context: CoordinateContext): void {
