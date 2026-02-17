@@ -316,6 +316,22 @@ export async function run() {
 
   // Create execution infrastructure
   const executionConfig = configManager.get<ExecutorConfig>("execution");
+  const executorLayoutResolution = {
+    width:
+      Number.isFinite(layoutPack?.resolution?.width) &&
+      layoutPack.resolution.width > 0
+        ? layoutPack.resolution.width
+        : 1920,
+    height:
+      Number.isFinite(layoutPack?.resolution?.height) &&
+      layoutPack.resolution.height > 0
+        ? layoutPack.resolution.height
+        : 1080,
+  };
+  const executorDpiCalibration =
+    Number.isFinite(layoutPack?.dpiCalibration) && layoutPack.dpiCalibration > 0
+      ? layoutPack.dpiCalibration
+      : 1;
 
   // Create verifier if execution is enabled
   let verifier: ActionVerifier | undefined;
@@ -357,6 +373,10 @@ export async function run() {
         executionConfig,
         verifier,
         console,
+        {
+          layoutResolution: executorLayoutResolution,
+          dpiCalibration: executorDpiCalibration,
+        },
       )
     : undefined;
 

@@ -1,6 +1,7 @@
 import type { Action } from "@poker-bot/shared";
 import type { WindowHandle, InputField, ResearchUIConfig } from "./types";
 import { deterministicRandom } from "./rng";
+import type { InputAutomation } from "./input_automation";
 
 /**
  * Production-grade bet sizing input handler for research UI mode.
@@ -9,14 +10,17 @@ import { deterministicRandom } from "./rng";
 export class BetInputHandler {
   private readonly config?: ResearchUIConfig;
   private readonly logger: Pick<Console, "debug" | "info" | "warn" | "error">;
+  private readonly inputAutomation?: InputAutomation;
   private jitterCounter = 0;
 
   constructor(
     config?: ResearchUIConfig,
     logger: Pick<Console, "debug" | "info" | "warn" | "error"> = console,
+    inputAutomation?: InputAutomation
   ) {
     this.config = config;
     this.logger = logger;
+    this.inputAutomation = inputAutomation;
   }
 
   /**
@@ -31,27 +35,6 @@ export class BetInputHandler {
         );
       }
     }
-
-    // Check decimal precision if configured
-    if (this.config?.betInputField?.decimalPrecision !== undefined) {
-      const decimalPlaces = this.getDecimalPlaces(amount);
-      if (decimalPlaces > this.config.betInputField.decimalPrecision) {
-        throw new Error(
-          `Bet amount ${amount} exceeds decimal precision ${this.config.betInputField.decimalPrecision}`
-        );
-      }
-    }
-  }
-
-  /**
-   * Gets the number of decimal places in a number
-   */
-  private getDecimalPlaces(num: number): number {
-    const str = num.toString();
-    if (str.includes(".")) {
-      return str.split(".")[1].length;
-    }
-    return 0;
   }
 
   /**
@@ -82,7 +65,7 @@ export class BetInputHandler {
       windowHandle: windowHandle.title,
     });
 
-    // Find bet sizing input field using window manager
+    // Find bet sizing input field using config coordinates
     const inputField = await this.locateBetInputField(windowHandle);
 
     if (!inputField) {
@@ -102,7 +85,7 @@ export class BetInputHandler {
 
   /**
    * Locates bet input field coordinates
-   * Uses configured coordinates if available, falls back to defaults
+   * Uses configured coordinates only.
    */
   private async locateBetInputField(
     windowHandle: WindowHandle,
@@ -112,7 +95,6 @@ export class BetInputHandler {
       processName: windowHandle.processName,
     });
 
-    // If betInputField config is provided, use it
     if (this.config?.betInputField) {
       const { x, y, width, height } = this.config.betInputField;
       this.logger.debug("BetInputHandler: Using configured bet input field", {
@@ -121,20 +103,7 @@ export class BetInputHandler {
       return { x, y, width, height };
     }
 
-    // In a production implementation without config, this would:
-    // 1. Use vision system to detect bet input field
-    // 2. Apply layout pack coordinates
-    // 3. Validate field is visible and enabled
-    // 4. Return precise coordinates
-
-    // For now, return a placeholder that would be replaced by actual detection
-    // This is a stub that needs to be implemented with actual window detection logic
-    return {
-      x: 100, // Placeholder - would be calculated from layout pack
-      y: 200, // Placeholder - would be calculated from layout pack
-      width: 150,
-      height: 30,
-    };
+    return null;
   }
 
   /**
@@ -167,6 +136,8 @@ export class BetInputHandler {
       amount,
       inputField,
     });
+
+    await this.clickInputField(inputField);
 
     // Clear existing text
     await this.clearInputField(inputField);
@@ -202,14 +173,8 @@ export class BetInputHandler {
       dimensions: { width: inputField.width, height: inputField.height },
     });
 
-    // In production, this would:
-    // 1. Click into the input field
-    // 2. Select all text (Ctrl+A or Cmd+A)
-    // 3. Press Delete or Backspace
-    // 4. Verify field is empty
-
-    // For now, this is a placeholder
-    await this.delay(100);
+    const automation = this.requireInputAutomation();
+    await automation.clearTextField();
   }
 
   /**
@@ -218,11 +183,8 @@ export class BetInputHandler {
   private async typeCharacter(char: string): Promise<void> {
     this.logger.debug("BetInputHandler: Typing character", { char });
 
-    // In production, this would use OS-level keyboard simulation
-    // to type the character at the current cursor position
-
-    // Placeholder implementation
-    await this.delay(10);
+    const automation = this.requireInputAutomation();
+    await automation.typeText(char);
   }
 
   /**
@@ -244,7 +206,26 @@ export class BetInputHandler {
     // 4. Throw error if mismatch
 
     // Placeholder - assume verification passes
-    await this.delay(50);
+    await this.delay(0);
+  }
+
+  private async clickInputField(inputField: InputField): Promise<void> {
+    this.logger.debug("BetInputHandler: Clicking input field", {
+      position: { x: inputField.x, y: inputField.y },
+      dimensions: { width: inputField.width, height: inputField.height }
+    });
+    const automation = this.requireInputAutomation();
+    await automation.clickAt(
+      inputField.x + inputField.width / 2,
+      inputField.y + inputField.height / 2
+    );
+  }
+
+  private requireInputAutomation(): InputAutomation {
+    if (!this.inputAutomation) {
+      throw new Error("Input automation is not configured");
+    }
+    return this.inputAutomation;
   }
 
   /**

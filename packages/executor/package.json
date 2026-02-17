@@ -12,6 +12,7 @@
     "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
+    "@nut-tree/nut-js": "npm:@nut-tree-fork/nut-js@^4.2.6",
     "@poker-bot/shared": "workspace:*"
   },
   "devDependencies": {

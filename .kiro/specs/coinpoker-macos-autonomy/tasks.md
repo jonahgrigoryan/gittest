@@ -78,8 +78,8 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - **Property 8: Build Flag Validation**
     - **Validates: Requirements 2.10, 2.11**
 
-- [ ] 4. Implement InputAutomation wrapper for nut.js and extend BetInputHandler
-  - [ ] 4.1 Create InputAutomation class wrapping nut.js
+- [x] 4. Implement InputAutomation wrapper for nut.js and extend BetInputHandler
+  - [x] 4.1 Create InputAutomation class wrapping nut.js
     - Implement clickAt() using `mouse.move(straightTo(point))` then `mouse.leftClick()` (not `setPosition`)
     - Implement typeText() using `keyboard.type(text)`
     - Implement clearTextField() using `Cmd+A` then `Backspace`
@@ -87,7 +87,7 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Add human-like pre-action delay (1–3s) using `deterministicRandom` before clicking
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.8, 3.9, 3.10, 12.1, 12.2, 12.3, 12.5_
   
-  - [ ] 4.2 Extend existing BetInputHandler with formatting and nut.js integration
+  - [x] 4.2 Extend existing BetInputHandler with formatting and nut.js integration
     - **Existing:** `packages/executor/src/bet_input_handler.ts` has stub `typeCharacter()`, `clearInputField()`, `locateBetInputField()` that do nothing
     - Replace stubs with nut.js calls via InputAutomation
     - Accept `BetInputConfig` (extends `InputField` with `decimalPrecision`, `decimalSeparator`) in constructor
@@ -97,27 +97,27 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Add random inter-keystroke delays (50–200ms) using `deterministicRandom`
     - _Requirements: 3.5, 3.6, 3.7, 3.11_
   
-  - [ ] 4.3 Write property test for bet amount rounding
+  - [x] 4.3 Write property test for bet amount rounding
     - **Property 9: Bet Amount Rounding**
     - **Validates: Requirements 3.5**
   
-  - [ ] 4.4 Write property test for minimum raise enforcement
+  - [x] 4.4 Write property test for minimum raise enforcement
     - **Property 10: Minimum Raise Enforcement**
     - **Validates: Requirements 3.6**
   
-  - [ ] 4.5 Write property test for decimal separator formatting
+  - [x] 4.5 Write property test for decimal separator formatting
     - **Property 11: Decimal Separator Formatting**
     - **Validates: Requirements 3.7**
   
-  - [ ] 4.6 Write property test for bet amount round trip
+  - [x] 4.6 Write property test for bet amount round trip
     - **Property 12: Bet Amount Round Trip**
     - **Validates: Requirements 3.5, 3.7**
   
-  - [ ] 4.7 Write property test for coordinate scaling correctness
+  - [x] 4.7 Write property test for coordinate scaling correctness
     - **Property 31: Coordinate Scaling Correctness**
     - **Validates: Requirements 12.1, 12.2, 12.3**
   
-  - [ ] 4.8 Write property test for out-of-bounds coordinate rejection
+  - [x] 4.8 Write property test for out-of-bounds coordinate rejection
     - **Property 32: Out-of-Bounds Coordinate Rejection**
     - **Validates: Requirements 12.4**
 

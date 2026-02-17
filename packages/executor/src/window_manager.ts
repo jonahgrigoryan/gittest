@@ -30,6 +30,11 @@ interface ScreenCoords {
   y: number;
 }
 
+interface LayoutResolution {
+  width: number;
+  height: number;
+}
+
 interface ROI {
   x: number;
   y: number;
@@ -175,6 +180,44 @@ export class WindowManager {
     });
 
     return screenCoords;
+  }
+
+  /**
+   * Converts vision-space coordinates to screen-space coordinates.
+   */
+  visionToScreenCoords(
+    visionX: number,
+    visionY: number,
+    layoutResolution: LayoutResolution,
+    windowBounds: WindowBounds,
+    dpiCalibration: number
+  ): ScreenCoords {
+    if (layoutResolution.width <= 0 || layoutResolution.height <= 0) {
+      throw new Error(
+        `Invalid layout resolution for coordinate translation: ${layoutResolution.width}x${layoutResolution.height}`
+      );
+    }
+
+    const safeDpiCalibration =
+      Number.isFinite(dpiCalibration) && dpiCalibration > 0 ? dpiCalibration : 1;
+    const screenX =
+      (windowBounds.x + (visionX / layoutResolution.width) * windowBounds.width) *
+      safeDpiCalibration;
+    const screenY =
+      (windowBounds.y + (visionY / layoutResolution.height) * windowBounds.height) *
+      safeDpiCalibration;
+
+    const translated = { x: screenX, y: screenY };
+    this.logger.debug("WindowManager: Converted vision coordinates to screen coordinates", {
+      visionX,
+      visionY,
+      layoutResolution,
+      windowBounds,
+      dpiCalibration: safeDpiCalibration,
+      translated
+    });
+
+    return translated;
   }
 
   /**

@@ -5,17 +5,6 @@ import { ComplianceChecker } from "../src/compliance";
 import type { StrategyDecision } from "@poker-bot/shared";
 import type { ActionVerifier } from "../src/verifier";
 
-// Mock BetInputHandler
-vi.mock("../src/bet_input_handler", () => {
-  return {
-    BetInputHandler: vi.fn().mockImplementation(() => ({
-      inputBetAmount: vi.fn().mockResolvedValue(undefined)
-    }))
-  };
-});
-
-import { BetInputHandler } from "../src/bet_input_handler";
-
 const baseDecision: StrategyDecision = {
   action: {
     type: "raise",
@@ -72,14 +61,28 @@ describe("ResearchUIExecutor", () => {
   let mockWindowManager: any;
   let mockComplianceChecker: any;
   let mockVerifier: any;
+  let mockInputAutomation: any;
+  let mockBetInputHandler: any;
+
+  const createExecutor = (verifier?: ActionVerifier) =>
+    new ResearchUIExecutor(
+      mockWindowManager as WindowManager,
+      mockComplianceChecker as ComplianceChecker,
+      verifier,
+      mockResearchUIConfig,
+      console,
+      {
+        inputAutomation: mockInputAutomation,
+        betInputHandler: mockBetInputHandler
+      }
+    );
 
   beforeEach(() => {
     mockWindowManager = {
       findPokerWindow: vi.fn().mockResolvedValue({ id: 1, processName: "poker", title: "Table 1" }),
       getWindowBounds: vi.fn().mockResolvedValue({ x: 0, y: 0, width: 800, height: 600 }),
       validateWindow: vi.fn().mockReturnValue(true),
-      focusWindow: vi.fn().mockResolvedValue(true),
-      buttonToScreenCoords: vi.fn().mockReturnValue({ x: 100, y: 100 })
+      focusWindow: vi.fn().mockResolvedValue(true)
     };
 
     mockComplianceChecker = {
@@ -90,8 +93,16 @@ describe("ResearchUIExecutor", () => {
       verifyAction: vi.fn().mockResolvedValue({ passed: true })
     };
 
-    // Reset BetInputHandler mock
-    (BetInputHandler as any).mockClear();
+    mockInputAutomation = {
+      clickAt: vi.fn().mockResolvedValue(undefined),
+      typeText: vi.fn().mockResolvedValue(undefined),
+      clearTextField: vi.fn().mockResolvedValue(undefined),
+      updateCoordinateContext: vi.fn(),
+      updateRandomSeed: vi.fn()
+    };
+    mockBetInputHandler = {
+      inputBetAmount: vi.fn().mockResolvedValue(undefined)
+    };
   });
 
   afterEach(() => {
@@ -103,13 +114,7 @@ describe("ResearchUIExecutor", () => {
     it("Scenario 1: halts execution when compliance checker blocks", async () => {
       mockComplianceChecker.validateExecution.mockResolvedValue(false);
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
 
@@ -123,13 +128,7 @@ describe("ResearchUIExecutor", () => {
     it("Scenario 2: fails fast when window manager returns null", async () => {
       mockWindowManager.findPokerWindow.mockResolvedValue(null);
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
 
@@ -140,13 +139,7 @@ describe("ResearchUIExecutor", () => {
 
     // Scenario 3: Vision timeout (mocking turn state check failure)
     it("Scenario 3: handles vision/turn state failure", async () => {
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       // Mock private method getCurrentTurnState to throw timeout error
       vi.spyOn(executor as any, "getCurrentTurnState").mockRejectedValue(new Error("Vision timeout"));
@@ -159,20 +152,12 @@ describe("ResearchUIExecutor", () => {
 
     // Scenario 4: Bet sizing failure
     it("Scenario 4: surfaces bet sizing failures", async () => {
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       // Stub delay to avoid real sleeps (deterministic)
       vi.spyOn(executor as any, "delay").mockResolvedValue(undefined);
 
-      // Mock BetInputHandler instance to throw error
-      // We need to access the instance property directly to mock the method on the specific instance
-      (executor as any).betInputHandler.inputBetAmount = vi.fn().mockRejectedValue(new Error("Invalid bet size calculation"));
+      mockBetInputHandler.inputBetAmount.mockRejectedValue(new Error("Invalid bet size calculation"));
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
 
@@ -188,13 +173,7 @@ describe("ResearchUIExecutor", () => {
         mismatchReason: "OCR mismatch"
       });
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        mockVerifier as ActionVerifier, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor(mockVerifier as ActionVerifier);
 
       // Stub delay to avoid real sleeps (deterministic)
       vi.spyOn(executor as any, "delay").mockResolvedValue(undefined);
@@ -230,13 +209,7 @@ describe("ResearchUIExecutor", () => {
         action: { ...baseDecision.action, amount: -50 } 
       };
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const result = await executor.execute(invalidDecision, { verifyAction: false });
 
@@ -252,13 +225,7 @@ describe("ResearchUIExecutor", () => {
         action: { ...baseDecision.action, amount: NaN } 
       };
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const result = await executor.execute(nanDecision, { verifyAction: false });
 
@@ -274,13 +241,7 @@ describe("ResearchUIExecutor", () => {
         action: { ...baseDecision.action, amount: Infinity } 
       };
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager, 
-        mockComplianceChecker as ComplianceChecker, 
-        undefined, 
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const result = await executor.execute(infDecision, { verifyAction: false });
 
@@ -290,13 +251,7 @@ describe("ResearchUIExecutor", () => {
     });
 
     it("Task 2.5: focuses window before action execution", async () => {
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager,
-        mockComplianceChecker as ComplianceChecker,
-        undefined,
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const performActionSpy = vi.spyOn(executor as any, "performAction").mockResolvedValue({
         success: true,
@@ -338,13 +293,7 @@ describe("ResearchUIExecutor", () => {
     it("Task 2.5: returns failure when focus operation fails", async () => {
       mockWindowManager.focusWindow.mockResolvedValue(false);
 
-      const executor = new ResearchUIExecutor(
-        mockWindowManager as WindowManager,
-        mockComplianceChecker as ComplianceChecker,
-        undefined,
-        mockResearchUIConfig,
-        console
-      );
+      const executor = createExecutor();
 
       const performActionSpy = vi.spyOn(executor as any, "performAction");
       const result = await executor.execute(baseDecision, { verifyAction: false });
@@ -352,6 +301,96 @@ describe("ResearchUIExecutor", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("Failed to focus window");
       expect(performActionSpy).not.toHaveBeenCalled();
+    });
+
+    it("Task 4: raise flow calls BetInputHandler before InputAutomation action click", async () => {
+      const executor = createExecutor();
+      const actionButton = {
+        screenCoords: { x: 412, y: 598 },
+        isEnabled: true,
+        isVisible: true,
+        confidence: 0.99
+      };
+      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
+        isHeroTurn: true,
+        actionTimer: 12,
+        confidence: 0.95
+      });
+      vi.spyOn(executor as any, "findActionButton").mockResolvedValue(actionButton);
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+      const betInputMock = mockBetInputHandler.inputBetAmount;
+
+      expect(result.success).toBe(true);
+      expect(betInputMock).toHaveBeenCalledTimes(1);
+      expect(mockInputAutomation.clickAt).toHaveBeenCalledWith(actionButton.screenCoords.x, actionButton.screenCoords.y);
+
+      const betInputOrder = betInputMock.mock.invocationCallOrder[0];
+      const buttonClickOrder = mockInputAutomation.clickAt.mock.invocationCallOrder[0];
+      expect(betInputOrder).toBeLessThan(buttonClickOrder);
+    });
+
+    it("Task 4: updates coordinate context from discovered window bounds", async () => {
+      mockWindowManager.getWindowBounds.mockResolvedValue({
+        x: 200,
+        y: 120,
+        width: 1400,
+        height: 900
+      });
+      const executor = createExecutor();
+      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
+        isHeroTurn: true,
+        confidence: 0.99
+      });
+      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
+        screenCoords: { x: 200, y: 300 },
+        isEnabled: true,
+        isVisible: true,
+        confidence: 0.9
+      });
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call" }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockInputAutomation.updateCoordinateContext).toHaveBeenCalled();
+      expect(mockInputAutomation.updateCoordinateContext).toHaveBeenCalledWith({
+        dpiCalibration: 1,
+        layoutResolution: { width: 1920, height: 1080 },
+        windowBounds: { x: 200, y: 120, width: 1400, height: 900 }
+      });
+      expect(mockInputAutomation.updateRandomSeed).toHaveBeenCalledWith(baseDecision.metadata?.rngSeed);
+    });
+
+    it("Task 4: executor does not add duplicate click delay outside InputAutomation", async () => {
+      const executor = createExecutor();
+      const delaySpy = vi.spyOn(executor as any, "delay");
+      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
+        isHeroTurn: true,
+        confidence: 0.99
+      });
+      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
+        screenCoords: { x: 80, y: 120 },
+        isEnabled: true,
+        isVisible: true,
+        confidence: 0.95
+      });
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "fold", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(true);
+      expect(delaySpy).not.toHaveBeenCalled();
     });
   });
 });

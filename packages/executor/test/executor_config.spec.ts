@@ -38,6 +38,18 @@ vi.mock("../src/bet_input_handler", () => {
   };
 });
 
+vi.mock("../src/input_automation", () => {
+  return {
+    InputAutomation: vi.fn().mockImplementation(() => ({
+      clickAt: vi.fn().mockResolvedValue(undefined),
+      typeText: vi.fn().mockResolvedValue(undefined),
+      clearTextField: vi.fn().mockResolvedValue(undefined),
+      updateCoordinateContext: vi.fn(),
+      updateRandomSeed: vi.fn(),
+    })),
+  };
+});
+
 describe("createActionExecutor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -444,6 +456,7 @@ describe("createActionExecutor", () => {
 
     it("falls back to OsaScriptRunner when no runner override is provided", async () => {
       const { OsaScriptRunner } = await import("../src/window_manager");
+      const { InputAutomation } = await import("../src/input_automation");
 
       const config: ExecutorConfig = {
         enabled: true,
@@ -461,6 +474,37 @@ describe("createActionExecutor", () => {
       createActionExecutor("research-ui", config, undefined, console);
 
       expect(OsaScriptRunner).toHaveBeenCalledTimes(1);
+      expect(InputAutomation).toHaveBeenCalledTimes(1);
+    });
+
+    it("supports injecting prebuilt input automation", async () => {
+      const { InputAutomation } = await import("../src/input_automation");
+      const injectedInputAutomation = {
+        clickAt: vi.fn(),
+        typeText: vi.fn(),
+        clearTextField: vi.fn(),
+        updateCoordinateContext: vi.fn(),
+        updateRandomSeed: vi.fn()
+      };
+
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          windowTitlePatterns: ["CoinPoker"],
+          processNames: ["CoinPoker"]
+        }
+      };
+
+      createActionExecutor("research-ui", config, undefined, console, {
+        inputAutomation: injectedInputAutomation as any
+      });
+
+      expect(InputAutomation).not.toHaveBeenCalled();
     });
   });
 });

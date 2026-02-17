@@ -11,7 +11,26 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
-## CoinPoker Autonomy Progress (Updated: 2026-02-15)
+## CoinPoker Autonomy Progress (Updated: 2026-02-16)
+
+- **Task 4 – nut.js input automation + coordinate scaling (Req 3.1–3.11, 12.1–12.5)**
+  Implemented on branch `feat/task-4-nutjs-input-automation` (PR pending). Completed end-to-end input automation and Task 4 property coverage:
+  - Added `InputAutomation` wrapper (`packages/executor/src/input_automation.ts`) with injectable mouse/keyboard provider, deterministic 1–3s pre-click delay, out-of-bounds click rejection, and single-path translation via `WindowManager.visionToScreenCoords(...)`
+  - Added `WindowManager.visionToScreenCoords(...)` proportional scaling formula with `dpiCalibration`
+  - Replaced bet input stubs in `packages/executor/src/bet_input_handler.ts` to use InputAutomation for click/clear/type flow (raise input owns click input + clear + type sequence)
+  - Wired `ResearchUIExecutor` to use InputAutomation for real click flow and coordinate context updates; removed duplicate executor-side click delays
+  - Wired factory injection in `packages/executor/src/index.ts` for `InputAutomation`/mouse-keyboard provider options with backward-compatible construction
+  - Added Task 4 tests:
+    - `packages/executor/test/bet_input_handler.spec.ts` (Properties 9, 10, 11, 12)
+    - `packages/executor/test/input_automation.spec.ts` (Properties 31, 32 + pre-click delay determinism/range)
+    - `packages/executor/test/research_bridge.spec.ts` (raise flow ordering, coordinate-context update, no duplicate delay)
+    - `packages/executor/test/executor_config.spec.ts` (factory input-automation injection path)
+  - Added executor dependency alias for nut.js package in `packages/executor/package.json`:
+    - `@nut-tree/nut-js` mapped to `@nut-tree-fork/nut-js` for current registry availability
+  Verification run (all passing):
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
 
 - **Task 3 – ComplianceChecker process detection (Req 2.6–2.11)**
   Implemented on branch `feat/task-3-compliance-process-detection` (PR pending). Replaced compliance stubs with provider-backed real process detection and scanning:
