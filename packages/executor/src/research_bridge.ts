@@ -5,6 +5,7 @@ import type { ActionExecutor, ExecutionResult, ExecutionOptions, ResearchUIConfi
 import type { StrategyDecision } from '@poker-bot/shared';
 import type { ActionVerifier } from './verifier';
 import { deterministicRandom } from './rng';
+import { InputAutomation, type CoordinateContext } from './input_automation';
 
 // Local interfaces to avoid import issues
 interface ButtonInfo {
@@ -35,6 +36,15 @@ interface StateChange {
   position?: string;
 }
 
+const DEFAULT_LAYOUT_RESOLUTION = { width: 1920, height: 1080 } as const;
+
+interface ResearchUIExecutorDependencies {
+  inputAutomation?: InputAutomation;
+  betInputHandler?: BetInputHandler;
+  layoutResolution?: { width: number; height: number };
+  dpiCalibration?: number;
+}
+
 /**
  * Production-grade Research UI Executor for cross-platform OS automation.
  * Handles poker GUI interaction with compliance checks and safety measures.
@@ -42,10 +52,13 @@ interface StateChange {
 export class ResearchUIExecutor implements ActionExecutor {
   private readonly windowManager: WindowManager;
   private readonly complianceChecker: ComplianceChecker;
+  private readonly inputAutomation: InputAutomation;
   private readonly betInputHandler: BetInputHandler;
   private readonly verifier?: ActionVerifier;
   private readonly researchUIConfig?: ResearchUIConfig;
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
+  private readonly layoutResolution: { width: number; height: number };
+  private readonly dpiCalibration: number;
   private jitterCounter = 0;
 
   constructor(
@@ -53,14 +66,35 @@ export class ResearchUIExecutor implements ActionExecutor {
     complianceChecker: ComplianceChecker,
     verifier?: ActionVerifier,
     researchUIConfig?: ResearchUIConfig,
-    logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console
+    logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'> = console,
+    dependencies: ResearchUIExecutorDependencies = {}
   ) {
     this.windowManager = windowManager;
     this.complianceChecker = complianceChecker;
     this.researchUIConfig = researchUIConfig;
-    this.betInputHandler = new BetInputHandler(researchUIConfig, logger);
     this.verifier = verifier;
     this.logger = logger;
+    this.layoutResolution = dependencies.layoutResolution ?? DEFAULT_LAYOUT_RESOLUTION;
+    this.dpiCalibration = dependencies.dpiCalibration ?? 1;
+
+    const initialContext: CoordinateContext = {
+      dpiCalibration: this.dpiCalibration,
+      layoutResolution: this.layoutResolution,
+      windowBounds: {
+        x: 0,
+        y: 0,
+        width: this.layoutResolution.width,
+        height: this.layoutResolution.height
+      }
+    };
+
+    this.inputAutomation =
+      dependencies.inputAutomation ??
+      new InputAutomation(initialContext, this.windowManager, this.logger);
+
+    this.betInputHandler =
+      dependencies.betInputHandler ??
+      new BetInputHandler(researchUIConfig, logger, this.inputAutomation);
   }
 
   /**
@@ -115,6 +149,16 @@ export class ResearchUIExecutor implements ActionExecutor {
         return this.createFailureResult(error, startTime);
       }
 
+      const focusedWindowBounds = await this.windowManager.getWindowBounds(windowHandle);
+      if (!this.windowManager.validateWindow(windowHandle, focusedWindowBounds)) {
+        const error = 'Window validation failed after focus';
+        this.logger.error('ResearchUIExecutor: ' + error);
+        return this.createFailureResult(error, startTime);
+      }
+
+      this.inputAutomation.updateCoordinateContext(this.createCoordinateContext(focusedWindowBounds));
+      this.inputAutomation.updateRandomSeed(decision.metadata?.rngSeed ?? 0);
+
       // 4. Check turn state
       const turnState = await this.getCurrentTurnState();
       if (!turnState?.isHeroTurn) {
@@ -140,7 +184,12 @@ export class ResearchUIExecutor implements ActionExecutor {
 
       // 6. Execute action via OS automation
       const executionTime = Date.now() - startTime;
-      const actionResult = await this.performAction(decision, actionButton, windowHandle);
+      const actionResult = await this.performAction(
+        decision,
+        actionButton,
+        windowHandle,
+        focusedWindowBounds
+      );
 
       if (!actionResult.success) {
         return actionResult;
@@ -240,7 +289,8 @@ export class ResearchUIExecutor implements ActionExecutor {
   private async performAction(
     decision: StrategyDecision,
     buttonInfo: ButtonInfo,
-    windowHandle: WindowHandle
+    windowHandle: WindowHandle,
+    windowBounds: { x: number; y: number; width: number; height: number }
   ): Promise<ExecutionResult> {
     const action = decision.action;
     this.logger.debug('ResearchUIExecutor: Performing action', {
@@ -250,36 +300,22 @@ export class ResearchUIExecutor implements ActionExecutor {
     });
 
     try {
-      // 1. Convert button coordinates to screen space
-      const windowBounds = await this.windowManager.getWindowBounds(windowHandle);
-      const screenCoords = this.windowManager.buttonToScreenCoords(buttonInfo, windowBounds);
+      this.inputAutomation.updateCoordinateContext(this.createCoordinateContext(windowBounds));
 
-      this.logger.debug('ResearchUIExecutor: Converted to screen coordinates', { screenCoords });
-
-      // 2. Add human-like delay before clicking (1-3 seconds)
-      const humanDelay = 1000 + this.drawRandom(decision) * 2000;
-      this.logger.debug('ResearchUIExecutor: Adding human delay', { delayMs: humanDelay });
-      await this.delay(humanDelay);
-
-      // 3. Move mouse to button position
-      await this.moveMouse(screenCoords.x, screenCoords.y);
-      this.logger.debug('ResearchUIExecutor: Moved mouse to button');
-
-      // 4. Small random delay before click
-      await this.delay(50 + this.drawRandom(decision) * 150);
-
-      // 5. Execute click
-      await this.clickMouse();
-      this.logger.info('ResearchUIExecutor: Clicked action button', {
-        action: action.type,
-        coordinates: screenCoords
-      });
-
-      // 6. Handle bet sizing for raise actions
+      // For raise actions: input amount first, then click the raise button.
       if (action.type === 'raise' && action.amount !== undefined) {
         this.logger.debug('ResearchUIExecutor: Handling bet sizing');
         await this.betInputHandler.inputBetAmount(action, windowHandle, decision.metadata?.rngSeed);
       }
+
+      await this.inputAutomation.clickScreenCoords(
+        buttonInfo.screenCoords.x,
+        buttonInfo.screenCoords.y
+      );
+      this.logger.info('ResearchUIExecutor: Clicked action button', {
+        action: action.type,
+        coordinates: buttonInfo.screenCoords
+      });
 
       return {
         success: true,
@@ -435,25 +471,23 @@ export class ResearchUIExecutor implements ActionExecutor {
   }
 
   /**
-   * OS-level mouse control (placeholders for actual implementation)
-   */
-  private async moveMouse(x: number, y: number): Promise<void> {
-    this.logger.debug('ResearchUIExecutor: Moving mouse', { x, y });
-    // In production, this would use OS APIs to move mouse
-    await this.delay(10);
-  }
-
-  private async clickMouse(): Promise<void> {
-    this.logger.debug('ResearchUIExecutor: Clicking mouse');
-    // In production, this would use OS APIs to click mouse
-    await this.delay(10);
-  }
-
-  /**
    * Delay helper
    */
   private async delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private createCoordinateContext(windowBounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }): CoordinateContext {
+    return {
+      dpiCalibration: this.dpiCalibration,
+      layoutResolution: this.layoutResolution,
+      windowBounds
+    };
   }
 
   private drawRandom(decision: StrategyDecision): number {

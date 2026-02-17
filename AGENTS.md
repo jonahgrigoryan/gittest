@@ -78,6 +78,33 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
 This section is the operational workflow for ongoing "hands + eyes" work. Use it
 as the default runbook for all coding agents until replaced.
 
+## Active State Snapshot
+
+- Brain/core stack is complete and treated as stable baseline (solver, agents, strategy,
+  replay, evaluator, deployment, and associated observability/error handling).
+- Current project scope is CoinPoker macOS autonomy hands+eyes.
+- `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
+  - Tasks 0–3 are complete on `main`.
+  - Task 4 work is complete on branch `feat/task-4-nutjs-input-automation` and awaiting merge.
+    - Task 0 fast-check prerequisite
+    - Task 1 research UI config schema and validation
+    - Task 2 WindowManager AppleScript implementation
+    - Task 3 compliance process detection
+    - Task 4 nut.js input automation + bet input integration
+- Current next target is to finish Task 4 PR/merge, then Task 5 (executor infrastructure checkpoint).
+- Confirmed post-Phase-12 successful commits on main/task branch are:
+  - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
+  - `878b5d3` (`Phase 11: Observability + Health Controller Coverage`)
+  - `15f60cb` (`Phase 10: Executor Error Paths & Verification`)
+  - `be5e487` (`Phase 9: Time Budget & Preemption Hardening`)
+  - `be4babf` (`Phase 8: Vision & solver client integration tests`)
+  - `f176c2f` (`feat(executor): complete task 1 research-ui config schema and validation`)
+  - `930e47` (`chore(test): add fast-check prerequisite for autonomy tasks`)
+  - `7015f6e` (`feat(executor): harden window discovery, focus safety, and config schema`)
+  - `474f3d4` (`feat(executor): implement task 3 compliance process detection`)
+  - `9044613` (`feat(executor): implement task 4 input automation and scaling`)
+  - `616cfac` (`fix(executor): lazy-load nutjs bindings at runtime`)
+
 ### Scope & Source of Truth
 - Brain/core decision stack is complete (solver + agents + strategy + replay).
 - Active development scope is CoinPoker macOS autonomy:
@@ -125,12 +152,23 @@ as the default runbook for all coding agents until replaced.
   - Branch/PR reference.
   - Verification commands run and outcomes.
   - Known risks or follow-up tasks.
+- On `feat/task-*` branches, the handoff update also requires:
+  - `AGENTS.md` updated to reflect current milestone and sequencing.
+  - `progress.md` updated with milestone and task state.
+  - A `check:handoff` command run before push.
+  - If the guard blocks because docs are missing, run:
+    - `pnpm run handoff:update` (or `pnpm run check:handoff:fix`), then commit docs, then re-run `pnpm run check:handoff`.
 - Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes aligned with
   real completion status.
 - In any handoff note, always include:
   - Current active branch.
   - Next task ID/name.
   - Exact next command to run.
+- Repository guardrail (recommended):
+  - `git config core.hooksPath .githooks`
+  - `chmod +x .githooks/pre-push scripts/check-task-handoff-docs.sh`
+  - The pre-push hook runs `pnpm run check:handoff` and blocks task-branch pushes when
+    AGENTS.md and progress.md were not updated against `origin/main`.
 
 ## Cash-Game Readiness Playbook (Phases 8-12)
 
@@ -281,3 +319,11 @@ Files:
 
 Commit message:
 - `feat(test): add decision pipeline e2e + final integration gate`
+
+## Auto Handoff Log
+<!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->
+- 2026-02-17 | task 4 (nutjs input automation) | branch `feat/task-4-nutjs-input-automation` | base `origin/main` (`474f3d4`) | head `da6ab32` | changed files: 20
+- key files: `.githooks/pre-push`, `.github/PULL_REQUEST_TEMPLATE.md`, `.kiro/specs/coinpoker-macos-autonomy/task-4-kickoff-prompt.md`, `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `package.json`, `packages/executor/package.json`, `packages/executor/src/bet_input_handler.ts`, `packages/executor/src/index.ts`, `packages/executor/src/input_automation.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/window_manager.ts`, `packages/executor/test/bet_input_handler.spec.ts`
+<!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:end -->
+<!-- AUTO_HANDOFF_END -->

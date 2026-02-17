@@ -3,6 +3,8 @@ import { ResearchUIExecutor } from './research_bridge';
 import { WindowManager, OsaScriptRunner } from './window_manager';
 import { ComplianceChecker } from './compliance';
 import { ActionVerifier } from './verifier';
+import { BetInputHandler } from './bet_input_handler';
+import { InputAutomation } from './input_automation';
 import type {
   ActionExecutor,
   ExecutionMode,
@@ -12,10 +14,16 @@ import type {
 } from './types';
 import type { AppleScriptRunner } from './window_manager';
 import type { ProcessListProvider } from './compliance';
+import type { MouseKeyboardProvider, InputAutomationOptions } from './input_automation';
 
 export interface ExecutorFactoryDependencies {
   appleScriptRunner?: AppleScriptRunner;
   processListProvider?: ProcessListProvider;
+  inputAutomation?: InputAutomation;
+  mouseKeyboardProvider?: MouseKeyboardProvider;
+  inputAutomationOptions?: InputAutomationOptions;
+  layoutResolution?: { width: number; height: number };
+  dpiCalibration?: number;
 }
 
 function normalizeSelectorValues(values: string[] | undefined): string[] {
@@ -166,12 +174,40 @@ export function createActionExecutor(
         dependencies.processListProvider
       );
 
+      const layoutResolution = dependencies.layoutResolution ?? { width: 1920, height: 1080 };
+      const dpiCalibration = dependencies.dpiCalibration ?? 1;
+      const inputAutomation =
+        dependencies.inputAutomation ??
+        new InputAutomation(
+          {
+            dpiCalibration,
+            layoutResolution,
+            windowBounds: {
+              x: 0,
+              y: 0,
+              width: layoutResolution.width,
+              height: layoutResolution.height
+            }
+          },
+          windowManager,
+          logger,
+          dependencies.mouseKeyboardProvider,
+          dependencies.inputAutomationOptions
+        );
+      const betInputHandler = new BetInputHandler(config.researchUI, logger, inputAutomation);
+
       return new ResearchUIExecutor(
         windowManager,
         complianceChecker,
         verifier,
         config.researchUI,
-        logger
+        logger,
+        {
+          inputAutomation,
+          betInputHandler,
+          layoutResolution,
+          dpiCalibration
+        }
       );
 
     case 'api':
@@ -192,3 +228,4 @@ export { ComplianceChecker } from './compliance';
 export { ActionVerifier } from './verifier';
 export type { VisionClientInterface } from './verifier';
 export { BetInputHandler } from './bet_input_handler';
+export { InputAutomation } from './input_automation';
