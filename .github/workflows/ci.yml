@@ -51,6 +51,10 @@ jobs:
 
       - run: pnpm run ci:verify
 
+      - name: Verify task handoff docs for task branches
+        if: (github.event_name == 'push' && startsWith(github.ref_name, 'feat/task-')) || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'feat/task-'))
+        run: pnpm run check:handoff
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4

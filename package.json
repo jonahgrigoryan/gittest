@@ -10,6 +10,7 @@
     "check:handoff": "bash scripts/check-task-handoff-docs.sh",
     "check:handoff:fix": "bash scripts/check-task-handoff-docs.sh --fix",
     "handoff:update": "node tools/update-handoff-docs.mjs",
+    "handoff:finish": "pnpm run handoff:update && pnpm run check:handoff",
     "check:pnpm": "pnpm -v",
     "check:python": "python3 -V || python -V",
     "check:protoc": "protoc --version",

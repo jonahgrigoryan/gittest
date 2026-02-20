@@ -1,6 +1,6 @@
 # Project Progress & Workflow
 
-## Current Focus (Updated: 2026-02-17)
+## Current Focus (Updated: 2026-02-20)
 
 - Brain stack is complete: solver, agent coordinator, strategy engine, replay, observability, deployment.
 - Active implementation phase is CoinPoker macOS autonomy ("hands + eyes").
@@ -11,13 +11,13 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
-## CoinPoker Autonomy Progress (Updated: 2026-02-17)
+## CoinPoker Autonomy Progress (Updated: 2026-02-20)
 
 - **Task 5 – executor infrastructure checkpoint** (in-progress)
   Task 5 is the next live milestone (`[ ] Checkpoint - Ensure executor infrastructure tests pass`) and is the current handoff target before moving to live-vision integration.
 
 - **Task 4 – nut.js input automation + coordinate scaling (Req 3.1–3.11, 12.1–12.5)**
-  Implemented on branch `feat/task-4-nutjs-input-automation` (PR pending). Completed end-to-end input automation and Task 4 property coverage:
+  Completed and merged on `main` via PR #41. Completed end-to-end input automation and Task 4 property coverage:
   - Added `InputAutomation` wrapper (`packages/executor/src/input_automation.ts`) with injectable mouse/keyboard provider, deterministic 1–3s pre-click delay, out-of-bounds click rejection, and single-path translation via `WindowManager.visionToScreenCoords(...)`
   - Added `WindowManager.visionToScreenCoords(...)` proportional scaling formula with `dpiCalibration`
   - Replaced bet input stubs in `packages/executor/src/bet_input_handler.ts` to use InputAutomation for click/clear/type flow (raise input owns click input + clear + type sequence)
@@ -190,11 +190,22 @@ All commands must pass before declaring a task complete.
   `origin/main`.
 - If handoff validation fails due to missing doc changes, run:
   - `pnpm run handoff:update` (or `pnpm run check:handoff:fix`)
+  - Shortcut for task branches: `pnpm run handoff:finish`
   - Commit `AGENTS.md` and `progress.md`
   - Re-run `pnpm run check:handoff`
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:start -->
+### Auto Handoff: Task 5 (2026-02-20)
+- Branch: `feat/task-5-executor-infrastructure-checkpoint`
+- Base: `origin/main` @ `8b15582`
+- Head: `8b15582`
+- Task label: executor infrastructure checkpoint
+- Changed files (0): `(only AGENTS.md/progress.md changes)`
+- Status note: Auto-generated handoff entry. Replace with final PR/CI/merge outcomes when task closes.
+<!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->
 ### Auto Handoff: Task 4 (2026-02-17)
 - Branch: `feat/task-4-nutjs-input-automation`

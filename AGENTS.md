@@ -84,14 +84,14 @@ as the default runbook for all coding agents until replaced.
   replay, evaluator, deployment, and associated observability/error handling).
 - Current project scope is CoinPoker macOS autonomy hands+eyes.
 - `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
-  - Tasks 0–3 are complete on `main`.
-  - Task 4 work is complete on branch `feat/task-4-nutjs-input-automation` and awaiting merge.
+  - Tasks 0–4 are complete on `main`.
+  - Task 4 was completed and merged via PR (#41), including:
     - Task 0 fast-check prerequisite
     - Task 1 research UI config schema and validation
     - Task 2 WindowManager AppleScript implementation
     - Task 3 compliance process detection
     - Task 4 nut.js input automation + bet input integration
-- Current next target is to finish Task 4 PR/merge, then Task 5 (executor infrastructure checkpoint).
+- Current next target is Task 5 (executor infrastructure checkpoint), then Task 6 (VisionClient retry logic).
 - Confirmed post-Phase-12 successful commits on main/task branch are:
   - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
   - `878b5d3` (`Phase 11: Observability + Health Controller Coverage`)
@@ -158,6 +158,7 @@ as the default runbook for all coding agents until replaced.
   - A `check:handoff` command run before push.
   - If the guard blocks because docs are missing, run:
     - `pnpm run handoff:update` (or `pnpm run check:handoff:fix`), then commit docs, then re-run `pnpm run check:handoff`.
+    - Shortcut on task branches: `pnpm run handoff:finish`.
 - Keep `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes aligned with
   real completion status.
 - In any handoff note, always include:
@@ -322,6 +323,11 @@ Commit message:
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:start -->
+- 2026-02-20 | task 5 (executor infrastructure checkpoint) | branch `feat/task-5-executor-infrastructure-checkpoint` | base `origin/main` (`8b15582`) | head `8b15582` | changed files: 0
+- key files: `(only AGENTS.md/progress.md changes)`
+<!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->
 - 2026-02-17 | task 4 (nutjs input automation) | branch `feat/task-4-nutjs-input-automation` | base `origin/main` (`474f3d4`) | head `da6ab32` | changed files: 20
 - key files: `.githooks/pre-push`, `.github/PULL_REQUEST_TEMPLATE.md`, `.kiro/specs/coinpoker-macos-autonomy/task-4-kickoff-prompt.md`, `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `package.json`, `packages/executor/package.json`, `packages/executor/src/bet_input_handler.ts`, `packages/executor/src/index.ts`, `packages/executor/src/input_automation.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/window_manager.ts`, `packages/executor/test/bet_input_handler.spec.ts`
