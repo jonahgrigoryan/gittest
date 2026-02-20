@@ -91,7 +91,8 @@ as the default runbook for all coding agents until replaced.
     - Task 2 WindowManager AppleScript implementation
     - Task 3 compliance process detection
     - Task 4 nut.js input automation + bet input integration
-- Current next target is Task 5 (executor infrastructure checkpoint), then Task 6 (VisionClient retry logic).
+- Task 5 checkpoint validation is complete on branch `feat/task-5-executor-infrastructure-checkpoint` and pending PR merge.
+- Current next target is Task 6 (VisionClient retry logic for live mode).
 - Confirmed post-Phase-12 successful commits on main/task branch are:
   - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
   - `878b5d3` (`Phase 11: Observability + Health Controller Coverage`)

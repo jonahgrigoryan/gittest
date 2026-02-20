@@ -13,11 +13,22 @@
 
 ## CoinPoker Autonomy Progress (Updated: 2026-02-20)
 
-- **Task 5 – executor infrastructure checkpoint** (in-progress)
-  Task 5 is the next live milestone (`[ ] Checkpoint - Ensure executor infrastructure tests pass`) and is the current handoff target before moving to live-vision integration.
+- **Task 5 – executor infrastructure checkpoint** (complete on 2026-02-20)
+  Completed on branch `feat/task-5-executor-infrastructure-checkpoint` as a validation-only checkpoint for Tasks 1–4 executor infrastructure.
+  Verification run (all passing):
+  - `pnpm --filter @poker-bot/executor exec vitest run test/executor_config.spec.ts test/window_manager.spec.ts test/compliance.spec.ts test/bet_input_handler.spec.ts test/input_automation.spec.ts test/research_bridge.spec.ts test/fast_check_import.spec.ts`
+  - `pnpm --filter @poker-bot/executor run test`
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+  - `pnpm run ci:verify:mock`
+  Outcome: no regressions detected and no code fixes required.
+  Current active branch: `feat/task-5-executor-infrastructure-checkpoint`
+  Next task ID/name: `Task 6 – Extend existing VisionClient with retry logic for live mode`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-6-vision-client-retry-logic`
 
 - **Task 4 – nut.js input automation + coordinate scaling (Req 3.1–3.11, 12.1–12.5)**
-  Completed and merged on `main` via PR #41. Completed end-to-end input automation and Task 4 property coverage:
+  Implemented on branch `feat/task-4-nutjs-input-automation` and merged to `main` via PR [#41](https://github.com/jonahgrigoryan/gittest/pull/41). Completed end-to-end input automation and Task 4 property coverage:
   - Added `InputAutomation` wrapper (`packages/executor/src/input_automation.ts`) with injectable mouse/keyboard provider, deterministic 1–3s pre-click delay, out-of-bounds click rejection, and single-path translation via `WindowManager.visionToScreenCoords(...)`
   - Added `WindowManager.visionToScreenCoords(...)` proportional scaling formula with `dpiCalibration`
   - Replaced bet input stubs in `packages/executor/src/bet_input_handler.ts` to use InputAutomation for click/clear/type flow (raise input owns click input + clear + type sequence)
@@ -160,7 +171,7 @@ All commands must pass before declaring a task complete.
 - [x] Task 2: Extend existing WindowManager with real macOS AppleScript implementation
 - [x] Task 3: Extend existing ComplianceChecker with real macOS process detection
 - [x] Task 4: Implement InputAutomation wrapper for nut.js and extend BetInputHandler
-- [ ] Task 5: Checkpoint - Ensure executor infrastructure tests pass
+- [x] Task 5: Checkpoint - Ensure executor infrastructure tests pass
 - [ ] Task 6: Extend existing VisionClient with retry logic for live mode
 - [ ] Task 7: Extend ResearchUIExecutor to use vision output
 - [ ] Task 8: Implement vision service template loading and matching
