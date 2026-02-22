@@ -13,7 +13,7 @@ const mockAction: Action = {
 describe("ActionVerifier", () => {
   it("fails when vision client cannot provide high confidence state", async () => {
     const visionClient: VisionClientInterface = {
-      captureAndParse: async () => ({
+      captureAndParse: async (_options) => ({
         confidence: { overall: 0.5 }
       }) as any
     };
@@ -26,7 +26,7 @@ describe("ActionVerifier", () => {
 
   it("passes when no mismatches are detected", async () => {
     const visionClient: VisionClientInterface = {
-      captureAndParse: async () =>
+      captureAndParse: async (_options) =>
         ({
           confidence: { overall: 0.999 },
           pot: { amount: 100 },
@@ -38,6 +38,30 @@ describe("ActionVerifier", () => {
     const verifier = new ActionVerifier(visionClient, console);
     const result = await verifier.verifyAction(mockAction, [], 1000);
     expect(result.passed).toBe(true);
+  });
+
+  it("aborts capture when the timeout elapses", async () => {
+    let abortSignal: AbortSignal | undefined;
+    let aborted = false;
+    const visionClient: VisionClientInterface = {
+      captureAndParse: async (options) => {
+        abortSignal = options?.signal;
+        return await new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            aborted = true;
+            reject(new Error("capture aborted"));
+          });
+        });
+      },
+    };
+
+    const verifier = new ActionVerifier(visionClient, console);
+    const result = await verifier.verifyAction(mockAction, [], 5);
+
+    expect(result.passed).toBe(false);
+    expect(abortSignal).toBeDefined();
+    expect(abortSignal?.aborted).toBe(true);
+    expect(aborted).toBe(true);
   });
 });
 
