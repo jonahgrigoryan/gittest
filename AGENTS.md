@@ -85,7 +85,7 @@ as the default runbook for all coding agents until replaced.
 - Current project scope is CoinPoker macOS autonomy hands+eyes.
 - `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
   - Tasks 0–5 are complete on `main`.
-  - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic` and pending PR merge.
+  - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic`; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) is open with CI green and ready for squash merge.
   - Task 4 was completed and merged via PR (#41), including:
     - Task 0 fast-check prerequisite
     - Task 1 research UI config schema and validation

@@ -13,7 +13,7 @@
 
 ## CoinPoker Autonomy Progress (Updated: 2026-02-22)
 
-- **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22, pending PR)
+- **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) open, CI green, pending squash merge)
   Completed on branch `feat/task-6-vision-client-retry-logic` and aligned to requirements 4.5/4.6/8.4 with deterministic property and unit coverage.
   Delivered:
   - Extended `VisionClient` with config-driven retry/backoff options, runtime normalization (`retryBackoffMaxMs >= retryBackoffBaseMs`, min 1ms), explicit max attempts semantics (`1 + retryLimit`), retry classification (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, timeout-equivalent), and injectable sleep seam for deterministic tests.
@@ -35,7 +35,7 @@
   - `pnpm run test:unit`
   Current active branch: `feat/task-6-vision-client-retry-logic`
   Next task ID/name: `Task 7 – Extend ResearchUIExecutor to use vision output`
-  Exact next command to run: `pnpm --filter @poker-bot/executor exec vitest run test/research_bridge.spec.ts`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-7-research-ui-vision-output`
 
 - **Task 5 – executor infrastructure checkpoint** (complete on 2026-02-20, merged via PR [#42](https://github.com/jonahgrigoryan/gittest/pull/42))
   Completed on branch `feat/task-5-executor-infrastructure-checkpoint` as a validation-only checkpoint for Tasks 1–4 executor infrastructure. Merged to `main`.
