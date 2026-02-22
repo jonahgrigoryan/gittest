@@ -49,7 +49,9 @@ describe("ActionVerifier", () => {
         return await new Promise((_resolve, reject) => {
           options?.signal?.addEventListener("abort", () => {
             aborted = true;
-            reject(new Error("capture aborted"));
+            const abortError = new Error("capture aborted");
+            abortError.name = "VisionCaptureAbortedError";
+            reject(abortError);
           });
         });
       },
