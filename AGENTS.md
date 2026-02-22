@@ -84,16 +84,18 @@ as the default runbook for all coding agents until replaced.
   replay, evaluator, deployment, and associated observability/error handling).
 - Current project scope is CoinPoker macOS autonomy hands+eyes.
 - `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
-  - Tasks 0–4 are complete on `main`.
+  - Tasks 0–5 are complete on `main`.
+  - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic` and pending PR merge.
   - Task 4 was completed and merged via PR (#41), including:
     - Task 0 fast-check prerequisite
     - Task 1 research UI config schema and validation
     - Task 2 WindowManager AppleScript implementation
     - Task 3 compliance process detection
     - Task 4 nut.js input automation + bet input integration
-- Task 5 checkpoint validation is complete on branch `feat/task-5-executor-infrastructure-checkpoint` and pending PR merge.
-- Current next target is Task 6 (VisionClient retry logic for live mode).
+  - Task 5 was completed and merged via PR (#42) (executor infrastructure checkpoint).
+- Current next target is Task 7 (ResearchUIExecutor vision output integration).
 - Confirmed post-Phase-12 successful commits on main/task branch are:
+  - `c59c88d` (`chore(executor): task 5 infrastructure checkpoint validation (#42)`)
   - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
   - `878b5d3` (`Phase 11: Observability + Health Controller Coverage`)
   - `15f60cb` (`Phase 10: Executor Error Paths & Verification`)
@@ -327,6 +329,7 @@ Commit message:
 <!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:start -->
 - 2026-02-20 | task 5 (executor infrastructure checkpoint) | branch `feat/task-5-executor-infrastructure-checkpoint` | base `origin/main` (`8b15582`) | head `8b15582` | changed files: 0
 - key files: `(only AGENTS.md/progress.md changes)`
+- merged to main via PR #42 (`c59c88d`)
 <!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:end -->
 
 <!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->

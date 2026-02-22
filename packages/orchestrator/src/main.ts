@@ -156,7 +156,8 @@ export async function run() {
     resetSession: () => riskGuard.resetSession(),
   };
 
-  const layoutPackConfigPath = configManager.get<string>("vision.layoutPack");
+  const visionConfig = configManager.get<BotConfig["vision"]>("vision");
+  const layoutPackConfigPath = visionConfig.layoutPack;
   const baseLayoutDir = path.resolve(
     process.cwd(),
     "../../config/layout-packs",
@@ -179,10 +180,8 @@ export async function run() {
   }
 
   const parserConfig: ParserConfig = {
-    confidenceThreshold: configManager.get<number>(
-      "vision.confidenceThreshold",
-    ),
-    occlusionThreshold: configManager.get<number>("vision.occlusionThreshold"),
+    confidenceThreshold: visionConfig.confidenceThreshold,
+    occlusionThreshold: visionConfig.occlusionThreshold,
     enableInference: true,
   };
 
@@ -339,6 +338,12 @@ export async function run() {
     const executionVisionClient = new VisionClient(
       visionServiceUrl,
       layoutPack,
+      {
+        timeoutMs: visionConfig.captureTimeoutMs ?? 2000,
+        retryLimit: visionConfig.retryLimit ?? 3,
+        retryBackoffBaseMs: visionConfig.retryBackoffBaseMs ?? 100,
+        retryBackoffMaxMs: visionConfig.retryBackoffMaxMs ?? 400,
+      },
     );
     process.on("beforeExit", () => {
       executionVisionClient.close();

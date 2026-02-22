@@ -103,6 +103,22 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1
+        },
+        "captureTimeoutMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retryLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retryBackoffBaseMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retryBackoffMaxMs": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },

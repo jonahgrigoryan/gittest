@@ -124,23 +124,23 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
 - [x] 5. Checkpoint - Ensure executor infrastructure tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Extend existing VisionClient with retry logic for live mode
-  - [ ] 6.1 Extend existing VisionClient at `packages/orchestrator/src/vision/client.ts`
+- [x] 6. Extend existing VisionClient with retry logic for live mode
+  - [x] 6.1 Extend existing VisionClient at `packages/orchestrator/src/vision/client.ts`
     - **Existing:** Working gRPC client with `captureAndParse()` and `healthCheck()`. Layout pack loaded at construction time.
     - Add configurable retry logic with exponential backoff for timeouts (currently throws on first timeout)
     - Treat `UNAVAILABLE` and `DEADLINE_EXCEEDED` as retryable; cap at configured retry limit with backoff
     - Keep existing `captureAndParse()` and `healthCheck()` signatures compatible
     - _Requirements: 4.1, 4.5, 4.6, 8.3, 8.4_
   
-  - [ ] 6.2 Write property test for vision retry behavior
+  - [x] 6.2 Write property test for vision retry behavior
     - **Property 14: Vision Retry Behavior**
     - **Validates: Requirements 4.5, 4.6**
   
-  - [ ] 6.3 Write property test for health check failure handling
+  - [x] 6.3 Write property test for health check failure handling
     - **Property 23: Health Check Failure Handling**
     - **Validates: Requirements 8.4**
   
-  - [ ] 6.4 Write unit tests for vision client retry and timeout handling
+  - [x] 6.4 Write unit tests for vision client retry and timeout handling
     - Test timeout on first attempt triggers retry
     - Test all retries exhausted aborts turn check
     - **Note:** Existing tests at `packages/orchestrator/test/vision/client.spec.ts` cover basic timeout and health check; extend these

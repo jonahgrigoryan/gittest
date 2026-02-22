@@ -1,4 +1,10 @@
-import { credentials, Metadata, type ClientUnaryCall } from "@grpc/grpc-js";
+import {
+  credentials,
+  Metadata,
+  status,
+  type ClientUnaryCall,
+  type ServiceError,
+} from "@grpc/grpc-js";
 import type { Position, Card, Rank, Suit } from "@poker-bot/shared";
 import { vision, visionGen } from "@poker-bot/shared";
 const VisionServiceClient = visionGen.VisionServiceClient;
@@ -29,22 +35,87 @@ const RANK_VALUES: Rank[] = [
 const SUIT_VALUES: Suit[] = ["h", "d", "c", "s"];
 type RpcCardData = NonNullable<RpcVisionOutput["cards"]>;
 
+const DEFAULT_TIMEOUT_MS = 2000;
+const DEFAULT_RETRY_LIMIT = 3;
+const DEFAULT_RETRY_BACKOFF_BASE_MS = 100;
+const DEFAULT_RETRY_BACKOFF_MAX_MS = 400;
+
+type SleepFn = (ms: number) => Promise<void>;
+type VisionClientConfigInput = number | VisionClientOptions;
+
+interface NormalizedVisionClientOptions {
+  timeoutMs: number;
+  retryLimit: number;
+  retryBackoffBaseMs: number;
+  retryBackoffMaxMs: number;
+  sleep: SleepFn;
+}
+
+export interface VisionClientOptions {
+  timeoutMs?: number;
+  retryLimit?: number;
+  retryBackoffBaseMs?: number;
+  retryBackoffMaxMs?: number;
+  sleep?: SleepFn;
+}
+
+class VisionCaptureTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Vision capture timed out after ${timeoutMs}ms`);
+    this.name = "VisionCaptureTimeoutError";
+  }
+}
+
 export class VisionClient {
   private readonly client: VisionServiceClientInstance;
-
   private readonly layoutJson: string;
   private readonly timeoutMs: number;
+  private readonly retryLimit: number;
+  private readonly retryBackoffBaseMs: number;
+  private readonly retryBackoffMaxMs: number;
+  private readonly sleep: SleepFn;
 
-  constructor(serviceUrl: string, layoutPack: vision.LayoutPack, timeoutMs: number = 5000) {
+  constructor(
+    serviceUrl: string,
+    layoutPack: vision.LayoutPack,
+    optionsOrTimeoutMs?: VisionClientConfigInput,
+  ) {
     this.client = new VisionServiceClient(
       serviceUrl,
       credentials.createInsecure(),
     );
     this.layoutJson = JSON.stringify(layoutPack);
-    this.timeoutMs = timeoutMs;
+    const options = this.normalizeOptions(optionsOrTimeoutMs);
+    this.timeoutMs = options.timeoutMs;
+    this.retryLimit = options.retryLimit;
+    this.retryBackoffBaseMs = options.retryBackoffBaseMs;
+    this.retryBackoffMaxMs = options.retryBackoffMaxMs;
+    this.sleep = options.sleep;
   }
 
   async captureAndParse(): Promise<vision.VisionOutput> {
+    const maxAttempts = 1 + this.retryLimit;
+    let attempt = 0;
+
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      try {
+        const response = await this.captureOnce();
+        return this.transformVisionOutput(response);
+      } catch (error) {
+        if (!this.isRetryableError(error) || attempt >= maxAttempts) {
+          throw error;
+        }
+
+        const backoffMs = this.computeBackoffDelayMs(attempt);
+        await this.sleep(backoffMs);
+      }
+    }
+
+    throw new Error("Vision capture failed after retry attempts");
+  }
+
+  private async captureOnce(): Promise<RpcVisionOutput> {
     const request = { layoutJson: this.layoutJson };
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let call: ClientUnaryCall | undefined;
@@ -52,7 +123,7 @@ export class VisionClient {
     const callPromise = new Promise<RpcVisionOutput>((resolve, reject) => {
       call = this.client.captureFrame(
         request,
-        (error: Error | null, result?: RpcVisionOutput) => {
+        (error: ServiceError | null, result?: RpcVisionOutput) => {
           if (error) {
             reject(error);
             return;
@@ -68,7 +139,7 @@ export class VisionClient {
 
     if (this.timeoutMs <= 0) {
       const response = await callPromise;
-      return this.transformVisionOutput(response);
+      return response;
     }
 
     const timeoutPromise = new Promise<RpcVisionOutput>((_, reject) => {
@@ -76,18 +147,17 @@ export class VisionClient {
         if (call) {
           call.cancel();
         }
-        reject(new Error(`Vision capture timed out after ${this.timeoutMs}ms`));
+        reject(new VisionCaptureTimeoutError(this.timeoutMs));
       }, this.timeoutMs);
     });
 
-    const response = await Promise.race([callPromise, timeoutPromise]).finally(
+    return Promise.race([callPromise, timeoutPromise]).finally(
       () => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
       },
     );
-    return this.transformVisionOutput(response);
   }
 
   async healthCheck(metadata?: Metadata): Promise<boolean> {
@@ -110,6 +180,96 @@ export class VisionClient {
   close(): void {
     this.client.close();
   }
+
+  private normalizeOptions(
+    optionsOrTimeoutMs?: VisionClientConfigInput,
+  ): NormalizedVisionClientOptions {
+    if (
+      typeof optionsOrTimeoutMs === "number" ||
+      optionsOrTimeoutMs === undefined
+    ) {
+      return {
+        timeoutMs: this.normalizeTimeoutMs(optionsOrTimeoutMs),
+        retryLimit: DEFAULT_RETRY_LIMIT,
+        retryBackoffBaseMs: DEFAULT_RETRY_BACKOFF_BASE_MS,
+        retryBackoffMaxMs: DEFAULT_RETRY_BACKOFF_MAX_MS,
+        sleep: this.defaultSleep,
+      };
+    }
+
+    const timeoutMs = this.normalizeTimeoutMs(optionsOrTimeoutMs.timeoutMs);
+    const retryLimit = this.normalizeRetryLimit(optionsOrTimeoutMs.retryLimit);
+    const retryBackoffBaseMs = this.normalizeBackoffMs(
+      optionsOrTimeoutMs.retryBackoffBaseMs,
+      DEFAULT_RETRY_BACKOFF_BASE_MS,
+    );
+    const retryBackoffMaxMsRaw = this.normalizeBackoffMs(
+      optionsOrTimeoutMs.retryBackoffMaxMs,
+      DEFAULT_RETRY_BACKOFF_MAX_MS,
+    );
+
+    return {
+      timeoutMs,
+      retryLimit,
+      retryBackoffBaseMs,
+      retryBackoffMaxMs: Math.max(retryBackoffBaseMs, retryBackoffMaxMsRaw),
+      sleep: optionsOrTimeoutMs.sleep ?? this.defaultSleep,
+    };
+  }
+
+  private normalizeTimeoutMs(timeoutMs?: number): number {
+    const normalized =
+      typeof timeoutMs === "number" && Number.isFinite(timeoutMs)
+        ? timeoutMs
+        : DEFAULT_TIMEOUT_MS;
+    return Math.max(0, Math.trunc(normalized));
+  }
+
+  private normalizeRetryLimit(retryLimit?: number): number {
+    const normalized =
+      typeof retryLimit === "number" && Number.isFinite(retryLimit)
+        ? retryLimit
+        : DEFAULT_RETRY_LIMIT;
+    return Math.max(0, Math.trunc(normalized));
+  }
+
+  private normalizeBackoffMs(backoffMs: number | undefined, fallback: number): number {
+    const normalized =
+      typeof backoffMs === "number" && Number.isFinite(backoffMs)
+        ? backoffMs
+        : fallback;
+    return Math.max(1, Math.trunc(normalized));
+  }
+
+  private computeBackoffDelayMs(attempt: number): number {
+    const uncapped = this.retryBackoffBaseMs * 2 ** Math.max(0, attempt - 1);
+    return Math.min(this.retryBackoffMaxMs, uncapped);
+  }
+
+  private isRetryableError(error: unknown): boolean {
+    if (error instanceof VisionCaptureTimeoutError) {
+      return true;
+    }
+
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+
+    const code =
+      "code" in error
+        ? (error as { code?: number }).code
+        : undefined;
+
+    return (
+      code === status.UNAVAILABLE ||
+      code === status.DEADLINE_EXCEEDED
+    );
+  }
+
+  private readonly defaultSleep: SleepFn = async (ms: number) =>
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
 
   private transformVisionOutput(output: RpcVisionOutput): vision.VisionOutput {
     const stacks = new Map<Position, { amount: number; confidence: number }>();

@@ -1,19 +1,20 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import fc from "fast-check";
+import { describe, it, expect, afterEach } from "vitest";
 import {
   Server,
   ServerCredentials,
   status,
   type ServiceError,
-} from '@grpc/grpc-js';
-import { VisionClient } from '../../src/vision/client';
-import { vision, visionGen } from '@poker-bot/shared';
+} from "@grpc/grpc-js";
+import { VisionClient } from "../../src/vision/client";
+import { vision, visionGen } from "@poker-bot/shared";
 
 const roi = { x: 0, y: 0, width: 10, height: 10 };
 
 const layoutPack: vision.LayoutPack = {
-  version: 'test',
-  platform: 'test',
-  theme: 'test',
+  version: "test",
+  platform: "test",
+  theme: "test",
   resolution: { width: 800, height: 600 },
   dpiCalibration: 1,
   cardROIs: [],
@@ -36,7 +37,7 @@ const layoutPack: vision.LayoutPack = {
     allIn: roi,
   },
   turnIndicatorROI: roi,
-  windowPatterns: { titleRegex: '.*', processName: 'test' },
+  windowPatterns: { titleRegex: ".*", processName: "test" },
 };
 
 const baseOutput: visionGen.VisionOutput = {
@@ -44,7 +45,7 @@ const baseOutput: visionGen.VisionOutput = {
   cards: { holeCards: [], communityCards: [], confidence: 0.9 },
   stacks: {},
   pot: { amount: 100, confidence: 0.8 },
-  buttons: { dealer: 'BTN', confidence: 0.7 },
+  buttons: { dealer: "BTN", confidence: 0.7 },
   positions: { confidence: 0.6 },
   occlusion: {},
   actionButtons: undefined,
@@ -62,12 +63,12 @@ const startVisionServer = async (
     healthCheck:
       healthHandler ??
       ((_call, callback) => {
-        callback(null, { healthy: true, message: 'ok' });
+        callback(null, { healthy: true, message: "ok" });
       }),
   });
   const port = await new Promise<number>((resolve, reject) => {
     server.bindAsync(
-      '127.0.0.1:0',
+      "127.0.0.1:0",
       ServerCredentials.createInsecure(),
       (error, assignedPort) => {
         if (error) {
@@ -87,7 +88,11 @@ const shutdownServer = (server: Server) =>
     server.tryShutdown(() => resolve());
   });
 
-describe('VisionClient Contract', () => {
+function makeGrpcError(message: string, code: status): ServiceError {
+  return Object.assign(new Error(message), { code });
+}
+
+describe("VisionClient Contract", () => {
   let client: VisionClient | undefined;
   let server: Server | undefined;
 
@@ -102,8 +107,8 @@ describe('VisionClient Contract', () => {
     }
   });
 
-  it('parses a successful capture', async () => {
-    let receivedLayout = '';
+  it("parses a successful capture", async () => {
+    let receivedLayout = "";
     const started = await startVisionServer((call, callback) => {
       receivedLayout = call.request.layoutJson;
       callback(null, baseOutput);
@@ -114,35 +119,182 @@ describe('VisionClient Contract', () => {
     const result = await client.captureAndParse();
     expect(result.timestamp).toBe(123);
     expect(result.pot.amount).toBe(100);
-    expect(result.buttons.dealer).toBe('BTN');
-    expect(JSON.parse(receivedLayout).version).toBe('test');
+    expect(result.buttons.dealer).toBe("BTN");
+    expect(JSON.parse(receivedLayout).version).toBe("test");
   });
 
-  it('times out when the server stalls', async () => {
-    const started = await startVisionServer(() => {
-      // Intentionally no callback to simulate a stalled request.
-    });
-    server = started.server;
-    client = new VisionClient(started.address, layoutPack, 50);
-
-    await expect(client.captureAndParse()).rejects.toThrow(/timed out/i);
-  });
-
-  it('propagates gRPC errors', async () => {
+  it("Feature: coinpoker-macos-autonomy, Property 14: Vision Retry Behavior", async () => {
+    const scenario = {
+      failuresBeforeSuccess: 0,
+      attempts: 0,
+    };
     const started = await startVisionServer((_call, callback) => {
-      const error: ServiceError = Object.assign(
-        new Error('vision offline'),
-        { code: status.UNAVAILABLE },
-      );
-      callback(error, null as unknown as visionGen.VisionOutput);
+      scenario.attempts += 1;
+      if (scenario.attempts <= scenario.failuresBeforeSuccess) {
+        callback(
+          makeGrpcError("transient", status.UNAVAILABLE),
+          null as unknown as visionGen.VisionOutput,
+        );
+        return;
+      }
+      callback(null, baseOutput);
     });
     server = started.server;
-    client = new VisionClient(started.address, layoutPack, 100);
 
-    await expect(client.captureAndParse()).rejects.toThrow('vision offline');
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 0, max: 5 }),
+        fc.integer({ min: 0, max: 8 }),
+        async (retryLimit, failuresBeforeSuccess) => {
+          scenario.failuresBeforeSuccess = failuresBeforeSuccess;
+          scenario.attempts = 0;
+          const sleeps: number[] = [];
+          const localClient = new VisionClient(started.address, layoutPack, {
+            timeoutMs: 100,
+            retryLimit,
+            retryBackoffBaseMs: 10,
+            retryBackoffMaxMs: 80,
+            sleep: async (ms: number) => {
+              sleeps.push(ms);
+            },
+          });
+
+          try {
+            const maxAttempts = 1 + retryLimit;
+            const expectedAttempts = Math.min(
+              failuresBeforeSuccess + 1,
+              maxAttempts,
+            );
+
+            if (failuresBeforeSuccess <= retryLimit) {
+              const result = await localClient.captureAndParse();
+              expect(result.pot.amount).toBe(100);
+            } else {
+              await expect(localClient.captureAndParse()).rejects.toThrow(
+                "transient",
+              );
+            }
+
+            // Retry semantics: maximum attempts is always 1 + retryLimit.
+            expect(scenario.attempts).toBe(expectedAttempts);
+            expect(scenario.attempts).toBeLessThanOrEqual(maxAttempts);
+            expect(sleeps).toHaveLength(Math.max(0, expectedAttempts - 1));
+          } finally {
+            localClient.close();
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 
-  it('handles partial payload defaults', async () => {
+  it("retries timeout-equivalent errors and succeeds", async () => {
+    let attempts = 0;
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      if (attempts === 1) {
+        // Intentionally no callback to trigger client-side timeout.
+        return;
+      }
+      callback(null, baseOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 20,
+      retryLimit: 1,
+      retryBackoffBaseMs: 5,
+      retryBackoffMaxMs: 5,
+      sleep: async () => {},
+    });
+
+    const result = await client.captureAndParse();
+    expect(result.pot.amount).toBe(100);
+    expect(attempts).toBe(2);
+  });
+
+  it("does not retry non-retryable gRPC errors", async () => {
+    let attempts = 0;
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      callback(
+        makeGrpcError("invalid request", status.INVALID_ARGUMENT),
+        null as unknown as visionGen.VisionOutput,
+      );
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 100,
+      retryLimit: 3,
+      retryBackoffBaseMs: 10,
+      retryBackoffMaxMs: 80,
+      sleep: async () => {},
+    });
+
+    await expect(client.captureAndParse()).rejects.toThrow("invalid request");
+    expect(attempts).toBe(1);
+  });
+
+  it("normalizes backoff values to minimum 1ms", async () => {
+    let attempts = 0;
+    const sleepCalls: number[] = [];
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      if (attempts === 1) {
+        callback(
+          makeGrpcError("transient", status.UNAVAILABLE),
+          null as unknown as visionGen.VisionOutput,
+        );
+        return;
+      }
+      callback(null, baseOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 100,
+      retryLimit: 1,
+      retryBackoffBaseMs: 0,
+      retryBackoffMaxMs: 0,
+      sleep: async (ms: number) => {
+        sleepCalls.push(ms);
+      },
+    });
+
+    const result = await client.captureAndParse();
+    expect(result.pot.amount).toBe(100);
+    expect(sleepCalls).toEqual([1]);
+  });
+
+  it("normalizes backoff max to be at least backoff base", async () => {
+    let attempts = 0;
+    const sleepCalls: number[] = [];
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      if (attempts <= 2) {
+        callback(
+          makeGrpcError("transient", status.UNAVAILABLE),
+          null as unknown as visionGen.VisionOutput,
+        );
+        return;
+      }
+      callback(null, baseOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 100,
+      retryLimit: 2,
+      retryBackoffBaseMs: 50,
+      retryBackoffMaxMs: 10,
+      sleep: async (ms: number) => {
+        sleepCalls.push(ms);
+      },
+    });
+
+    const result = await client.captureAndParse();
+    expect(result.pot.amount).toBe(100);
+    expect(sleepCalls).toEqual([50, 50]);
+  });
+
+  it("handles partial payload defaults", async () => {
     const partial: visionGen.VisionOutput = {
       timestamp: 0,
       cards: undefined,
@@ -164,32 +316,37 @@ describe('VisionClient Contract', () => {
     const result = await client.captureAndParse();
     expect(result.cards.holeCards).toEqual([]);
     expect(result.pot.amount).toBe(0);
-    expect(result.buttons.dealer).toBe('BTN');
+    expect(result.buttons.dealer).toBe("BTN");
   });
 
-  it('recovers after transient failures', async () => {
+  it("retries deadline-exceeded responses and succeeds", async () => {
     let attempts = 0;
     const started = await startVisionServer((_call, callback) => {
       attempts += 1;
       if (attempts === 1) {
-        const error: ServiceError = Object.assign(
-          new Error('temporary'),
-          { code: status.UNAVAILABLE },
+        callback(
+          makeGrpcError("temporary", status.DEADLINE_EXCEEDED),
+          null as unknown as visionGen.VisionOutput,
         );
-        callback(error, null as unknown as visionGen.VisionOutput);
         return;
       }
       callback(null, baseOutput);
     });
     server = started.server;
-    client = new VisionClient(started.address, layoutPack, 100);
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 100,
+      retryLimit: 1,
+      retryBackoffBaseMs: 10,
+      retryBackoffMaxMs: 10,
+      sleep: async () => {},
+    });
 
-    await expect(client.captureAndParse()).rejects.toThrow('temporary');
     const result = await client.captureAndParse();
     expect(result.pot.amount).toBe(100);
+    expect(attempts).toBe(2);
   });
 
-  it('reports health check status', async () => {
+  it("reports health check status", async () => {
     const started = await startVisionServer((_call, callback) => {
       callback(null, baseOutput);
     });
