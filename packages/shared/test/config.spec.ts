@@ -111,6 +111,23 @@ describe("ConfigurationManager", () => {
       manager = new ConfigurationManager(schemaPath);
       await expect(manager.load(invalidPath)).rejects.toThrow("Config validation failed");
     });
+
+    it("fails validation when vision retry backoff values are below minimum", async () => {
+      const config = JSON.parse(
+        await fs.promises.readFile(tempConfigPath, "utf-8")
+      ) as BotConfig;
+      config.vision.retryBackoffBaseMs = 0;
+      config.vision.retryBackoffMaxMs = 0;
+
+      await fs.promises.writeFile(
+        tempConfigPath,
+        JSON.stringify(config, null, 2),
+        "utf-8"
+      );
+
+      manager = new ConfigurationManager(schemaPath);
+      await expect(manager.load(tempConfigPath)).rejects.toThrow("Config validation failed");
+    });
   });
 
   describe("get<T> method", () => {
@@ -139,6 +156,18 @@ describe("ConfigurationManager", () => {
       expect(typeof verify).toBe("boolean");
       expect(typeof retries).toBe("number");
       expect(retries).toBeGreaterThanOrEqual(0);
+    });
+
+    it("reads vision capture timeout and retry defaults", () => {
+      const captureTimeoutMs = manager!.get<number>("vision.captureTimeoutMs");
+      const retryLimit = manager!.get<number>("vision.retryLimit");
+      const retryBackoffBaseMs = manager!.get<number>("vision.retryBackoffBaseMs");
+      const retryBackoffMaxMs = manager!.get<number>("vision.retryBackoffMaxMs");
+
+      expect(captureTimeoutMs).toBe(2000);
+      expect(retryLimit).toBe(3);
+      expect(retryBackoffBaseMs).toBe(100);
+      expect(retryBackoffMaxMs).toBe(400);
     });
 
     it("reads researchUI configuration when present", () => {

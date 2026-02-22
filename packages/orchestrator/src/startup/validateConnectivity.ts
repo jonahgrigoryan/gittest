@@ -71,15 +71,19 @@ async function ensureVisionReady(
   logger?: Pick<Console, "info" | "warn" | "error">
 ): Promise<void> {
   const client = new VisionClient(serviceUrl, layoutPack);
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), timeoutMs);
   try {
-    await client.healthCheck();
+    const healthy = await withTimeout(
+      client.healthCheck(),
+      timeoutMs,
+      `Vision health check timed out after ${timeoutMs}ms`
+    );
+    if (!healthy) {
+      throw new Error("Vision health check returned unhealthy status");
+    }
     logger?.info?.(`Vision service healthy at ${serviceUrl}`);
   } catch (error) {
     throw new Error(`Vision connectivity check failed (${serviceUrl}): ${(error as Error).message}`);
   } finally {
-    clearTimeout(timer);
     client.close();
   }
 }
@@ -150,3 +154,25 @@ function normalizeBaseUrl(input: string): string {
   return input.endsWith("/") ? input.slice(0, -1) : input;
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> {
+  if (timeoutMs <= 0) {
+    return promise;
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}

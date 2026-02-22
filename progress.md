@@ -1,6 +1,6 @@
 # Project Progress & Workflow
 
-## Current Focus (Updated: 2026-02-20)
+## Current Focus (Updated: 2026-02-22)
 
 - Brain stack is complete: solver, agent coordinator, strategy engine, replay, observability, deployment.
 - Active implementation phase is CoinPoker macOS autonomy ("hands + eyes").
@@ -11,10 +11,34 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
-## CoinPoker Autonomy Progress (Updated: 2026-02-20)
+## CoinPoker Autonomy Progress (Updated: 2026-02-22)
 
-- **Task 5 – executor infrastructure checkpoint** (complete on 2026-02-20)
-  Completed on branch `feat/task-5-executor-infrastructure-checkpoint` as a validation-only checkpoint for Tasks 1–4 executor infrastructure.
+- **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) open, CI green, pending squash merge)
+  Completed on branch `feat/task-6-vision-client-retry-logic` and aligned to requirements 4.5/4.6/8.4 with deterministic property and unit coverage.
+  Delivered:
+  - Extended `VisionClient` with config-driven retry/backoff options, runtime normalization (`retryBackoffMaxMs >= retryBackoffBaseMs`, min 1ms), explicit max attempts semantics (`1 + retryLimit`), retry classification (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, timeout-equivalent), and injectable sleep seam for deterministic tests.
+  - Mapped `BotConfig.vision.captureTimeoutMs/retryLimit/retryBackoffBaseMs/retryBackoffMaxMs` into orchestrator runtime wiring for execution-time vision calls.
+  - Added startup health timeout guard using explicit `Promise.race` around `healthCheck()` in `validateConnectivity`, and fail-fast on unhealthy (`false`) status.
+  - Added/extended tests:
+    - `packages/orchestrator/test/vision/client.spec.ts` (Property 14 + retry/non-retryable/normalization/timeout behavior)
+    - `packages/orchestrator/test/startup/validateConnectivity.spec.ts` (Property 23 + startup timeout guard behavior)
+    - `packages/shared/test/config.spec.ts` (vision retry config coverage and schema-min validation)
+  - Extended config contract:
+    - `packages/shared/src/config/types.ts`
+    - `config/schema/bot-config.schema.json`
+    - `config/bot/default.bot.json`
+  Verification run (all passing):
+  - `pnpm --filter @poker-bot/shared exec vitest run test/config.spec.ts`
+  - `pnpm --filter @poker-bot/orchestrator exec vitest run test/vision/client.spec.ts test/startup/validateConnectivity.spec.ts`
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+  Current active branch: `feat/task-6-vision-client-retry-logic`
+  Next task ID/name: `Task 7 – Extend ResearchUIExecutor to use vision output`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-7-research-ui-vision-output`
+
+- **Task 5 – executor infrastructure checkpoint** (complete on 2026-02-20, merged via PR [#42](https://github.com/jonahgrigoryan/gittest/pull/42))
+  Completed on branch `feat/task-5-executor-infrastructure-checkpoint` as a validation-only checkpoint for Tasks 1–4 executor infrastructure. Merged to `main`.
   Verification run (all passing):
   - `pnpm --filter @poker-bot/executor exec vitest run test/executor_config.spec.ts test/window_manager.spec.ts test/compliance.spec.ts test/bet_input_handler.spec.ts test/input_automation.spec.ts test/research_bridge.spec.ts test/fast_check_import.spec.ts`
   - `pnpm --filter @poker-bot/executor run test`
@@ -23,9 +47,8 @@
   - `pnpm run test:unit`
   - `pnpm run ci:verify:mock`
   Outcome: no regressions detected and no code fixes required.
-  Current active branch: `feat/task-5-executor-infrastructure-checkpoint`
   Next task ID/name: `Task 6 – Extend existing VisionClient with retry logic for live mode`
-  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-6-vision-client-retry-logic`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-6-vision-client-retry-logic` (historical; now completed)
 
 - **Task 4 – nut.js input automation + coordinate scaling (Req 3.1–3.11, 12.1–12.5)**
   Implemented on branch `feat/task-4-nutjs-input-automation` and merged to `main` via PR [#41](https://github.com/jonahgrigoryan/gittest/pull/41). Completed end-to-end input automation and Task 4 property coverage:
@@ -172,7 +195,7 @@ All commands must pass before declaring a task complete.
 - [x] Task 3: Extend existing ComplianceChecker with real macOS process detection
 - [x] Task 4: Implement InputAutomation wrapper for nut.js and extend BetInputHandler
 - [x] Task 5: Checkpoint - Ensure executor infrastructure tests pass
-- [ ] Task 6: Extend existing VisionClient with retry logic for live mode
+- [x] Task 6: Extend existing VisionClient with retry logic for live mode
 - [ ] Task 7: Extend ResearchUIExecutor to use vision output
 - [ ] Task 8: Implement vision service template loading and matching
 - [ ] Task 9: Create CoinPoker layout pack with ROIs and templates
@@ -214,7 +237,7 @@ All commands must pass before declaring a task complete.
 - Head: `8b15582`
 - Task label: executor infrastructure checkpoint
 - Changed files (0): `(only AGENTS.md/progress.md changes)`
-- Status note: Auto-generated handoff entry. Replace with final PR/CI/merge outcomes when task closes.
+- Status note: Merged to main via PR [#42](https://github.com/jonahgrigoryan/gittest/pull/42) (commit `c59c88d`).
 <!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:end -->
 
 <!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:start -->

@@ -14,7 +14,11 @@
     "layoutPack": "simulator/default",
     "dpiCalibration": 1.0,
     "confidenceThreshold": 0.9,
-    "occlusionThreshold": 0.05
+    "occlusionThreshold": 0.05,
+    "captureTimeoutMs": 2000,
+    "retryLimit": 3,
+    "retryBackoffBaseMs": 100,
+    "retryBackoffMaxMs": 400
   },
   "gto": {
     "cachePath": "cache",

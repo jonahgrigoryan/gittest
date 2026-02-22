@@ -14,7 +14,7 @@ interface VisionOutput {
  * Interface for vision client to avoid cross-package dependencies
  */
 export interface VisionClientInterface {
-  captureAndParse(): Promise<VisionOutput>;
+  captureAndParse(options?: { signal?: AbortSignal }): Promise<VisionOutput>;
 }
 
 /**
@@ -107,18 +107,50 @@ export class ActionVerifier {
   private async captureWithTimeout(
     timeoutMs: number,
   ): Promise<VisionOutput | null> {
-    const timeoutPromise = new Promise<null>((resolve) => {
-      setTimeout(() => resolve(null), timeoutMs);
-    });
+    if (timeoutMs <= 0) {
+      return this.safeCapture();
+    }
 
-    const capturePromise = this.visionClient
-      .captureAndParse()
-      .catch((error) => {
-        this.logger.error("Vision client capture failed", { error });
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort(
+        new Error(
+          `ActionVerifier capture timed out after ${Math.max(0, timeoutMs)}ms`,
+        ),
+      );
+    }, timeoutMs);
+
+    try {
+      return await this.safeCapture({ signal: abortController.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private async safeCapture(
+    options?: { signal?: AbortSignal },
+  ): Promise<VisionOutput | null> {
+    try {
+      return await this.visionClient.captureAndParse(options);
+    } catch (error) {
+      if (this.isAbortError(error)) {
+        const message =
+          error instanceof Error ? error.message : String(error ?? "");
+        this.logger.warn("Vision client capture aborted", { reason: message });
         return null;
-      });
+      }
+      this.logger.error("Vision client capture failed", { error });
+      return null;
+    }
+  }
 
-    return Promise.race([capturePromise, timeoutPromise]);
+  private isAbortError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+    return (
+      error.name === "VisionCaptureAbortedError" || error.name === "AbortError"
+    );
   }
 
   /**

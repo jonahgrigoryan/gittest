@@ -57,6 +57,10 @@ export interface BotConfig {
     dpiCalibration: number;
     confidenceThreshold: number;
     occlusionThreshold: number;
+    captureTimeoutMs?: number;
+    retryLimit?: number;
+    retryBackoffBaseMs?: number;
+    retryBackoffMaxMs?: number;
   };
   gto: {
     cachePath: string;
