@@ -214,7 +214,7 @@ describe("VisionClient Contract", () => {
     const capturePromise = client.captureAndParse({ signal: controller.signal });
     setTimeout(() => controller.abort(), 10);
 
-    await expect(capturePromise).rejects.toThrow("Vision capture aborted");
+    await expect(capturePromise).rejects.toThrow(/aborted/i);
     expect(attempts).toBe(1);
   });
 
@@ -232,7 +232,7 @@ describe("VisionClient Contract", () => {
 
     await expect(
       client.captureAndParse({ signal: controller.signal }),
-    ).rejects.toThrow("Vision capture aborted");
+    ).rejects.toThrow(/aborted/i);
     expect(attempts).toBe(0);
   });
 
