@@ -234,7 +234,7 @@ describe("Chaos engineering drills", () => {
 
   it("flags executor misfires via ActionVerifier", async () => {
     const visionClient: VisionClientInterface = {
-      captureAndParse: vi.fn(async () => ({
+      captureAndParse: vi.fn(async (_options) => ({
         confidence: { overall: 0.4 }
       }))
     };

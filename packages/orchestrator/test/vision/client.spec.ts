@@ -188,6 +188,54 @@ describe("VisionClient Contract", () => {
     );
   });
 
+  it("aborts pending retries when abort signal fires", async () => {
+    let attempts = 0;
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      callback(
+        makeGrpcError("transient", status.UNAVAILABLE),
+        null as unknown as visionGen.VisionOutput,
+      );
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, {
+      timeoutMs: 50,
+      retryLimit: 3,
+      retryBackoffBaseMs: 100,
+      retryBackoffMaxMs: 100,
+      sleep: async () =>
+        new Promise((_resolve) => {
+          // never resolve to ensure abort breaks the wait
+          void 0;
+        }),
+    });
+
+    const controller = new AbortController();
+    const capturePromise = client.captureAndParse({ signal: controller.signal });
+    setTimeout(() => controller.abort(), 10);
+
+    await expect(capturePromise).rejects.toThrow("Vision capture aborted");
+    expect(attempts).toBe(1);
+  });
+
+  it("rejects immediately when abort signal is already triggered", async () => {
+    let attempts = 0;
+    const started = await startVisionServer((_call, callback) => {
+      attempts += 1;
+      callback(null, baseOutput);
+    });
+    server = started.server;
+    client = new VisionClient(started.address, layoutPack, 100);
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      client.captureAndParse({ signal: controller.signal }),
+    ).rejects.toThrow("Vision capture aborted");
+    expect(attempts).toBe(0);
+  });
+
   it("retries timeout-equivalent errors and succeeds", async () => {
     let attempts = 0;
     const started = await startVisionServer((_call, callback) => {

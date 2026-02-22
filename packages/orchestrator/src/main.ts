@@ -349,8 +349,8 @@ export async function run() {
       executionVisionClient.close();
     });
     const verifierVisionClient: VisionClientInterface = {
-      captureAndParse: async () => {
-        const snapshot = await executionVisionClient.captureAndParse();
+      captureAndParse: async (options) => {
+        const snapshot = await executionVisionClient.captureAndParse(options);
         const players =
           snapshot?.stacks instanceof Map
             ? new Map(

@@ -43,6 +43,10 @@ const DEFAULT_RETRY_BACKOFF_MAX_MS = 400;
 type SleepFn = (ms: number) => Promise<void>;
 type VisionClientConfigInput = number | VisionClientOptions;
 
+interface VisionCaptureOptions {
+  signal?: AbortSignal;
+}
+
 interface NormalizedVisionClientOptions {
   timeoutMs: number;
   retryLimit: number;
@@ -57,6 +61,13 @@ export interface VisionClientOptions {
   retryBackoffBaseMs?: number;
   retryBackoffMaxMs?: number;
   sleep?: SleepFn;
+}
+
+class VisionCaptureAbortedError extends Error {
+  constructor(message = "Vision capture aborted", options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "VisionCaptureAbortedError";
+  }
 }
 
 class VisionCaptureTimeoutError extends Error {
@@ -93,46 +104,98 @@ export class VisionClient {
     this.sleep = options.sleep;
   }
 
-  async captureAndParse(): Promise<vision.VisionOutput> {
+  async captureAndParse(
+    options?: VisionCaptureOptions,
+  ): Promise<vision.VisionOutput> {
+    const signal = options?.signal;
     const maxAttempts = 1 + this.retryLimit;
     let attempt = 0;
 
     while (attempt < maxAttempts) {
+      this.throwIfAborted(signal);
       attempt += 1;
       try {
-        const response = await this.captureOnce();
+        const response = await this.captureOnce(signal);
         return this.transformVisionOutput(response);
       } catch (error) {
+        if (this.isAbortError(error)) {
+          throw error;
+        }
         if (!this.isRetryableError(error) || attempt >= maxAttempts) {
           throw error;
         }
 
         const backoffMs = this.computeBackoffDelayMs(attempt);
-        await this.sleep(backoffMs);
+        await this.waitForBackoff(backoffMs, signal);
       }
     }
 
     throw new Error("Vision capture failed after retry attempts");
   }
 
-  private async captureOnce(): Promise<RpcVisionOutput> {
+  private async captureOnce(signal?: AbortSignal): Promise<RpcVisionOutput> {
+    this.throwIfAborted(signal);
     const request = { layoutJson: this.layoutJson };
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let call: ClientUnaryCall | undefined;
 
     const callPromise = new Promise<RpcVisionOutput>((resolve, reject) => {
+      let settled = false;
+      let abortListener: (() => void) | undefined;
+
+      const cleanup = () => {
+        if (abortListener && signal) {
+          signal.removeEventListener("abort", abortListener);
+          abortListener = undefined;
+        }
+      };
+
+      const resolveOnce = (value: RpcVisionOutput) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(value);
+      };
+
+      const rejectOnce = (error: Error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        reject(error);
+      };
+
+      if (signal) {
+        abortListener = () => {
+          if (call) {
+            call.cancel();
+          }
+          rejectOnce(this.toAbortError(signal));
+        };
+
+        if (signal.aborted) {
+          abortListener();
+          return;
+        }
+
+        signal.addEventListener("abort", abortListener);
+      }
+
       call = this.client.captureFrame(
         request,
         (error: ServiceError | null, result?: RpcVisionOutput) => {
           if (error) {
-            reject(error);
+            rejectOnce(error);
             return;
           }
           if (!result) {
-            reject(new Error("Vision capture returned empty result"));
+            rejectOnce(new Error("Vision capture returned empty result"));
             return;
           }
-          resolve(result);
+          resolveOnce(result);
         },
       );
     });
@@ -246,6 +309,62 @@ export class VisionClient {
     return Math.min(this.retryBackoffMaxMs, uncapped);
   }
 
+  private async waitForBackoff(
+    backoffMs: number,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (!signal) {
+      await this.sleep(backoffMs);
+      return;
+    }
+
+    this.throwIfAborted(signal);
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let abortListener: (() => void) | undefined;
+
+      const cleanup = () => {
+        if (abortListener) {
+          signal.removeEventListener("abort", abortListener);
+          abortListener = undefined;
+        }
+      };
+
+      const resolveOnce = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve();
+      };
+
+      const rejectOnce = (error: Error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        reject(error);
+      };
+
+      abortListener = () => {
+        rejectOnce(this.toAbortError(signal));
+      };
+
+      signal.addEventListener("abort", abortListener);
+
+      this.sleep(backoffMs)
+        .then(resolveOnce)
+        .catch((error) => {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          rejectOnce(normalizedError);
+        });
+    });
+  }
+
   private isRetryableError(error: unknown): boolean {
     if (error instanceof VisionCaptureTimeoutError) {
       return true;
@@ -264,6 +383,34 @@ export class VisionClient {
       code === status.UNAVAILABLE ||
       code === status.DEADLINE_EXCEEDED
     );
+  }
+
+  private isAbortError(error: unknown): boolean {
+    return error instanceof VisionCaptureAbortedError;
+  }
+
+  private throwIfAborted(signal?: AbortSignal): void {
+    if (!signal || !signal.aborted) {
+      return;
+    }
+    throw this.toAbortError(signal);
+  }
+
+  private toAbortError(signal: AbortSignal): Error {
+    const reason = signal.reason;
+    if (reason instanceof VisionCaptureAbortedError) {
+      return reason;
+    }
+
+    if (reason instanceof Error) {
+      return new VisionCaptureAbortedError(reason.message, { cause: reason });
+    }
+
+    if (typeof reason === "string" && reason.length > 0) {
+      return new VisionCaptureAbortedError(reason, { cause: reason });
+    }
+
+    return new VisionCaptureAbortedError(undefined, { cause: reason });
   }
 
   private readonly defaultSleep: SleepFn = async (ms: number) =>
