@@ -17,10 +17,27 @@ done
 
 BASE_BRANCH="${POSITIONAL[0]:-origin/main}"
 BRANCH="${POSITIONAL[1]:-$(git rev-parse --abbrev-ref HEAD)}"
+CURRENT_REF="$(git rev-parse --abbrev-ref HEAD)"
+BRANCH_REF="$BRANCH"
 
 if [[ ! "$BRANCH" =~ ^feat/task- ]]; then
   echo "Branch '$BRANCH' is not a task branch. Skipping handoff doc check."
   exit 0
+fi
+
+if ! git rev-parse --verify --quiet "${BRANCH_REF}^{commit}" >/dev/null; then
+  if git rev-parse --verify --quiet "refs/remotes/origin/${BRANCH}^{commit}" >/dev/null; then
+    BRANCH_REF="refs/remotes/origin/${BRANCH}"
+  elif git rev-parse --verify --quiet "refs/heads/${BRANCH}^{commit}" >/dev/null; then
+    BRANCH_REF="refs/heads/${BRANCH}"
+  elif [[ "$CURRENT_REF" == "HEAD" ]]; then
+    echo "Branch ref '$BRANCH' is unavailable in detached HEAD checkout; using HEAD for diff computation."
+    BRANCH_REF="HEAD"
+  else
+    echo "Branch ref '$BRANCH' is not available in local refs."
+    echo "Ensure the branch exists locally or run from a detached checkout where HEAD points at the branch commit."
+    exit 1
+  fi
 fi
 
 if ! git show-ref --verify --quiet "refs/remotes/$BASE_BRANCH" \
@@ -29,16 +46,16 @@ if ! git show-ref --verify --quiet "refs/remotes/$BASE_BRANCH" \
   exit 1
 fi
 
-MERGE_BASE="$(git merge-base "$BRANCH" "$BASE_BRANCH")"
+MERGE_BASE="$(git merge-base "$BRANCH_REF" "$BASE_BRANCH")"
 if [[ -z "$MERGE_BASE" ]]; then
-  echo "Could not determine merge-base between '$BRANCH' and '$BASE_BRANCH'."
+  echo "Could not determine merge-base between '$BRANCH_REF' and '$BASE_BRANCH'."
   exit 1
 fi
 
 missing=0
 for doc in AGENTS.md progress.md; do
-  if ! git diff --name-only "$MERGE_BASE" "$BRANCH" -- "$doc" | grep -qx "$doc"; then
-    echo "Required handoff doc '$doc' is not updated in branch diff ($MERGE_BASE..$BRANCH)."
+  if ! git diff --name-only "$MERGE_BASE" "$BRANCH_REF" -- "$doc" | grep -qx "$doc"; then
+    echo "Required handoff doc '$doc' is not updated in branch diff ($MERGE_BASE..$BRANCH_REF)."
     missing=1
   fi
 done

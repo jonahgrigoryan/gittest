@@ -121,7 +121,7 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - **Property 32: Out-of-Bounds Coordinate Rejection**
     - **Validates: Requirements 12.4**
 
-- [ ] 5. Checkpoint - Ensure executor infrastructure tests pass
+- [x] 5. Checkpoint - Ensure executor infrastructure tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 6. Extend existing VisionClient with retry logic for live mode
