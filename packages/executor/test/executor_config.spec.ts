@@ -75,6 +75,21 @@ describe("createActionExecutor", () => {
       minRaiseAmount: 2,
     };
 
+    const defaultVisionClient: VisionClientInterface = {
+      captureAndParse: vi.fn().mockResolvedValue({
+        confidence: { overall: 1 },
+      }),
+    };
+
+    const createResearchUIExecutorWithDefaults = (
+      config: ExecutorConfig,
+      dependencies: Parameters<typeof createActionExecutor>[4] = {}
+    ) =>
+      createActionExecutor("research-ui", config, undefined, console, {
+        visionClient: defaultVisionClient,
+        ...dependencies,
+      });
+
     it("accepts valid betInputField configuration", () => {
       const config: ExecutorConfig = {
         enabled: true,
@@ -88,7 +103,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
+      expect(() => createResearchUIExecutorWithDefaults(config)).not.toThrow();
     });
 
     it("throws descriptive error when betInputField is missing", () => {
@@ -290,7 +305,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
+      expect(() => createResearchUIExecutorWithDefaults(config)).not.toThrow();
     });
 
     it("throws descriptive error for negative minRaiseAmount", () => {
@@ -324,7 +339,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
+      expect(() => createResearchUIExecutorWithDefaults(config)).not.toThrow();
     });
 
     it("accepts zero minRaiseAmount", () => {
@@ -340,7 +355,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      expect(() => createActionExecutor("research-ui", config, undefined, console)).not.toThrow();
+      expect(() => createResearchUIExecutorWithDefaults(config)).not.toThrow();
     });
 
     it("reports multiple validation errors at once", () => {
@@ -440,7 +455,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      createActionExecutor("research-ui", config, undefined, console, {
+      createResearchUIExecutorWithDefaults(config, {
         appleScriptRunner: injectedRunner,
       });
 
@@ -473,7 +488,7 @@ describe("createActionExecutor", () => {
         },
       };
 
-      createActionExecutor("research-ui", config, undefined, console);
+      createResearchUIExecutorWithDefaults(config);
 
       expect(OsaScriptRunner).toHaveBeenCalledTimes(1);
       expect(InputAutomation).toHaveBeenCalledTimes(1);
@@ -502,7 +517,7 @@ describe("createActionExecutor", () => {
         }
       };
 
-      createActionExecutor("research-ui", config, undefined, console, {
+      createResearchUIExecutorWithDefaults(config, {
         inputAutomation: injectedInputAutomation as any
       });
 
@@ -542,6 +557,25 @@ describe("createActionExecutor", () => {
         expect.objectContaining({
           visionClient
         })
+      );
+    });
+
+    it("rejects research-ui executor creation when visionClient is missing", () => {
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          windowTitlePatterns: ["CoinPoker"],
+          processNames: ["CoinPoker"]
+        }
+      };
+
+      expect(() => createActionExecutor("research-ui", config, undefined, console)).toThrow(
+        "Vision client not configured for research-ui mode"
       );
     });
   });

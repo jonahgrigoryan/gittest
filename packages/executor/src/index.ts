@@ -145,6 +145,9 @@ export function createActionExecutor(
 
       // Validate required fields for research-ui mode
       validateResearchUIConfig(config.researchUI);
+      if (!dependencies.visionClient) {
+        throw new Error('Vision client not configured for research-ui mode');
+      }
 
       const selectors = resolveWindowSelectors(config.researchUI);
 
