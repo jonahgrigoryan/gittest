@@ -483,12 +483,13 @@ const createExecutorWithOverrides = (
       });
     });
 
-    it("7.2 Property 13: derives turn from turn state when valid and from buttons otherwise", async () => {
+    it("7.2 Property 13: derives turn from actionable buttons first, then falls back to turnState", async () => {
       const executor = createExecutor();
 
       await fc.assert(
         fc.property(
           fc.record({
+            hasActionButtons: fc.boolean(),
             hasTurnState: fc.boolean(),
             turnStateHero: fc.boolean(),
             turnStateConfidenceValid: fc.boolean(),
@@ -505,7 +506,7 @@ const createExecutorWithOverrides = (
             allInEnabled: fc.boolean(),
             allInVisible: fc.boolean()
           }),
-          ({ hasTurnState, turnStateHero, turnStateConfidenceValid, foldEnabled, foldVisible, checkEnabled, checkVisible, callEnabled, callVisible, raiseEnabled, raiseVisible, betEnabled, betVisible, allInEnabled, allInVisible }) => {
+          ({ hasActionButtons, hasTurnState, turnStateHero, turnStateConfidenceValid, foldEnabled, foldVisible, checkEnabled, checkVisible, callEnabled, callVisible, raiseEnabled, raiseVisible, betEnabled, betVisible, allInEnabled, allInVisible }) => {
             const snapshot: VisionOutput = {
               confidence: { overall: 0.99 },
               ...(hasTurnState
@@ -516,58 +517,65 @@ const createExecutorWithOverrides = (
                     }
                   }
                 : {}),
-              actionButtons: {
-                fold: {
-                  screenCoords: { x: 1, y: 1 },
-                  isEnabled: foldEnabled,
-                  isVisible: foldVisible,
-                  confidence: 0.9
-                },
-                check: {
-                  screenCoords: { x: 2, y: 2 },
-                  isEnabled: checkEnabled,
-                  isVisible: checkVisible,
-                  confidence: 0.9
-                },
-                call: {
-                  screenCoords: { x: 3, y: 3 },
-                  isEnabled: callEnabled,
-                  isVisible: callVisible,
-                  confidence: 0.9
-                },
-                raise: {
-                  screenCoords: { x: 4, y: 4 },
-                  isEnabled: raiseEnabled,
-                  isVisible: raiseVisible,
-                  confidence: 0.9
-                },
-                bet: {
-                  screenCoords: { x: 5, y: 5 },
-                  isEnabled: betEnabled,
-                  isVisible: betVisible,
-                  confidence: 0.9
-                },
-                allIn: {
-                  screenCoords: { x: 6, y: 6 },
-                  isEnabled: allInEnabled,
-                  isVisible: allInVisible,
-                  confidence: 0.9
-                }
-              }
+              ...(hasActionButtons
+                ? {
+                    actionButtons: {
+                      fold: {
+                        screenCoords: { x: 1, y: 1 },
+                        isEnabled: foldEnabled,
+                        isVisible: foldVisible,
+                        confidence: 0.9
+                      },
+                      check: {
+                        screenCoords: { x: 2, y: 2 },
+                        isEnabled: checkEnabled,
+                        isVisible: checkVisible,
+                        confidence: 0.9
+                      },
+                      call: {
+                        screenCoords: { x: 3, y: 3 },
+                        isEnabled: callEnabled,
+                        isVisible: callVisible,
+                        confidence: 0.9
+                      },
+                      raise: {
+                        screenCoords: { x: 4, y: 4 },
+                        isEnabled: raiseEnabled,
+                        isVisible: raiseVisible,
+                        confidence: 0.9
+                      },
+                      bet: {
+                        screenCoords: { x: 5, y: 5 },
+                        isEnabled: betEnabled,
+                        isVisible: betVisible,
+                        confidence: 0.9
+                      },
+                      allIn: {
+                        screenCoords: { x: 6, y: 6 },
+                        isEnabled: allInEnabled,
+                        isVisible: allInVisible,
+                        confidence: 0.9
+                      }
+                    }
+                  }
+                : {})
             };
 
             mockVisionClient.captureAndParse.mockResolvedValue(snapshot);
 
-            const expectedTurn = hasTurnState && turnStateConfidenceValid
-              ? turnStateHero
-              : Boolean(
-                  (foldEnabled && foldVisible) ||
-                    (checkEnabled && checkVisible) ||
-                    (callEnabled && callVisible) ||
-                    (raiseEnabled && raiseVisible) ||
-                    (betEnabled && betVisible) ||
-                    (allInEnabled && allInVisible)
-                );
+            const visibleButtonPresent = Boolean(
+              foldVisible ||
+                checkVisible ||
+                callVisible ||
+                raiseVisible ||
+                betVisible ||
+                allInVisible
+            );
+            const expectedTurn = hasActionButtons
+              ? visibleButtonPresent
+              : hasTurnState && turnStateConfidenceValid
+                ? turnStateHero
+                : false;
 
             const resolvedTurn = (executor as any).isHeroTurn(snapshot) as boolean;
             expect(resolvedTurn).toBe(expectedTurn);
@@ -576,6 +584,38 @@ const createExecutorWithOverrides = (
         ),
         { numRuns: 200 }
       );
+    });
+
+    it("uses actionable button state over conflicting turnState=false", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: false, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 300, y: 420 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.6
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
     });
 
     it("handles missing action button as error and disabled action button as warning", async () => {

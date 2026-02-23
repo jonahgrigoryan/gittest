@@ -377,23 +377,35 @@ export class ResearchUIExecutor implements ActionExecutor {
   }
 
   /**
-   * Derives hero turn from explicit turn state when valid, otherwise
-   * uses the action button fallback.
+   * Derives hero turn from action buttons when available.
+   * Falls back to turnState only when button metadata is unavailable.
    */
   private isHeroTurn(visionOutput: VisionOutput): boolean {
+    const buttons = this.getActionButtons(visionOutput.actionButtons);
+    const actionableButtonCount = buttons
+      .map((button) => this.countEnabledVisibleButtons(button))
+      .reduce((sum, count) => sum + count, 0);
+
+    if (actionableButtonCount > 0) {
+      return true;
+    }
+
+    const visibleButtonCount = buttons
+      .map((button) => this.countVisibleButtons(button))
+      .reduce((sum, count) => sum + count, 0);
+    if (visibleButtonCount > 0) {
+      return true;
+    }
+
+    if (buttons.some((button) => button !== undefined)) {
+      return false;
+    }
+
     if (visionOutput.turnState && this.isValidTurnState(visionOutput.turnState)) {
       return visionOutput.turnState.isHeroTurn;
     }
 
-    return (
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.fold) +
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.check) +
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.call) +
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.raise) +
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.bet) +
-      this.countEnabledVisibleButtons(visionOutput.actionButtons?.allIn) >
-      0
-    );
+    return false;
   }
 
   private isValidTurnState(
@@ -415,6 +427,28 @@ export class ResearchUIExecutor implements ActionExecutor {
       return 0;
     }
     return button.isEnabled && button.isVisible ? 1 : 0;
+  }
+
+  private countVisibleButtons(
+    button: VisionActionButton | undefined,
+  ): number {
+    if (!button) {
+      return 0;
+    }
+    return button.isVisible ? 1 : 0;
+  }
+
+  private getActionButtons(
+    actionButtons: VisionOutput["actionButtons"] | undefined,
+  ): Array<VisionActionButton | undefined> {
+    return [
+      actionButtons?.fold,
+      actionButtons?.check,
+      actionButtons?.call,
+      actionButtons?.raise,
+      actionButtons?.bet,
+      actionButtons?.allIn,
+    ];
   }
 
   private selectActionButton(
