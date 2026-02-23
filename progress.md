@@ -27,11 +27,12 @@
   - `pnpm run lint`
   - `pnpm run build`
   - `pnpm run test:unit`
-  Current active branch: `feat/task-7-research-ui-vision-output`
+  Merged to main via PR #44 (`6eefdcc`).
+  Current active branch: `main`
   Next task ID/name: `Task 8 – Implement vision service template loading and matching`
   Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-8-vision-service-template-loading`
 
-- **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) open, CI green, pending squash merge)
+- **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22; merged via PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43))
   Completed on branch `feat/task-6-vision-client-retry-logic` and aligned to requirements 4.5/4.6/8.4 with deterministic property and unit coverage.
   Delivered:
   - Extended `VisionClient` with config-driven retry/backoff options, runtime normalization (`retryBackoffMaxMs >= retryBackoffBaseMs`, min 1ms), explicit max attempts semantics (`1 + retryLimit`), retry classification (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, timeout-equivalent), and injectable sleep seam for deterministic tests.
@@ -248,6 +249,16 @@ All commands must pass before declaring a task complete.
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:start -->
+### Auto Handoff: Task 7 (2026-02-23)
+- Branch: `feat/task-7-research-ui-vision-output`
+- Base: `origin/main` @ `77278aa`
+- Head: `73f5d7f`
+- Task label: research ui vision output
+- Changed files (9): `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `packages/executor/src/index.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/verifier.ts`, `packages/executor/test/executor_config.spec.ts`, `packages/executor/test/research_bridge.spec.ts`, `packages/orchestrator/src/main.ts`
+- Status note: Merged to main via PR [#44](https://github.com/jonahgrigoryan/gittest/pull/44) (commit `6eefdcc`).
+<!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:start -->
 ### Auto Handoff: Task 5 (2026-02-20)
 - Branch: `feat/task-5-executor-infrastructure-checkpoint`

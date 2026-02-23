@@ -85,8 +85,8 @@ as the default runbook for all coding agents until replaced.
 - Current project scope is CoinPoker macOS autonomy hands+eyes.
 - `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
   - Tasks 0–5 are complete on `main`.
-  - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic`; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) is open with CI green and ready for squash merge.
-  - Task 7 implementation is complete on `feat/task-7-research-ui-vision-output` with verification passing (`pnpm --filter @poker-bot/executor exec vitest run test/research_bridge.spec.ts test/executor_config.spec.ts`, `pnpm run lint`, `pnpm run build`, `pnpm run test:unit`).
+  - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic`; merged to main via PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43).
+  - Task 7 implementation is complete on `feat/task-7-research-ui-vision-output`; merged to main via PR [#44](https://github.com/jonahgrigoryan/gittest/pull/44).
   - Task 4 was completed and merged via PR (#41), including:
     - Task 0 fast-check prerequisite
     - Task 1 research UI config schema and validation
@@ -327,6 +327,12 @@ Commit message:
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:start -->
+- 2026-02-23 | task 7 (research ui vision output) | branch `feat/task-7-research-ui-vision-output` | base `origin/main` (`77278aa`) | head `73f5d7f` | changed files: 9
+- key files: `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `packages/executor/src/index.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/verifier.ts`, `packages/executor/test/executor_config.spec.ts`, `packages/executor/test/research_bridge.spec.ts`, `packages/orchestrator/src/main.ts`
+- Status note: merged to main via PR [#44](https://github.com/jonahgrigoryan/gittest/pull/44) (commit `6eefdcc`).
+<!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-5-executor-infrastructure-checkpoint:start -->
 - 2026-02-20 | task 5 (executor infrastructure checkpoint) | branch `feat/task-5-executor-infrastructure-checkpoint` | base `origin/main` (`8b15582`) | head `8b15582` | changed files: 0
 - key files: `(only AGENTS.md/progress.md changes)`
