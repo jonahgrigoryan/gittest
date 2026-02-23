@@ -13,6 +13,34 @@
 
 ## CoinPoker Autonomy Progress (Updated: 2026-02-23)
 
+- **Task 8 – Vision service template loading + matching** (complete on 2026-02-23; pending PR)
+  Completed on branch `feat/task-8-vision-service-template-loading`, aligned to requirements 5.1–5.7 and task subtasks 8.1–8.5.
+  Delivered:
+  - Added `TemplateManager` startup loading, `TemplateLoadError`, template confidence threshold env override, and highest-confidence location matching in `services/vision/src/vision/templates.py`.
+  - Integrated template matching into `VisionServicer._process_action_buttons(...)`, added template fallback behavior, and set turn state via derived template matches in `services/vision/src/vision/server.py`.
+  - Added readiness-aware health check behavior and unhealthy startup path on bad layout pack configuration.
+  - Exported new template APIs via `services/vision/src/vision/__init__.py`.
+  - Added test coverage:
+    - `services/vision/tests/conftest.py`
+    - `services/vision/tests/test_templates.py`
+    - `services/vision/tests/test_template_property.py`
+    - `services/vision/tests/test_health_check.py`
+    - `services/vision/tests/test_output.py` (updated formatting/assert shape compatibility)
+  Verification run (passing):
+  - `cd services/vision && poetry run pytest tests/ -v` (28 passed)
+  - `cd services/vision && poetry run ruff check src/vision/templates.py src/vision/server.py src/vision/__init__.py tests/`
+  - `cd services/vision && poetry run black --check src/vision/templates.py src/vision/server.py src/vision/__init__.py tests/`
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+  - `pnpm run ci:verify:mock`
+  Known follow-up:
+  - `cd services/vision && poetry run ruff check src/ tests/` still reports pre-existing issues in generated `src/vision/vision_pb2_grpc.py`.
+  - `cd services/vision && poetry run black --check src/ tests/` still flags many pre-existing formatting deltas outside Task 8 scope.
+  Current active branch: `feat/task-8-vision-service-template-loading`
+  Next task ID/name: `Task 9 – Create CoinPoker layout pack with ROIs and templates`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-9-coinpoker-layout-pack`
+
 - **Task 7 – ResearchUIExecutor vision output integration** (complete on 2026-02-23)
   Completed on branch `feat/task-7-research-ui-vision-output`, aligned to requirements 4.1/4.2/4.3/4.4/4.7/4.8 and task properties 13/15.
   Delivered:
@@ -216,7 +244,7 @@ All commands must pass before declaring a task complete.
 - [x] Task 5: Checkpoint - Ensure executor infrastructure tests pass
 - [x] Task 6: Extend existing VisionClient with retry logic for live mode
 - [x] Task 7: Extend ResearchUIExecutor to use vision output
-- [ ] Task 8: Implement vision service template loading and matching
+- [x] Task 8: Implement vision service template loading and matching
 - [ ] Task 9: Create CoinPoker layout pack with ROIs and templates
 - [ ] Task 10: Checkpoint - Ensure vision integration tests pass
 - [ ] Task 11: Implement GameLoop with hand fingerprinting
@@ -249,6 +277,16 @@ All commands must pass before declaring a task complete.
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-8-vision-service-template-loading:start -->
+### Auto Handoff: Task 8 (2026-02-23)
+- Branch: `feat/task-8-vision-service-template-loading`
+- Base: `origin/main` @ `97306aa`
+- Head: `97306aa`
+- Task label: vision service template loading
+- Changed files (9): `services/vision/pyproject.toml`, `services/vision/src/vision/templates.py`, `services/vision/src/vision/server.py`, `services/vision/src/vision/__init__.py`, `services/vision/tests/conftest.py`, `services/vision/tests/test_templates.py`, `services/vision/tests/test_template_property.py`, `services/vision/tests/test_health_check.py`, `services/vision/tests/test_output.py`
+- Status note: Implementation + verification complete locally; pending commit/PR/merge.
+<!-- AUTO_HANDOFF_ENTRY:feat/task-8-vision-service-template-loading:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:start -->
 ### Auto Handoff: Task 7 (2026-02-23)
 - Branch: `feat/task-7-research-ui-vision-output`

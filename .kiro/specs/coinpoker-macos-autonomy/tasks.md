@@ -169,36 +169,36 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Test missing buttons abort execution and log error
     - _Requirements: 4.3, 4.8_
 
-- [ ] 8. Implement vision service template loading and matching
-  - [ ] 8.1 Add template loading to vision service
+- [x] 8. Implement vision service template loading and matching
+  - [x] 8.1 Add template loading to vision service
     - Load template assets from layout pack directory on startup
     - Handle missing template files gracefully with error logging
     - _Requirements: 5.1, 5.6_
   
-  - [ ] 8.2 Implement template matching for button detection
+  - [x] 8.2 Implement template matching for button detection
     - Use OpenCV matchTemplate with TM_CCOEFF_NORMED
     - Return button location and type when confidence exceeds threshold
     - Return highest confidence match when multiple matches found
     - Return empty result when no matches exceed threshold
     - _Requirements: 5.2, 5.3, 5.4, 5.5_
   
-  - [ ] 8.3 Implement turn state derivation in vision service
+  - [x] 8.3 Implement turn state derivation in vision service
     - Check for presence of fold, call, check, or raise button templates
     - Mark buttons as enabled/disabled based on template matching
     - _Requirements: 5.7_
   
-  - [ ] 8.3a Verify and test existing gRPC health check in vision server
+  - [x] 8.3a Verify and test existing gRPC health check in vision server
     - **Existing:** The vision proto already defines a `healthCheck` RPC, the Python server has a handler, and `VisionClient.healthCheck()` already calls it
     - Verify the existing health check returns correct status when service is ready vs. not ready
     - Add tests for health check success and failure paths
     - Only implement new logic if existing coverage is insufficient
     - _Requirements: 8.3, 8.4_
   
-  - [ ] 8.4 Write property test for template match confidence
+  - [x] 8.4 Write property test for template match confidence
     - **Property 16: Template Match Confidence Threshold**
     - **Validates: Requirements 5.3, 5.4, 5.5**
   
-  - [ ] 8.5 Write unit tests for template loading
+  - [x] 8.5 Write unit tests for template loading
     - Test templates load from layout pack directory
     - Test missing template files log errors and continue
     - _Requirements: 5.1, 5.6_
