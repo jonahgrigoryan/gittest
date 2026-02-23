@@ -463,7 +463,7 @@ export class ResearchUIExecutor implements ActionExecutor {
       case "call":
         return actionButtons.call;
       case "raise":
-        return actionButtons.raise;
+        return actionButtons.raise ?? actionButtons.bet;
       case "bet":
         return actionButtons.bet;
       case "allIn":

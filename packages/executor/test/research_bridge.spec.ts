@@ -676,6 +676,97 @@ const createExecutorWithOverrides = (
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
+    it("uses bet button fallback for raise actions when raise button is absent", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              raise: undefined,
+              bet: {
+                screenCoords: { x: 420, y: 610 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(true);
+      expect(mockWindowManager.visionToScreenCoords).toHaveBeenCalledWith(
+        420,
+        610,
+        { width: 1920, height: 1080 },
+        { x: 0, y: 0, width: 800, height: 600 },
+        1
+      );
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails raise actions when both raise and bet buttons are absent", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 100, y: 200 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Action button raise not found");
+      expect(mockInputAutomation.clickScreenCoords).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("treats raise->bet fallback button as non-actionable when disabled", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              raise: undefined,
+              bet: {
+                screenCoords: { x: 420, y: 610 },
+                isEnabled: false,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not actionable");
+      expect(mockInputAutomation.clickScreenCoords).not.toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
     it("fails deterministically when translated click is out of bounds", async () => {
       mockInputAutomation.clickScreenCoords.mockRejectedValue(
         new Error("Click coordinates (5000, 5000) are outside window bounds")
