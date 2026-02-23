@@ -35,7 +35,6 @@ interface StateChange {
 }
 
 const DEFAULT_LAYOUT_RESOLUTION = { width: 1920, height: 1080 } as const;
-const MIN_ACTION_BUTTON_CONFIDENCE = 0.8;
 
 interface ResearchUIExecutorDependencies {
   inputAutomation?: InputAutomation;
@@ -435,15 +434,7 @@ export class ResearchUIExecutor implements ActionExecutor {
   }
 
   private isActionButtonActionable(button: VisionActionButton): boolean {
-    if (!button.isEnabled || !button.isVisible) {
-      return false;
-    }
-
-    if (!Number.isFinite(button.confidence)) {
-      return false;
-    }
-
-    return button.confidence >= MIN_ACTION_BUTTON_CONFIDENCE;
+    return button.isEnabled && button.isVisible;
   }
 
   private getActionButton(

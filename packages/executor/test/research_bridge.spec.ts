@@ -642,7 +642,7 @@ const createExecutorWithOverrides = (
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it("treats low-confidence action button as non-actionable and skips click", async () => {
+    it("allows low-confidence action button when button is enabled and visible", async () => {
       const executor = createExecutor(
         undefined,
         mockLogger,
@@ -670,10 +670,8 @@ const createExecutorWithOverrides = (
         { verifyAction: false }
       );
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain("not actionable");
-      expect(mockInputAutomation.clickScreenCoords).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
     });
 
     it("uses bet button fallback for raise actions when raise button is absent", async () => {
