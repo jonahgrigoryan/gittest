@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createActionExecutor } from "../src/index";
+import { ResearchUIExecutor } from "../src/research_bridge";
 import type { ExecutorConfig, ResearchUIConfig } from "../src/types";
+import type { VisionClientInterface } from "../src/verifier";
 
 // Mock dependencies
 vi.mock("../src/window_manager", () => {
@@ -505,6 +507,42 @@ describe("createActionExecutor", () => {
       });
 
       expect(InputAutomation).not.toHaveBeenCalled();
+    });
+
+    it("forwards injected visionClient to ResearchUIExecutor", () => {
+      const config: ExecutorConfig = {
+        enabled: true,
+        mode: "research-ui",
+        verifyActions: true,
+        maxRetries: 1,
+        verificationTimeoutMs: 2000,
+        researchUI: {
+          ...baseResearchUIConfig,
+          windowTitlePatterns: ["CoinPoker"],
+          processNames: ["CoinPoker"]
+        }
+      };
+
+      const visionClient: VisionClientInterface = {
+        captureAndParse: vi.fn().mockResolvedValue({
+          confidence: { overall: 1 },
+        }),
+      };
+
+      createActionExecutor("research-ui", config, undefined, console, {
+        visionClient,
+      });
+
+      expect(ResearchUIExecutor).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        undefined,
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({
+          visionClient
+        })
+      );
     });
   });
 });

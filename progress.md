@@ -1,6 +1,6 @@
 # Project Progress & Workflow
 
-## Current Focus (Updated: 2026-02-22)
+## Current Focus (Updated: 2026-02-23)
 
 - Brain stack is complete: solver, agent coordinator, strategy engine, replay, observability, deployment.
 - Active implementation phase is CoinPoker macOS autonomy ("hands + eyes").
@@ -11,7 +11,25 @@
   4. `docs/plans/2026-02-03-coinpoker-autonomy.md` (implementation details)
 - Branch policy for all upcoming tasks: `feat/*` (ensures push-based CI triggers from `.github/workflows/ci.yml`).
 
-## CoinPoker Autonomy Progress (Updated: 2026-02-22)
+## CoinPoker Autonomy Progress (Updated: 2026-02-23)
+
+- **Task 7 – ResearchUIExecutor vision output integration** (complete on 2026-02-23)
+  Completed on branch `feat/task-7-research-ui-vision-output`, aligned to requirements 4.1/4.2/4.3/4.4/4.7/4.8 and task properties 13/15.
+  Delivered:
+  - Extended executor vision contract in `packages/executor/src/verifier.ts` to include optional `turnState` and `actionButtons`.
+  - Wired `visionClient` through `packages/executor/src/index.ts` into `ResearchUIExecutor` and injected the execution vision bridge in `packages/orchestrator/src/main.ts` so verifier and executor share one execution-time client path.
+  - Replaced mock turn/button logic in `packages/executor/src/research_bridge.ts` with one-snapshot flow (`captureVisionSnapshot`), explicit turn precedence/fallback, actionable button selection, coordinate translation via `WindowManager.visionToScreenCoords`, and confidence-gated actionability.
+  - Added/updated tests:
+    - `packages/executor/test/executor_config.spec.ts` (factory vision client injection)
+    - `packages/executor/test/research_bridge.spec.ts` (Property 13 turn derivation, Property 15 coordinate usage, missing/disabled/low-confidence action buttons, deterministic out-of-bounds failure path)
+  Verification run (all passing):
+  - `pnpm --filter @poker-bot/executor exec vitest run test/research_bridge.spec.ts test/executor_config.spec.ts`
+  - `pnpm run lint`
+  - `pnpm run build`
+  - `pnpm run test:unit`
+  Current active branch: `feat/task-7-research-ui-vision-output`
+  Next task ID/name: `Task 8 – Implement vision service template loading and matching`
+  Exact next command to run: `git checkout main && git pull --ff-only && git checkout -b feat/task-8-vision-service-template-loading`
 
 - **Task 6 – VisionClient retry logic for live mode** (complete on 2026-02-22; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) open, CI green, pending squash merge)
   Completed on branch `feat/task-6-vision-client-retry-logic` and aligned to requirements 4.5/4.6/8.4 with deterministic property and unit coverage.
@@ -196,7 +214,7 @@ All commands must pass before declaring a task complete.
 - [x] Task 4: Implement InputAutomation wrapper for nut.js and extend BetInputHandler
 - [x] Task 5: Checkpoint - Ensure executor infrastructure tests pass
 - [x] Task 6: Extend existing VisionClient with retry logic for live mode
-- [ ] Task 7: Extend ResearchUIExecutor to use vision output
+- [x] Task 7: Extend ResearchUIExecutor to use vision output
 - [ ] Task 8: Implement vision service template loading and matching
 - [ ] Task 9: Create CoinPoker layout pack with ROIs and templates
 - [ ] Task 10: Checkpoint - Ensure vision integration tests pass

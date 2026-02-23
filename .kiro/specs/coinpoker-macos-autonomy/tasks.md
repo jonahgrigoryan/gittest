@@ -146,8 +146,8 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - **Note:** Existing tests at `packages/orchestrator/test/vision/client.spec.ts` cover basic timeout and health check; extend these
     - _Requirements: 4.5, 4.6_
 
-- [ ] 7. Extend ResearchUIExecutor to use vision output
-  - [ ] 7.1 Wire VisionClient into ResearchUIExecutor
+- [x] 7. Extend ResearchUIExecutor to use vision output
+  - [x] 7.1 Wire VisionClient into ResearchUIExecutor
     - Add vision client as dependency
     - Implement turn state checking using vision output
     - Use vision button coordinates for click targets
@@ -156,15 +156,15 @@ This implementation plan breaks down the CoinPoker macOS autonomy feature into d
     - Update executor/orchestrator entry to pass VisionClient into ResearchUIExecutor (factory or main)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.7, 4.8_
   
-  - [ ] 7.2 Write property test for turn state derivation
+  - [x] 7.2 Write property test for turn state derivation
     - **Property 13: Turn State Derivation**
     - **Validates: Requirements 4.2, 4.3, 4.4**
   
-  - [ ] 7.3 Write property test for vision coordinate usage
+  - [x] 7.3 Write property test for vision coordinate usage
     - **Property 15: Vision Coordinate Usage**
     - **Validates: Requirements 4.7**
   
-  - [ ] 7.4 Write unit tests for disabled button handling
+  - [x] 7.4 Write unit tests for disabled button handling
     - Test disabled buttons skip execution and log warning
     - Test missing buttons abort execution and log error
     - _Requirements: 4.3, 4.8_
