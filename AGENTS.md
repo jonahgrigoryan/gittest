@@ -94,7 +94,7 @@ as the default runbook for all coding agents until replaced.
     - Task 3 compliance process detection
     - Task 4 nut.js input automation + bet input integration
   - Task 5 was completed and merged via PR (#42) (executor infrastructure checkpoint).
-- Current next target is Task 8 (vision service template loading + matching).
+- Current next target is Task 9 (CoinPoker layout pack with ROIs and templates).
 - Confirmed post-Phase-12 successful commits on main/task branch are:
   - `c59c88d` (`chore(executor): task 5 infrastructure checkpoint validation (#42)`)
   - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)
@@ -327,6 +327,12 @@ Commit message:
 
 ## Auto Handoff Log
 <!-- AUTO_HANDOFF_START -->
+<!-- AUTO_HANDOFF_ENTRY:feat/task-8-vision-service-template-loading:start -->
+- 2026-02-23 | task 8 (vision service template loading) | branch `feat/task-8-vision-service-template-loading` | base `origin/main` (`97306aa`) | head `97306aa` | changed files: 9
+- key files: `services/vision/pyproject.toml`, `services/vision/src/vision/templates.py`, `services/vision/src/vision/server.py`, `services/vision/src/vision/__init__.py`, `services/vision/tests/conftest.py`, `services/vision/tests/test_templates.py`, `services/vision/tests/test_template_property.py`, `services/vision/tests/test_health_check.py`, `services/vision/tests/test_output.py`
+- Status note: implementation and verification completed locally; pending commit/PR from `feat/task-8-vision-service-template-loading`.
+<!-- AUTO_HANDOFF_ENTRY:feat/task-8-vision-service-template-loading:end -->
+
 <!-- AUTO_HANDOFF_ENTRY:feat/task-7-research-ui-vision-output:start -->
 - 2026-02-23 | task 7 (research ui vision output) | branch `feat/task-7-research-ui-vision-output` | base `origin/main` (`77278aa`) | head `73f5d7f` | changed files: 9
 - key files: `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `packages/executor/src/index.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/verifier.ts`, `packages/executor/test/executor_config.spec.ts`, `packages/executor/test/research_bridge.spec.ts`, `packages/orchestrator/src/main.ts`
