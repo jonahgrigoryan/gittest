@@ -86,6 +86,7 @@ as the default runbook for all coding agents until replaced.
 - `.kiro/specs/coinpoker-macos-autonomy/tasks.md` checkboxes indicate:
   - Tasks 0–5 are complete on `main`.
   - Task 6 implementation is complete on `feat/task-6-vision-client-retry-logic`; PR [#43](https://github.com/jonahgrigoryan/gittest/pull/43) is open with CI green and ready for squash merge.
+  - Task 7 implementation is complete on `feat/task-7-research-ui-vision-output` with verification passing (`pnpm --filter @poker-bot/executor exec vitest run test/research_bridge.spec.ts test/executor_config.spec.ts`, `pnpm run lint`, `pnpm run build`, `pnpm run test:unit`).
   - Task 4 was completed and merged via PR (#41), including:
     - Task 0 fast-check prerequisite
     - Task 1 research UI config schema and validation
@@ -93,7 +94,7 @@ as the default runbook for all coding agents until replaced.
     - Task 3 compliance process detection
     - Task 4 nut.js input automation + bet input integration
   - Task 5 was completed and merged via PR (#42) (executor infrastructure checkpoint).
-- Current next target is Task 7 (ResearchUIExecutor vision output integration).
+- Current next target is Task 8 (vision service template loading + matching).
 - Confirmed post-Phase-12 successful commits on main/task branch are:
   - `c59c88d` (`chore(executor): task 5 infrastructure checkpoint validation (#42)`)
   - `228bea7` (`Phase 12: Decision Pipeline E2E + Final Integration Gate`)

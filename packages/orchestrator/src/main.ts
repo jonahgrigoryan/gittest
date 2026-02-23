@@ -332,10 +332,11 @@ export async function run() {
       ? layoutPack.dpiCalibration
       : 1;
 
-  // Create verifier if execution is enabled
+  // Create verifier + vision bridge for execution if enabled
   let verifier: ActionVerifier | undefined;
+  let executionVisionClient: VisionClientInterface | undefined;
   if (executionConfig.enabled) {
-    const executionVisionClient = new VisionClient(
+    const sharedExecutionVisionClient = new VisionClient(
       visionServiceUrl,
       layoutPack,
       {
@@ -346,11 +347,12 @@ export async function run() {
       },
     );
     process.on("beforeExit", () => {
-      executionVisionClient.close();
+      sharedExecutionVisionClient.close();
     });
-    const verifierVisionClient: VisionClientInterface = {
+
+    executionVisionClient = {
       captureAndParse: async (options) => {
-        const snapshot = await executionVisionClient.captureAndParse(options);
+        const snapshot = await sharedExecutionVisionClient.captureAndParse(options);
         const players =
           snapshot?.stacks instanceof Map
             ? new Map(
@@ -365,24 +367,42 @@ export async function run() {
           cards: { communityCards: snapshot?.cards?.communityCards ?? [] },
           actionHistory: [],
           players,
+          turnState: snapshot?.turnState
+            ? {
+                isHeroTurn: snapshot.turnState.isHeroTurn,
+                actionTimer: snapshot.turnState.actionTimer,
+                confidence: snapshot.turnState.confidence ?? 0,
+              }
+            : undefined,
+          actionButtons: snapshot?.actionButtons
+            ? {
+                fold: snapshot.actionButtons.fold,
+                check: snapshot.actionButtons.check,
+                call: snapshot.actionButtons.call,
+                raise: snapshot.actionButtons.raise,
+                bet: snapshot.actionButtons.bet,
+                allIn: snapshot.actionButtons.allIn,
+              }
+            : undefined,
         };
       },
     };
-    verifier = new ActionVerifier(verifierVisionClient, console);
+    verifier = new ActionVerifier(executionVisionClient, console);
   }
 
   // Create action executor
   const actionExecutor = executionConfig.enabled
     ? createActionExecutor(
-        executionConfig.mode,
-        executionConfig,
-        verifier,
-        console,
-        {
-          layoutResolution: executorLayoutResolution,
-          dpiCalibration: executorDpiCalibration,
-        },
-      )
+      executionConfig.mode,
+      executionConfig,
+      verifier,
+      console,
+      {
+        layoutResolution: executorLayoutResolution,
+        dpiCalibration: executorDpiCalibration,
+        visionClient: executionVisionClient,
+      },
+    )
     : undefined;
 
   const safeModeController = new SafeModeController(console);
@@ -638,8 +658,8 @@ export async function run() {
         return { action: safe, result };
       },
     },
-  };
-}
+    };
+  }
 
 function ensureTracker(existing?: TimeBudgetTracker): TimeBudgetTracker {
   if (existing) {

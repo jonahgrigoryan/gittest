@@ -3,18 +3,13 @@ import { ComplianceChecker } from './compliance';
 import { BetInputHandler } from './bet_input_handler';
 import type { ActionExecutor, ExecutionResult, ExecutionOptions, ResearchUIConfig } from './types';
 import type { StrategyDecision } from '@poker-bot/shared';
-import type { ActionVerifier } from './verifier';
+import type {
+  ActionVerifier,
+  VisionClientInterface,
+  VisionOutput,
+} from './verifier';
 import { deterministicRandom } from './rng';
 import { InputAutomation, type CoordinateContext } from './input_automation';
-
-// Local interfaces to avoid import issues
-interface ButtonInfo {
-  screenCoords: { x: number; y: number };
-  isEnabled: boolean;
-  isVisible: boolean;
-  confidence: number;
-  text?: string;
-}
 
 interface WindowHandle {
   id: string | number;
@@ -22,13 +17,16 @@ interface WindowHandle {
   processName: string;
 }
 
-interface VisionOutput {
-  turnState?: {
-    isHeroTurn: boolean;
-    actionTimer?: number;
-    confidence: number;
+type VisionActionButton = {
+  screenCoords: {
+    x: number;
+    y: number;
   };
-}
+  isEnabled: boolean;
+  isVisible: boolean;
+  confidence: number;
+  text?: string;
+};
 
 interface StateChange {
   type: 'pot_increase' | 'stack_decrease' | 'action_taken';
@@ -43,6 +41,7 @@ interface ResearchUIExecutorDependencies {
   betInputHandler?: BetInputHandler;
   layoutResolution?: { width: number; height: number };
   dpiCalibration?: number;
+  visionClient?: VisionClientInterface;
 }
 
 /**
@@ -56,6 +55,7 @@ export class ResearchUIExecutor implements ActionExecutor {
   private readonly betInputHandler: BetInputHandler;
   private readonly verifier?: ActionVerifier;
   private readonly researchUIConfig?: ResearchUIConfig;
+  private readonly visionClient?: VisionClientInterface;
   private readonly logger: Pick<Console, 'debug' | 'info' | 'warn' | 'error'>;
   private readonly layoutResolution: { width: number; height: number };
   private readonly dpiCalibration: number;
@@ -73,6 +73,7 @@ export class ResearchUIExecutor implements ActionExecutor {
     this.complianceChecker = complianceChecker;
     this.researchUIConfig = researchUIConfig;
     this.verifier = verifier;
+    this.visionClient = dependencies.visionClient;
     this.logger = logger;
     this.layoutResolution = dependencies.layoutResolution ?? DEFAULT_LAYOUT_RESOLUTION;
     this.dpiCalibration = dependencies.dpiCalibration ?? 1;
@@ -160,33 +161,51 @@ export class ResearchUIExecutor implements ActionExecutor {
       this.inputAutomation.updateRandomSeed(decision.metadata?.rngSeed ?? 0);
 
       // 4. Check turn state
-      const turnState = await this.getCurrentTurnState();
-      if (!turnState?.isHeroTurn) {
+      const visionOutput = await this.captureVisionSnapshot();
+      const isHeroTurn = this.isHeroTurn(visionOutput);
+      if (!isHeroTurn) {
         const error = 'Not hero\'s turn';
         this.logger.warn('ResearchUIExecutor: ' + error);
         return this.createFailureResult(error, startTime);
       }
 
-      this.logger.debug('ResearchUIExecutor: Turn state validated', { turnState });
+      this.logger.debug('ResearchUIExecutor: Turn state validated', {
+        turnState: visionOutput.turnState,
+        fallbackUsed: visionOutput.turnState ? this.isValidTurnState(visionOutput.turnState) === false : true,
+      });
 
       // 5. Find and validate action button
-      const actionButton = await this.findActionButton(decision.action.type);
-      if (!actionButton) {
-        const error = `Action button ${decision.action.type} not found or not actionable`;
+      const actionButtonResult = this.selectActionButton(
+        visionOutput,
+        decision.action.type
+      );
+
+      if (actionButtonResult.state === 'missing') {
+        const error = `Action button ${decision.action.type} not found`;
         this.logger.error('ResearchUIExecutor: ' + error);
         return this.createFailureResult(error, startTime);
       }
+
+      if (actionButtonResult.state === 'disabled') {
+        const error = `Action button ${decision.action.type} is not actionable`;
+        this.logger.warn('ResearchUIExecutor: ' + error);
+        return this.createFailureResult(error, startTime);
+      }
+
+      const actionButton = actionButtonResult.button;
 
       this.logger.debug('ResearchUIExecutor: Action button found', {
         actionType: decision.action.type,
         button: actionButton
       });
 
+      const screenCoords = this.resolveScreenButton(actionButton, focusedWindowBounds);
+
       // 6. Execute action via OS automation
       const executionTime = Date.now() - startTime;
       const actionResult = await this.performAction(
         decision,
-        actionButton,
+        screenCoords,
         windowHandle,
         focusedWindowBounds
       );
@@ -288,14 +307,14 @@ export class ResearchUIExecutor implements ActionExecutor {
    */
   private async performAction(
     decision: StrategyDecision,
-    buttonInfo: ButtonInfo,
+    screenCoords: { x: number; y: number },
     windowHandle: WindowHandle,
     windowBounds: { x: number; y: number; width: number; height: number }
   ): Promise<ExecutionResult> {
     const action = decision.action;
     this.logger.debug('ResearchUIExecutor: Performing action', {
       action,
-      buttonInfo,
+      screenCoords,
       windowHandle
     });
 
@@ -309,12 +328,12 @@ export class ResearchUIExecutor implements ActionExecutor {
       }
 
       await this.inputAutomation.clickScreenCoords(
-        buttonInfo.screenCoords.x,
-        buttonInfo.screenCoords.y
+        screenCoords.x,
+        screenCoords.y
       );
       this.logger.info('ResearchUIExecutor: Clicked action button', {
         action: action.type,
-        coordinates: buttonInfo.screenCoords
+        coordinates: screenCoords
       });
 
       return {
@@ -348,38 +367,153 @@ export class ResearchUIExecutor implements ActionExecutor {
   }
 
   /**
-   * Gets current turn state from vision system
+   * Captures a single shared vision snapshot for this execution cycle.
    */
-  private async getCurrentTurnState(): Promise<VisionOutput['turnState']> {
-    // In production, this would get turn state from actual vision system
-    // For now, return mock data that would be replaced by real implementation
-
-    return {
-      isHeroTurn: true,
-      actionTimer: 30,
-      confidence: 0.99
-    };
+  private async captureVisionSnapshot(): Promise<VisionOutput> {
+    if (!this.visionClient) {
+      throw new Error("Vision client not configured");
+    }
+    return this.visionClient.captureAndParse();
   }
 
   /**
-   * Finds action button from vision output
+   * Derives hero turn from action buttons when available.
+   * Falls back to turnState only when button metadata is unavailable.
    */
-  private async findActionButton(actionType: string): Promise<ButtonInfo | null> {
-    // In production, this would:
-    // 1. Capture current vision output
-    // 2. Use WindowManager.findActionButton()
-    // 3. Return the button info
+  private isHeroTurn(visionOutput: VisionOutput): boolean {
+    const buttons = this.getActionButtons(visionOutput.actionButtons);
+    const actionableButtonCount = buttons
+      .map((button) => this.countEnabledVisibleButtons(button))
+      .reduce((sum, count) => sum + count, 0);
 
-    // Mock implementation - would be replaced by actual vision integration
-    const mockButton: ButtonInfo = {
-      screenCoords: { x: 500, y: 600 },
-      isEnabled: true,
-      isVisible: true,
-      confidence: 0.95,
-      text: actionType
-    };
+    if (actionableButtonCount > 0) {
+      return true;
+    }
 
-    return mockButton;
+    const visibleButtonCount = buttons
+      .map((button) => this.countVisibleButtons(button))
+      .reduce((sum, count) => sum + count, 0);
+    if (visibleButtonCount > 0) {
+      return true;
+    }
+
+    if (buttons.some((button) => button !== undefined)) {
+      return false;
+    }
+
+    if (visionOutput.turnState && this.isValidTurnState(visionOutput.turnState)) {
+      return visionOutput.turnState.isHeroTurn;
+    }
+
+    return false;
+  }
+
+  private isValidTurnState(
+    turnState: VisionOutput["turnState"],
+  ): turnState is NonNullable<VisionOutput["turnState"]> {
+    return (
+      turnState !== undefined &&
+      Number.isFinite(turnState.confidence) &&
+      turnState.confidence >= 0 &&
+      turnState.confidence <= 1 &&
+      typeof turnState.isHeroTurn === "boolean"
+    );
+  }
+
+  private countEnabledVisibleButtons(
+    button: VisionActionButton | undefined,
+  ): number {
+    if (!button) {
+      return 0;
+    }
+    return button.isEnabled && button.isVisible ? 1 : 0;
+  }
+
+  private countVisibleButtons(
+    button: VisionActionButton | undefined,
+  ): number {
+    if (!button) {
+      return 0;
+    }
+    return button.isVisible ? 1 : 0;
+  }
+
+  private getActionButtons(
+    actionButtons: VisionOutput["actionButtons"] | undefined,
+  ): Array<VisionActionButton | undefined> {
+    return [
+      actionButtons?.fold,
+      actionButtons?.check,
+      actionButtons?.call,
+      actionButtons?.raise,
+      actionButtons?.bet,
+      actionButtons?.allIn,
+    ];
+  }
+
+  private selectActionButton(
+    visionOutput: VisionOutput,
+    actionType: string,
+  ): { state: "found"; button: VisionActionButton } | { state: "disabled"; button: VisionActionButton } | { state: "missing" } {
+    const button = this.getActionButton(visionOutput, actionType);
+    if (!button) {
+      return { state: "missing" };
+    }
+
+    if (!this.isActionButtonActionable(button)) {
+      return { state: "disabled", button };
+    }
+
+    return { state: "found", button };
+  }
+
+  private isActionButtonActionable(button: VisionActionButton): boolean {
+    return button.isEnabled && button.isVisible;
+  }
+
+  private getActionButton(
+    visionOutput: VisionOutput,
+    actionType: string,
+  ): VisionActionButton | undefined {
+    const actionButtons = visionOutput.actionButtons;
+    if (!actionButtons) {
+      return undefined;
+    }
+
+    switch (actionType) {
+      case "fold":
+        return actionButtons.fold;
+      case "check":
+        return actionButtons.check;
+      case "call":
+        return actionButtons.call;
+      case "raise":
+        return actionButtons.raise ?? actionButtons.bet;
+      case "bet":
+        return actionButtons.bet;
+      case "allIn":
+        return actionButtons.allIn;
+      default:
+        return undefined;
+    }
+  }
+
+  private resolveScreenButton(
+    visionButton: VisionActionButton,
+    windowBounds: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    },
+  ): { x: number; y: number } {
+    return this.windowManager.visionToScreenCoords(
+      visionButton.screenCoords.x,
+      visionButton.screenCoords.y,
+      this.layoutResolution,
+      windowBounds,
+      this.dpiCalibration
+    );
   }
 
   /**

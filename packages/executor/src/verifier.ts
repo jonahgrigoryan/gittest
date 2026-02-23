@@ -2,12 +2,61 @@ import type { GameState, Action, Position } from "@poker-bot/shared";
 import type { VerificationResult, StateChange, ExecutionResult } from "./types";
 
 // Local interface to match VisionOutput from vision types
-interface VisionOutput {
+export interface VisionOutput {
   confidence: { overall: number };
   pot?: { amount: number };
   cards?: { communityCards: GameState["communityCards"] };
   actionHistory?: GameState["actionHistory"];
   players?: GameState["players"];
+  turnState?: {
+    isHeroTurn: boolean;
+    actionTimer?: number;
+    confidence: number;
+  };
+  actionButtons?: {
+    fold?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+    check?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+    call?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+    raise?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+    bet?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+    allIn?: {
+      screenCoords: { x: number; y: number };
+      isEnabled: boolean;
+      isVisible: boolean;
+      confidence: number;
+      text?: string;
+    };
+  };
 }
 
 /**

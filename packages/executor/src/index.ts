@@ -24,6 +24,7 @@ export interface ExecutorFactoryDependencies {
   inputAutomationOptions?: InputAutomationOptions;
   layoutResolution?: { width: number; height: number };
   dpiCalibration?: number;
+  visionClient?: import("./verifier").VisionClientInterface;
 }
 
 function normalizeSelectorValues(values: string[] | undefined): string[] {
@@ -144,6 +145,9 @@ export function createActionExecutor(
 
       // Validate required fields for research-ui mode
       validateResearchUIConfig(config.researchUI);
+      if (!dependencies.visionClient) {
+        throw new Error('Vision client not configured for research-ui mode');
+      }
 
       const selectors = resolveWindowSelectors(config.researchUI);
 
@@ -206,7 +210,8 @@ export function createActionExecutor(
           inputAutomation,
           betInputHandler,
           layoutResolution,
-          dpiCalibration
+          dpiCalibration,
+          visionClient: dependencies.visionClient,
         }
       );
 

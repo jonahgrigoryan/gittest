@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import fc from "fast-check";
 import { ResearchUIExecutor } from "../src/research_bridge";
 import { WindowManager } from "../src/window_manager";
 import { ComplianceChecker } from "../src/compliance";
 import type { StrategyDecision } from "@poker-bot/shared";
-import type { ActionVerifier } from "../src/verifier";
+import type {
+  ActionVerifier,
+  VisionClientInterface,
+  VisionOutput,
+} from "../src/verifier";
+
+type MockLogger = Pick<Console, "debug" | "info" | "warn" | "error">;
 
 const baseDecision: StrategyDecision = {
   action: {
@@ -57,32 +64,106 @@ const mockResearchUIConfig = {
   minRaiseAmount: 2
 };
 
+const baselineVisionButton = {
+  screenCoords: { x: 250, y: 350 },
+  isEnabled: true,
+  isVisible: true,
+  confidence: 0.95
+};
+
 describe("ResearchUIExecutor", () => {
   let mockWindowManager: any;
   let mockComplianceChecker: any;
   let mockVerifier: any;
   let mockInputAutomation: any;
   let mockBetInputHandler: any;
+  let mockVisionClient: any;
+  let mockLogger: MockLogger;
 
-  const createExecutor = (verifier?: ActionVerifier) =>
-    new ResearchUIExecutor(
-      mockWindowManager as WindowManager,
-      mockComplianceChecker as ComplianceChecker,
-      verifier,
-      mockResearchUIConfig,
-      console,
-      {
-        inputAutomation: mockInputAutomation,
-        betInputHandler: mockBetInputHandler
+  const defaultVisionSnapshot: VisionOutput = {
+    confidence: { overall: 0.99 },
+    turnState: {
+      isHeroTurn: true,
+      actionTimer: 20,
+      confidence: 0.99
+    },
+    actionButtons: {
+      fold: baselineVisionButton,
+      check: baselineVisionButton,
+      call: baselineVisionButton,
+      raise: baselineVisionButton,
+      bet: baselineVisionButton,
+      allIn: baselineVisionButton
+    }
+  };
+
+const createExecutor = (verifier?: ActionVerifier, logger: MockLogger = mockLogger, visionClient?: VisionClientInterface) =>
+  new ResearchUIExecutor(
+    mockWindowManager as WindowManager,
+    mockComplianceChecker as ComplianceChecker,
+    verifier,
+    mockResearchUIConfig,
+    logger,
+    {
+      inputAutomation: mockInputAutomation,
+      betInputHandler: mockBetInputHandler,
+      visionClient: visionClient ?? mockVisionClient,
+    },
+  );
+
+const createExecutorWithOverrides = (
+  verifier?: ActionVerifier,
+  logger: MockLogger = mockLogger,
+  visionClient?: VisionClientInterface,
+  dependencyOverrides: {
+    layoutResolution?: { width: number; height: number };
+    dpiCalibration?: number;
+    inputAutomation?: typeof mockInputAutomation;
+    betInputHandler?: typeof mockBetInputHandler;
+  } = {},
+) =>
+  new ResearchUIExecutor(
+    mockWindowManager as WindowManager,
+    mockComplianceChecker as ComplianceChecker,
+    verifier,
+    mockResearchUIConfig,
+    logger,
+    {
+      inputAutomation: dependencyOverrides.inputAutomation ?? mockInputAutomation,
+      betInputHandler: dependencyOverrides.betInputHandler ?? mockBetInputHandler,
+      visionClient: visionClient ?? mockVisionClient,
+      layoutResolution: dependencyOverrides.layoutResolution,
+      dpiCalibration: dependencyOverrides.dpiCalibration,
+    }
+  );
+
+  const setVisionButtons = (buttons: Partial<VisionOutput["actionButtons"]>): void => {
+    mockVisionClient.captureAndParse.mockResolvedValue({
+      ...defaultVisionSnapshot,
+      actionButtons: {
+        ...defaultVisionSnapshot.actionButtons,
+        ...buttons
       }
-    );
+    });
+  };
 
   beforeEach(() => {
+    mockLogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+
     mockWindowManager = {
       findPokerWindow: vi.fn().mockResolvedValue({ id: 1, processName: "poker", title: "Table 1" }),
       getWindowBounds: vi.fn().mockResolvedValue({ x: 0, y: 0, width: 800, height: 600 }),
       validateWindow: vi.fn().mockReturnValue(true),
-      focusWindow: vi.fn().mockResolvedValue(true)
+      focusWindow: vi.fn().mockResolvedValue(true),
+      visionToScreenCoords: vi.fn((visionX, visionY, layoutResolution, windowBounds, dpiCalibration) => ({
+        x: (windowBounds.x + (visionX / layoutResolution.width) * windowBounds.width) * dpiCalibration,
+        y: (windowBounds.y + (visionY / layoutResolution.height) * windowBounds.height) * dpiCalibration
+      }))
     };
 
     mockComplianceChecker = {
@@ -103,6 +184,10 @@ describe("ResearchUIExecutor", () => {
     };
     mockBetInputHandler = {
       inputBetAmount: vi.fn().mockResolvedValue(undefined)
+    };
+
+    mockVisionClient = {
+      captureAndParse: vi.fn().mockResolvedValue(defaultVisionSnapshot)
     };
   });
 
@@ -140,10 +225,8 @@ describe("ResearchUIExecutor", () => {
 
     // Scenario 3: Vision timeout (mocking turn state check failure)
     it("Scenario 3: handles vision/turn state failure", async () => {
+      mockVisionClient.captureAndParse.mockRejectedValue(new Error("Vision timeout"));
       const executor = createExecutor();
-
-      // Mock private method getCurrentTurnState to throw timeout error
-      vi.spyOn(executor as any, "getCurrentTurnState").mockRejectedValue(new Error("Vision timeout"));
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
 
@@ -185,8 +268,10 @@ describe("ResearchUIExecutor", () => {
         actionExecuted: baseDecision.action,
         verificationResult: undefined
       });
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({ isHeroTurn: true });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({ screenCoords: {x:0,y:0} });
+      setVisionButtons({
+        call: { ...baselineVisionButton, isEnabled: true, isVisible: true, screenCoords: { x: 0, y: 0 } },
+        fold: { ...baselineVisionButton, isEnabled: true, isVisible: true, screenCoords: { x: 0, y: 0 } }
+      });
 
       const result = await executor.execute(baseDecision, { 
         verifyAction: true, 
@@ -267,17 +352,8 @@ describe("ResearchUIExecutor", () => {
           windowHandle: "1"
         }
       });
-
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
-        isHeroTurn: true,
-        actionTimer: 20,
-        confidence: 0.99
-      });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
-        screenCoords: { x: 250, y: 420 },
-        isEnabled: true,
-        isVisible: true,
-        confidence: 0.95
+      setVisionButtons({
+        raise: { screenCoords: { x: 250, y: 420 }, isEnabled: true, isVisible: true, confidence: 0.95 }
       });
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
@@ -312,12 +388,9 @@ describe("ResearchUIExecutor", () => {
         isVisible: true,
         confidence: 0.99
       };
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
-        isHeroTurn: true,
-        actionTimer: 12,
-        confidence: 0.95
+      setVisionButtons({
+        raise: actionButton
       });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue(actionButton);
 
       const result = await executor.execute(baseDecision, { verifyAction: false });
       const betInputMock = mockBetInputHandler.inputBetAmount;
@@ -325,8 +398,8 @@ describe("ResearchUIExecutor", () => {
       expect(result.success).toBe(true);
       expect(betInputMock).toHaveBeenCalledTimes(1);
       expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledWith(
-        actionButton.screenCoords.x,
-        actionButton.screenCoords.y
+        expect.any(Number),
+        expect.any(Number)
       );
 
       const betInputOrder = betInputMock.mock.invocationCallOrder[0];
@@ -342,15 +415,8 @@ describe("ResearchUIExecutor", () => {
         height: 900
       });
       const executor = createExecutor();
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
-        isHeroTurn: true,
-        confidence: 0.99
-      });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
-        screenCoords: { x: 200, y: 300 },
-        isEnabled: true,
-        isVisible: true,
-        confidence: 0.9
+      setVisionButtons({
+        call: { screenCoords: { x: 200, y: 300 }, isEnabled: true, isVisible: true, confidence: 0.9 }
       });
 
       const result = await executor.execute(
@@ -374,15 +440,8 @@ describe("ResearchUIExecutor", () => {
     it("Task 4: executor does not add duplicate click delay outside InputAutomation", async () => {
       const executor = createExecutor();
       const delaySpy = vi.spyOn(executor as any, "delay");
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
-        isHeroTurn: true,
-        confidence: 0.99
-      });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
-        screenCoords: { x: 80, y: 120 },
-        isEnabled: true,
-        isVisible: true,
-        confidence: 0.95
+      setVisionButtons({
+        fold: { screenCoords: { x: 80, y: 120 }, isEnabled: true, isVisible: true, confidence: 0.95 }
       });
 
       const result = await executor.execute(
@@ -403,15 +462,8 @@ describe("ResearchUIExecutor", () => {
         .mockResolvedValueOnce({ x: 120, y: 80, width: 1000, height: 700 });
 
       const executor = createExecutor();
-      vi.spyOn(executor as any, "getCurrentTurnState").mockResolvedValue({
-        isHeroTurn: true,
-        confidence: 0.99
-      });
-      vi.spyOn(executor as any, "findActionButton").mockResolvedValue({
-        screenCoords: { x: 250, y: 350 },
-        isEnabled: true,
-        isVisible: true,
-        confidence: 0.95
+      setVisionButtons({
+        call: { screenCoords: { x: 250, y: 350 }, isEnabled: true, isVisible: true, confidence: 0.95 }
       });
 
       const result = await executor.execute(
@@ -429,6 +481,434 @@ describe("ResearchUIExecutor", () => {
         layoutResolution: { width: 1920, height: 1080 },
         windowBounds: { x: 120, y: 80, width: 1000, height: 700 }
       });
+    });
+
+    it("7.2 Property 13: derives turn from actionable buttons first, then falls back to turnState", async () => {
+      const executor = createExecutor();
+
+      await fc.assert(
+        fc.property(
+          fc.record({
+            hasActionButtons: fc.boolean(),
+            hasTurnState: fc.boolean(),
+            turnStateHero: fc.boolean(),
+            turnStateConfidenceValid: fc.boolean(),
+            foldEnabled: fc.boolean(),
+            foldVisible: fc.boolean(),
+            checkEnabled: fc.boolean(),
+            checkVisible: fc.boolean(),
+            callEnabled: fc.boolean(),
+            callVisible: fc.boolean(),
+            raiseEnabled: fc.boolean(),
+            raiseVisible: fc.boolean(),
+            betEnabled: fc.boolean(),
+            betVisible: fc.boolean(),
+            allInEnabled: fc.boolean(),
+            allInVisible: fc.boolean()
+          }),
+          ({ hasActionButtons, hasTurnState, turnStateHero, turnStateConfidenceValid, foldEnabled, foldVisible, checkEnabled, checkVisible, callEnabled, callVisible, raiseEnabled, raiseVisible, betEnabled, betVisible, allInEnabled, allInVisible }) => {
+            const snapshot: VisionOutput = {
+              confidence: { overall: 0.99 },
+              ...(hasTurnState
+                ? {
+                    turnState: {
+                      isHeroTurn: turnStateHero,
+                      confidence: turnStateConfidenceValid ? 0.7 : 2
+                    }
+                  }
+                : {}),
+              ...(hasActionButtons
+                ? {
+                    actionButtons: {
+                      fold: {
+                        screenCoords: { x: 1, y: 1 },
+                        isEnabled: foldEnabled,
+                        isVisible: foldVisible,
+                        confidence: 0.9
+                      },
+                      check: {
+                        screenCoords: { x: 2, y: 2 },
+                        isEnabled: checkEnabled,
+                        isVisible: checkVisible,
+                        confidence: 0.9
+                      },
+                      call: {
+                        screenCoords: { x: 3, y: 3 },
+                        isEnabled: callEnabled,
+                        isVisible: callVisible,
+                        confidence: 0.9
+                      },
+                      raise: {
+                        screenCoords: { x: 4, y: 4 },
+                        isEnabled: raiseEnabled,
+                        isVisible: raiseVisible,
+                        confidence: 0.9
+                      },
+                      bet: {
+                        screenCoords: { x: 5, y: 5 },
+                        isEnabled: betEnabled,
+                        isVisible: betVisible,
+                        confidence: 0.9
+                      },
+                      allIn: {
+                        screenCoords: { x: 6, y: 6 },
+                        isEnabled: allInEnabled,
+                        isVisible: allInVisible,
+                        confidence: 0.9
+                      }
+                    }
+                  }
+                : {})
+            };
+
+            mockVisionClient.captureAndParse.mockResolvedValue(snapshot);
+
+            const visibleButtonPresent = Boolean(
+              foldVisible ||
+                checkVisible ||
+                callVisible ||
+                raiseVisible ||
+                betVisible ||
+                allInVisible
+            );
+            const expectedTurn = hasActionButtons
+              ? visibleButtonPresent
+              : hasTurnState && turnStateConfidenceValid
+                ? turnStateHero
+                : false;
+
+            const resolvedTurn = (executor as any).isHeroTurn(snapshot) as boolean;
+            expect(resolvedTurn).toBe(expectedTurn);
+            return true;
+          }
+        ),
+        { numRuns: 200 }
+      );
+    });
+
+    it("uses actionable button state over conflicting turnState=false", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: false, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 300, y: 420 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.6
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
+    });
+
+    it("handles missing action button as error and disabled action button as warning", async () => {
+      const disabledLoggerExecutor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 100, y: 200 },
+                isEnabled: false,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const disabledResult = await disabledLoggerExecutor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(disabledResult.success).toBe(false);
+      expect(disabledResult.error).toContain("not actionable");
+      expect(mockLogger.warn).toHaveBeenCalled();
+
+      const missingLoggerExecutor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              check: {
+                screenCoords: { x: 100, y: 200 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const missingResult = await missingLoggerExecutor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(missingResult.success).toBe(false);
+      expect(missingResult.error).toContain("not found");
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("allows low-confidence action button when button is enabled and visible", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 100, y: 200 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.2
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses bet button fallback for raise actions when raise button is absent", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              raise: undefined,
+              bet: {
+                screenCoords: { x: 420, y: 610 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(true);
+      expect(mockWindowManager.visionToScreenCoords).toHaveBeenCalledWith(
+        420,
+        610,
+        { width: 1920, height: 1080 },
+        { x: 0, y: 0, width: 800, height: 600 },
+        1
+      );
+      expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails raise actions when both raise and bet buttons are absent", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              call: {
+                screenCoords: { x: 100, y: 200 },
+                isEnabled: true,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Action button raise not found");
+      expect(mockInputAutomation.clickScreenCoords).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("treats raise->bet fallback button as non-actionable when disabled", async () => {
+      const executor = createExecutor(
+        undefined,
+        mockLogger,
+        {
+          captureAndParse: vi.fn().mockResolvedValue({
+            confidence: { overall: 0.99 },
+            turnState: { isHeroTurn: true, confidence: 0.99 },
+            actionButtons: {
+              raise: undefined,
+              bet: {
+                screenCoords: { x: 420, y: 610 },
+                isEnabled: false,
+                isVisible: true,
+                confidence: 0.95
+              }
+            }
+          })
+        } as VisionClientInterface
+      );
+
+      const result = await executor.execute(baseDecision, { verifyAction: false });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not actionable");
+      expect(mockInputAutomation.clickScreenCoords).not.toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it("fails deterministically when translated click is out of bounds", async () => {
+      mockInputAutomation.clickScreenCoords.mockRejectedValue(
+        new Error("Click coordinates (5000, 5000) are outside window bounds")
+      );
+      const executor = createExecutor();
+      setVisionButtons({
+        call: {
+          screenCoords: { x: 1900, y: 1000 },
+          isEnabled: true,
+          isVisible: true,
+          confidence: 0.95
+        }
+      });
+
+      const result = await executor.execute(
+        {
+          ...baseDecision,
+          action: { ...baseDecision.action, type: "call", amount: undefined }
+        },
+        { verifyAction: false }
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Action execution failed");
+      expect(result.error).toContain("outside window bounds");
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("7.3 Property 15: uses WindowManager vision coordinates and click translated screen coordinates", async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.integer({ min: 1, max: 1920 }),
+          fc.integer({ min: 1, max: 1080 }),
+          fc.integer({ min: -1000, max: 3000 }),
+          fc.integer({ min: -1000, max: 2000 }),
+          fc.integer({ min: 300, max: 3000 }),
+          fc.integer({ min: 200, max: 2000 }),
+          fc.integer({ min: 1, max: 2 }),
+          fc.integer({ min: 1, max: 1080 }),
+          fc.integer({ min: 1, max: 1920 }),
+          async (
+            visionX,
+            visionY,
+            windowX,
+            windowY,
+            windowWidth,
+            windowHeight,
+            dpiCalibration,
+            layoutWidth,
+            layoutHeight
+          ) => {
+            mockVisionClient.captureAndParse.mockClear();
+            mockWindowManager.visionToScreenCoords.mockClear();
+            mockInputAutomation.clickScreenCoords.mockClear();
+
+            mockWindowManager.getWindowBounds
+              .mockResolvedValueOnce({ x: 0, y: 0, width: 800, height: 600 })
+              .mockResolvedValueOnce({ x: windowX, y: windowY, width: windowWidth, height: windowHeight });
+
+            mockVisionClient.captureAndParse.mockResolvedValue({
+              confidence: { overall: 0.99 },
+              turnState: { isHeroTurn: true, confidence: 0.99 },
+              actionButtons: {
+                call: {
+                  screenCoords: { x: visionX, y: visionY },
+                  isEnabled: true,
+                  isVisible: true,
+                  confidence: 0.95
+                }
+              }
+            });
+
+            const executor = createExecutorWithOverrides(
+              undefined,
+              mockLogger,
+              {
+                captureAndParse: mockVisionClient.captureAndParse
+              } as VisionClientInterface,
+              {
+                layoutResolution: {
+                  width: layoutWidth,
+                  height: layoutHeight
+                },
+                dpiCalibration
+              }
+            );
+            const callDecision: StrategyDecision = {
+              ...baseDecision,
+              action: { ...baseDecision.action, type: "call", amount: undefined }
+            };
+            await executor.execute(callDecision, { verifyAction: false, timeoutMs: 1000 });
+
+            expect(mockWindowManager.visionToScreenCoords).toHaveBeenCalledTimes(1);
+            expect(mockInputAutomation.clickScreenCoords).toHaveBeenCalledTimes(1);
+
+            const expectedX = (windowX + (visionX / layoutWidth) * windowWidth) * dpiCalibration;
+            const expectedY = (windowY + (visionY / layoutHeight) * windowHeight) * dpiCalibration;
+
+            expect(mockInputAutomation.clickScreenCoords).toHaveBeenLastCalledWith(expectedX, expectedY);
+            expect(mockVisionClient.captureAndParse).toHaveBeenCalledTimes(1);
+          }
+        ),
+        { numRuns: 50 }
+      );
     });
   });
 });
