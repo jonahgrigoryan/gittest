@@ -350,3 +350,44 @@ Commit message:
 - key files: `.githooks/pre-push`, `.github/PULL_REQUEST_TEMPLATE.md`, `.kiro/specs/coinpoker-macos-autonomy/task-4-kickoff-prompt.md`, `.kiro/specs/coinpoker-macos-autonomy/tasks.md`, `package.json`, `packages/executor/package.json`, `packages/executor/src/bet_input_handler.ts`, `packages/executor/src/index.ts`, `packages/executor/src/input_automation.ts`, `packages/executor/src/research_bridge.ts`, `packages/executor/src/window_manager.ts`, `packages/executor/test/bet_input_handler.spec.ts`
 <!-- AUTO_HANDOFF_ENTRY:feat/task-4-nutjs-input-automation:end -->
 <!-- AUTO_HANDOFF_END -->
+
+## Cursor Cloud specific instructions
+
+### Environment prerequisites
+
+The VM update script handles `pnpm install` and vision service `poetry install`.
+The following must already be present in the VM image (installed during initial
+setup, not by the update script):
+
+- **Node.js v20.17.0** via nvm (set as nvm default; `.nvmrc` is the source of truth).
+- **pnpm 9.0.0** installed globally under the nvm Node (`npm i -g pnpm@9.0.0`).
+- **Poetry** installed via `pip install poetry` (system Python 3.12 is within the
+  `>=3.11,<3.13` range required by `services/vision/pyproject.toml`).
+- **Rust 1.85.0** with `clippy` and `rustfmt` components (`rust-toolchain.toml`
+  handles this automatically via rustup).
+
+### Running services and tests
+
+| What | Command | Notes |
+|---|---|---|
+| Lint (all TS packages) | `pnpm run lint` | |
+| Build (all TS packages) | `pnpm run build` | Runs `proto:gen:safe` automatically via `prebuild` |
+| TS unit tests | `pnpm run test:unit` | Vitest across all packages |
+| Rust solver checks | `cd services/solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test` | |
+| Python vision tests | `cd services/vision && poetry run pytest` | Poetry venv is auto-created on first `poetry install` |
+| Full CI mock pipeline | `pnpm run ci:verify:mock` | Runs lint + build + test + 50-hand replay + solver checks; no network services needed |
+
+### Gotchas
+
+- `pnpm` is not available until nvm activates Node 20.17.0. The update script
+  sources nvm first; if running manually, ensure `source ~/.nvm/nvm.sh && nvm use 20.17.0`
+  or that the shell profile has already done so.
+- The `prebuild` script uses `proto:gen:safe` (non-CI) which falls back to
+  existing stubs if `buf` generation fails. This is safe; proto stubs are
+  committed to the repo.
+- Cache `.bin` files emit `Z_DATA_ERROR` warnings during tests — this is expected
+  (plain binary fallback) and does not indicate failure.
+- `ORCH_SKIP_STARTUP_CHECKS=1` and `AGENTS_USE_MOCK=1` are required for running
+  the orchestrator without live solver/vision gRPC services.
+- Poetry uses the system Python; the `POETRY_PYTHON` env var in CI scripts
+  explicitly sets the interpreter path.
