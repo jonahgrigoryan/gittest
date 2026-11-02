@@ -73,6 +73,28 @@ them into a calibrated strategy that the orchestrator can blend with GTO output.
   proto stubs with `pnpm run proto:gen` and re-run `pnpm run build`.
 - Treat every task as production work: no scaffolding, no placeholder code, and no partial implementations. Coding agents must follow the task requirements end-to-end so downstream collaborators can build on the result immediately.
 
+## Cursor Cloud specific instructions
+
+Login shells on the Cloud Agent image already provide the CI toolchains. No daemon has to be running for lint, unit tests, or mock replay. LLM API keys are not required when `AGENTS_USE_MOCK=1`.
+
+- Node `v20.17.0` and pnpm `9.0.0` come first on `PATH`. `node` from the agent runtime is newer; use the login shell so `pnpm run check:node` prints `v20.17.0`.
+- Vision uses Python `3.11.9` (`python3.11`) and Poetry `2.2.1`. The virtualenv is `services/vision/.venv`. Run tests with `cd services/vision && poetry run pytest`.
+- Solver uses Rust `1.85.0` from `rust-toolchain.toml`, including rustfmt and clippy. `buf` `1.28.1` is the workspace devDependency (`pnpm exec buf`).
+- CoinPoker macOS window focus and nut.js input cannot run on Linux Cloud Agents. Cover that package with `packages/executor` unit tests.
+
+Representative end-to-end check (mock agents, 50-hand fixture):
+
+```bash
+pnpm run lint && pnpm run build && pnpm run test:unit
+(cd services/vision && poetry run pytest)
+(cd services/solver && cargo fmt -- --check && cargo clippy -- -D warnings && cargo test)
+REPLAY_TRUST_LOGS=1 ORCH_SKIP_STARTUP_CHECKS=1 AGENTS_USE_MOCK=1 BOT_CONFIG=config/bot/default.bot.json \
+  pnpm exec tsx packages/orchestrator/src/cli/replay.ts \
+  --file packages/evaluator/test/fixtures/session_test-session/hand_records.jsonl \
+  --limit 50 --output results/replay/report.json
+pnpm exec tsx tools/check-replay-report.ts && pnpm exec tsx tools/check-artifacts.ts
+```
+
 ## Active Workflow (Current Phase: CoinPoker macOS Autonomy)
 
 This section is the operational workflow for ongoing "hands + eyes" work. Use it
